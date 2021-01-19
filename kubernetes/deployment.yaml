@@ -1,0 +1,89 @@
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: passwordexchange-deployment
+  namespace: default
+  labels:
+    app: passwordexchange
+spec:
+  selector:
+    matchLabels:
+      app: passwordexchange
+  replicas: 2
+  template: 
+    metadata:
+      labels:
+        app: passwordexchange 
+        name: "passwordexchange"
+        phase: "prod" 
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+    spec:
+      containers:
+      - name: site-fpm
+        image: gimpyb/myphp-container:0.0.7
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+        volumeMounts:
+        - name: php-socket
+          mountPath: /sock
+        - name: html
+          mountPath: "/var/www/html"
+        - name: php-config 
+          mountPath: "/usr/local/etc/php-fpm.d" 
+      - name: nginx
+        image: nginx:1.19.0-alpine
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: php-socket
+          mountPath: /sock
+        - name: html
+          mountPath: /var/www/html
+        - name: nginx-config
+          mountPath: /etc/nginx
+      initContainers:
+      - name: setup
+        image:  gimpyb/passwordexchange-container-prod:0.0.1
+        command: ["sh", "-c", "aws configure set default.region us-west-2 && ls -lah /root/.aws/ && aws ssm get-parameters-by-path --path /mysite/dev/ --recursive --with-decryption --output text --query \"Parameters[].[Name,Value]\" | sed -E 's#/mysite/dev/([^[:space:]]*)[[:space:]](.*)#export \\1=\"\\2\"#' | sed -E 's/(export)([[:space:]].*=)/\\1\\U\\2/' > /var/www/html/.env && rsync -avzh /var/www/html/ /code && rsync -avzh /etc/nginx/ /nginx && rsync -avzh /usr/local/etc/php-fpm.d/ /php"]
+        volumeMounts:
+        - name: html
+          mountPath: /code
+        - name: nginx-config
+          mountPath: /nginx 
+        - name: php-config 
+          mountPath: /php
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - name: php-socket
+        emptyDir: {}
+      - name: html
+        emptyDir: {}        
+      - name: nginx-config
+        emptyDir: {}        
+      - name: php-config 
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: passwordexchange-service 
+  annotations:
+    # external-dns.alpha.kubernetes.io/hostname: anthony.bible
+  namespace: default
+spec:
+  selector:
+    app: passwordexchange 
+  ports:
+    - name: http2
+      port: 80
+      targetPort: 80  
+      
+---
