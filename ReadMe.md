@@ -1,9 +1,9 @@
 # Password.exchange
 Password exchange was built because there was no known way to securely share passwords. No need to have someone pick up the phone or set up "complicated" gpg. While password exchange focuses on passwords it in theory can be used for any text. 
-
+---
 ## How it works
 You fill out the form with the neccessary information including yours and their names and emails. Once you click send, we send two emails, one to the recipeint with the information to retrieve their password and one to you to help track when the recipient opens the email and visits the page. 
-
+---
 ### Features
 1. Send message to both users. 
 2. Remind users after a day of not opening
@@ -13,7 +13,7 @@ You fill out the form with the neccessary information including yours and their 
 
 TODO:
   1. Is Client Side encryption feasable?
-
+---
 ### Installation
 ##### Docker
 1. Clone this repo locally
