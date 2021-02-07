@@ -8,7 +8,7 @@ $dotenv->load();
 use \Aws\Ses\SesClient;
 use \Aws\Credentials\CredentialProvider;
 use \Aws\Exception\AwsException;
-print_r($_POST)
+print_r($_POST);
 
 function sendEmail(){
 	### TODO ### 
