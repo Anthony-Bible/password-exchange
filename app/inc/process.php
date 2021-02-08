@@ -1,6 +1,8 @@
 <?php
 //namespace SendGrid;
 require (__DIR__ . '/../vendor/autoload.php');
+include_once(dirname(__FILE__) . "/database.php"); 
+include_once(dirname(__FILE__) . "/functions.php");
 
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
@@ -8,8 +10,22 @@ $dotenv->load();
 use \Aws\Ses\SesClient;
 use \Aws\Credentials\CredentialProvider;
 use \Aws\Exception\AwsException;
-print_r($_POST);
-
+#print_r($_POST);
+### STEPS ###
+# 1. Generate Random string
+# 2. Encrypt message with random string
+# 3. Store Message and recpients info in db
+# 4. Send email with link and random string
+# 5. User gets to page
+# 6. User enters random string, first and last name
+# 7. We verify it's them
+# 8. Take them to the screen 
+# 9. Set thee data for deletion
+# 10. Clean data every 7 days
+$token = RandomToken(64);
+$iv, $encyrptedstring, $key = EncryptMesage($message,$token)
+storeMessageinDatabase($encryptedstring, $firstname, $lastname)
+# Array ( [name] => Anthony [email] => test1@anthony.bible [other_firstname] => Test [other_lastname] => User [other_email] => test2@anthony.bible [message] => this is a test )  
 function sendEmail(){
 	### TODO ### 
     # Create function with all variables in an array #

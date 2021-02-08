@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Password Exchange    </title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+    <script src="js/script.js"></script>
+
 </head>
 <body>
 <form id="contact-form" method="post" action="inc/process.php" role="form">
@@ -62,10 +64,17 @@
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
-            <div class="col-md-12">
-                <input type="submit" class="btn btn-success btn-send" id="sendinfo" value="Send message">
             </div>
-        </div>
+
+            <div id="success"></div>
+                        <div class="row">
+                            <div  class="form-group col-xs-12">
+                            <div class="g-recaptcha" data-sitekey="6LcFT00aAAAAAC5bafMxkRnAF-WuoBPXKQMK5Pho"></div>
+                                <button id="contactFormSubmit"   type="submit" class="btn btn-success btn-lg">Send</button>
+                            <div id="wasitasuccess"> </div>
+                            </div>
+
+                        </div>
         <div class="row">
             <div class="col-md-12">
                 <p class="text-muted">
@@ -77,5 +86,7 @@
 
 </form>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+<script src="https://www.google.com/recaptcha/api.js"></script>
+
 </body>
 </html>
