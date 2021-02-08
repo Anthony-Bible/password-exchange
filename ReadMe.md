@@ -11,6 +11,8 @@ You fill out the form with the neccessary information including yours and their 
 ### Features
 1. Send message to both users. 
 2. Remind users after a day of not opening
+3. Get notifications of the following
+   a. email opened, page visited, Page viewed
 3. Expire after 7 days or 1 hour after viewing
    a. In the future this will be configurable
 
