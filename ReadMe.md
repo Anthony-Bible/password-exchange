@@ -16,7 +16,17 @@ You fill out the form with the neccessary information including yours and their 
 
 
 TODO:
-  1. Is Client Side encryption feasable?
+  1. Allow user to generate password 
+  2. Is Client Side encryption feasable?
+
+Future (hopeful) Intergrations:
+1. Bitwarden
+2. Google drive (files)
+3. Salesforce
+4. Lastpass
+5. Email (pgp)
+  a. User can send pgp encrypted email, we retrieve, decrypt and then send like the regular process
+6. slack(?)
 
 ---
 
