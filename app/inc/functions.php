@@ -34,7 +34,34 @@ function EcryptMessage($messagedata, $encryption_key){
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($cypherMethod));
     $encryption = openssl_encrypt($messagedata, $ciphering, 
     $encryption_key, $options=0, $encryption_iv); 
-    return $iv, $encyrption;
+    return $iv, $encyrption, $encryption_key;
+}
+function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
+{
+    $link=$db->connect();
+    if (!($encryptedstring==''|| $firstname==''||$lastname='')){
+        $sql = "INSERT INTO messages (encryptedstring, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
+          
+          $sqlData  = array(
+                    ":user"=>$_SESSION['user_id'],
+                    ":content"=>$content,
+                    ":likes"=> "0", 
+                    ":retweets" => "0",
+                    );
+           echo "<errors>".
+                " No Errors".
+                "</errors>";     
+          $stmt = $link->prepare($sql);
+          $stmt->execute($sqlData);
+
+  }else{
+       echo "<errors>".
+            "You need to enter something in the content area".
+            "</errors>"; 
+
+  }
+echo "</response>";
+
 }
 
 function mailVerify($usertoken,$firstname,$email){
