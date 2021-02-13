@@ -28,7 +28,8 @@ class database{
         $dbname=getenv('PASSWORDEXCHANGEDBNAME');
         $servername=getenv('PASSWORDEXCHANGEHOST');
     //connect ot database using PDO
-    $this->conn = new PDO('mysql:host='.$servername.';dbname='.$dbname, $user, $pass,
+    $charset= 'utf8mb4';
+    $this->conn = new PDO('mysql:host='.$servername.';dbname='.$dbname. ';charset=' .$charset, $user, $pass,
           [
                 PDO::ATTR_PERSISTENT            => true,
                 PDO::ATTR_ERRMODE               => PDO::ERRMODE_EXCEPTION
