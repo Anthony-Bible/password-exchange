@@ -69,7 +69,7 @@
             <div id="success"></div>
                         <div class="row">
                             <div  class="form-group col-xs-12">
-                            <div class="g-recaptcha" data-sitekey="6LcFT00aAAAAAC5bafMxkRnAF-WuoBPXKQMK5Pho"></div>
+                            <div class="g-recaptcha" data-sitekey="6LeGDHwaAAAAADAGSax5zzuM16NPJmjKOX5jOgP9"></div>
                                 <button id="contactFormSubmit"   type="submit" class="btn btn-success btn-lg">Send</button>
                             <div id="wasitasuccess"> </div>
                             </div>
