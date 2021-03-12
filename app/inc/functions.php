@@ -34,7 +34,7 @@ function EcryptMessage($messagedata, $encryption_key){
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($cypherMethod));
     $encryption = openssl_encrypt($messagedata, $ciphering, 
     $encryption_key, $options=0, $encryption_iv); 
-    return $iv, $encyrption, $encryption_key;
+    return array($iv, $encyrption, $encryption_key);
 }
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
