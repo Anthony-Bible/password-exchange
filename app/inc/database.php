@@ -10,9 +10,9 @@
 
 echo "<response>";
 #print_r($_ENV);
-if(session_status() == 1){
-	session_start();
-}
+// if(session_status() == 1){
+// 	session_start();
+// }
 
 
 
