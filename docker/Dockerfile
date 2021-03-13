@@ -17,10 +17,13 @@ RUN composer install
 # RUN pip3 install git+https://github.com/aws/aws-cli.git@v2 --upgrade
 # RUN test ! -f /usr/local/bin/aws && ln -s /opt/aws-cliv2/env/bin/aws /usr/local/bin/aws
 # RUN test ! -f /usr/local/bin/aws_bash_completer && ln -s /opt/aws-cliv2/env/bin/aws_bash_complete
-FROM infrastructureascode/aws-cli as awscli
-FROM php:7.4-fpm-alpine
+FROM nginx:stable-alpine as nginxconfig
 RUN apk add openssl-dev openssl
 RUN  openssl dhparam -out /etc/nginx/dhparam.pem 2048 
+FROM infrastructureascode/aws-cli as awscli
+FROM php:7.4-fpm-alpine
+RUN mkdir -p /etc/nginx
+COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 
 COPY --from=awscli /usr/bin/aws /usr/local/bin/aws
 COPY --chown=82 --from=composerInstall /password-exchange/ /var/www/html
