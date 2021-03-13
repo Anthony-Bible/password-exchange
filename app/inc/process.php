@@ -23,7 +23,7 @@ use \Aws\Exception\AwsException;
 # 9. Set thee data for deletion
 # 10. Clean data every 7 days
 $token = RandomToken(64);
-list($iv, $encyrptedstring, $key) = EncryptMesage($message,$token);
+list($iv, $encyrptedstring, $key) = EncryptMessage($message,$token);
 storeMessageinDatabase($encryptedstring, $firstname, $lastname);
 # Array ( [name] => Anthony [email] => test1@anthony.bible [other_firstname] => Test [other_lastname] => User [other_email] => test2@anthony.bible [message] => this is a test )  
 function sendEmail(){
