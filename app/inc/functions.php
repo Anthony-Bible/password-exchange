@@ -5,7 +5,7 @@ include_once(dirname(__FILE__) . "/database.php");
 
 error_reporting(E_ALL | E_WARNING | E_NOTICE);
 ini_set('display_errors', TRUE);
-global $db 
+global $db;
 $db= new database();
 function redirect($place)
 {
