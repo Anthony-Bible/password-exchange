@@ -17,6 +17,7 @@ RUN pip3 install git+https://github.com/boto/botocore.git@v2 --upgrade
 RUN pip3 install git+https://github.com/aws/aws-cli.git@v2 --upgrade
 RUN test ! -f /usr/local/bin/aws && ln -s /opt/aws-cliv2/env/bin/aws /usr/local/bin/aws
 RUN test ! -f /usr/local/bin/aws_bash_completer && ln -s /opt/aws-cliv2/env/bin/aws_bash_complete
+RUN which aws
 FROM nginx:stable-alpine as nginxconfig
 RUN apk add openssl-dev openssl
 RUN  openssl dhparam -out /etc/nginx/dhparam.pem 2048 
@@ -25,7 +26,7 @@ RUN mkdir -p /etc/nginx && \
     apk update && apk add git rsync sed
 COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 
-COPY --from=AWSInstaller /usr/local/biin/aws /usr/local/bin/aws
+COPY --from=AWSInstaller /usr/bin/aws /usr/local/bin/
 COPY --chown=82 --from=composerInstall /password-exchange/ /var/www/html
 RUN mkdir /root/.aws
 RUN git clone -b password.exchange https://github.com/Anthony-Bible/Nginx-config.git  /etc/custom-nginx
