@@ -5,7 +5,6 @@ include_once(dirname(__FILE__) . "/database.php");
 
 error_reporting(E_ALL | E_WARNING | E_NOTICE);
 ini_set('display_errors', TRUE);
-global $db;
 $db= new database();
 function redirect($place)
 {
@@ -38,15 +37,15 @@ function EncryptMessage($messagedata, $encryption_key){
 }
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
+    global $db;
     $link=$db->connect();
     if (!($encryptedstring==''|| $firstname==''||$lastname='')){
         $sql = "INSERT INTO messages (encryptedstring, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
           
           $sqlData  = array(
-                    ":user"=>$_SESSION['user_id'],
-                    ":content"=>$content,
-                    ":likes"=> "0", 
-                    ":retweets" => "0",
+                    ":encryptedstring"=>$encryptedstring,
+                    ":firstname"=>$firstname,
+                    ":lastname"=> $lastname
                     );
            echo "<errors>".
                 " No Errors".
