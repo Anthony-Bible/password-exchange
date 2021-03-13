@@ -22,7 +22,7 @@ use \Aws\Exception\AwsException;
 # 8. Take them to the screen 
 # 9. Set thee data for deletion
 # 10. Clean data every 7 days
-print_r($_POST)
+print_r($_POST);
 $token = RandomToken(64);
 list($iv, $encyrptedstring, $key) = EncryptMessage($message,$token);
 storeMessageinDatabase($encryptedstring, $firstname, $lastname);
