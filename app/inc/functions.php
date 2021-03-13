@@ -33,7 +33,7 @@ function EncryptMessage($messagedata, $encryption_key){
     $ciphering = "AES-128-CTR"; 
     $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($ciphering));
     $encryption = openssl_encrypt($messagedata, $ciphering, $encryption_key, $options=0, $iv); 
-    return array($iv, $encyrption, $encryption_key);
+    return array($iv, $encryption, $encryption_key);
 }
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
