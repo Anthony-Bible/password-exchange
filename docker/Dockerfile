@@ -36,7 +36,6 @@ RUN mkdir -p /etc/nginx && \
     apk update && apk add git rsync sed
 COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 COPY --from=phpconfig /usr/local/etc/php-fpm.d  /usr/local/etc/php-fpm.d
-COPY --from=AWSInstaller /usr/bin/aws /usr/local/bin/
 COPY --chown=82 --from=composerInstall /password-exchange/ /var/www/html
 RUN mkdir /root/.aws
 RUN git clone -b password.exchange https://github.com/Anthony-Bible/Nginx-config.git  /etc/custom-nginx
