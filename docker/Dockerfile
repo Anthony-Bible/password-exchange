@@ -37,6 +37,5 @@ RUN mkdir -p /etc/nginx && \
 COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 COPY --from=phpconfig /usr/local/etc/php-fpm.d  /usr/local/etc/php-fpm.d
 COPY --chown=82 --from=composerInstall /password-exchange/ /var/www/html
-RUN mkdir /root/.aws
 RUN git clone -b password.exchange https://github.com/Anthony-Bible/Nginx-config.git  /etc/custom-nginx
 
