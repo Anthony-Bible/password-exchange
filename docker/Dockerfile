@@ -23,7 +23,7 @@ RUN apk add openssl-dev openssl
 RUN  openssl dhparam -out /etc/nginx/dhparam.pem 2048 
 FROM php:7.4-fpm-alpine
 RUN mkdir -p /etc/nginx && \
-    apk update && apk add git rsync sed
+    apk update && apk add git rsync sed build-base libffi-dev
 COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 
 COPY --from=AWSInstaller /usr/bin/aws /usr/local/bin/
