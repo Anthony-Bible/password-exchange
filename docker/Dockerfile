@@ -22,7 +22,8 @@ RUN apk add openssl-dev openssl
 RUN  openssl dhparam -out /etc/nginx/dhparam.pem 2048 
 FROM infrastructureascode/aws-cli as awscli
 FROM php:7.4-fpm-alpine
-RUN mkdir -p /etc/nginx
+RUN mkdir -p /etc/nginx && \
+    apk update && apk add git
 COPY --from=nginxconfig /etc/nginx/ /etc/nginx/
 
 COPY --from=awscli /usr/bin/aws /usr/local/bin/aws
