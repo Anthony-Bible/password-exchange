@@ -45,8 +45,6 @@ $sender_email = getenv('SENDEREMAIL');
 	
 		$recieverEmail=[$_POST["email"], "anthony@anthonybible.com"];
 		$receiverid = $_POST["name"];
-		$phone=$_POST["phone"];
-		$message = $_POST["message"];
 		$subject = "Thanks for contacting me";
 		$plaintext_body = 'This email was sent with Amazon SES using the AWS SDK for PHP.' ;
 		$html_body =  '';
@@ -58,7 +56,7 @@ $sender_email = getenv('SENDEREMAIL');
 			/* We've set all the 	, it's now time to send it. To do this we just check the captcha response. If they failed we won't send the mail. This has dramatically reduced the spam to almost zero */
 			
 			$secret= getenv('GOOGLECAPTCHASECRET');
-			$captchaResponse=$_POST["captcha"];
+			$captchaResponse=$_POST["g-recaptcha-response"];
 			echo "<response>";
 			echo "<message>";
 
