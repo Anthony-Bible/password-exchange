@@ -40,7 +40,7 @@ function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
     global $db;
     $link=$db->connect();
     if (!($encryptedstring==''|| $firstname==''||$lastname='')){
-        $sql = "INSERT INTO messages (encryptedstring, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
+        $sql = "INSERT INTO messages (message, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
           
           $sqlData  = array(
                     ":encryptedstring"=>$encryptedstring,

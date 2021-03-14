@@ -26,9 +26,9 @@ use \Aws\Exception\AwsException;
 $firstname=$_POST['other_firstname'];
 $lastname=$_POST['other_lastname'];
 $token = RandomToken(64);
-list($iv, $encryptedstring, $key) = EncryptMessage($_POST['message'],$token);
-storeMessageinDatabase($encryptedstring, $firstname, $lastname);
+list($iv, $encryptedstring, $key) = EncryptMessage($_POST['message'],$token);4
 echo $encryptedstring;
+storeMessageinDatabase($encryptedstring, $firstname, $lastname);
 #Array ( [name] => Anthony Bible [email] => pine64@anthony.bible [other_firstname] => Anthony [other_lastname] => Bible [other_email] => test2@anthony.bible [message] => yeat a nother test 1268 [g-recaptcha-response] => 03AGdBq27UFdxuDUc_IPa-9r4AYLLiDq-zYaCC2oTyKRRGoDW7D2-_bfPX9Vg14kI_-Z7-cinNq3vzHCTeNl4hofRopK9-SYaFIUNyzOxqj9z9hFWD9rhBF3mZ3YFujFgiEiUDztUifvkKQ-C0rXyB-fM1YB8Nq3apv0KpcIDZI4xc0A9QHu5SfuscGuJQ-X_vj9yIVwyDbnT6cY_untqkLcHXTV5q_Jz4vWuNglHDpr7d7yuMptXao9pdU71sTpAZCuan8nqMz2hNn34Me-2loPxguilSBbqAIhsRxKoW1vHTi8jOvhJvT8b2hErMKKh9hTMh6118riofIX-7C5zZng2BskPIIo6yU-hK9pnFADJA_4AIPEuUvupwQaVDrnwzzjqUZO1hqOwO1neg7A3XsILeWaEfstvFow2QBy-AY8oVpU6QSv79MR7I7VcJkmoXEp5CzEYBt1Mvt4AXuYjUOn28z-gjtS7rHw )
 function sendEmail(){
 	### TODO ### 
