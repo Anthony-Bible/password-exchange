@@ -4,7 +4,7 @@ require (__DIR__ . '/../vendor/autoload.php');
 include_once(dirname(__FILE__) . "/database.php"); 
 include_once(dirname(__FILE__) . "/functions.php");
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . './');
 $dotenv->load();
 
 use \Aws\Ses\SesClient;
@@ -33,6 +33,7 @@ storeMessageinDatabase($encryptedstring, $firstname, $lastname);
 function sendEmail(){
 	### TODO ### 
     # Create function with all variables in an array #
+	
 	$provider = CredentialProvider::env();
 echo '<?xml version="1.0" encoding="UTF-8" ?>'; 
 $SesClient = new SesClient([
