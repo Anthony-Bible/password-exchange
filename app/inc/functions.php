@@ -35,6 +35,11 @@ function EncryptMessage($messagedata, $encryption_key){
     $encryption = openssl_encrypt($messagedata, $ciphering, $encryption_key, $options=0, $iv); 
     return array($iv, $encryption, $encryption_key);
 }
+function DecryptMessage($messagedata, $encryption_key, $iv){
+    $ciphering = "AES-128-CTR"; 
+    $encryption = openssl_decrypt($messagedata, $ciphering, $encryption_key, $options=0, $iv); 
+    return array($iv, $encryption, $encryption_key);
+}
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
     global $db;
