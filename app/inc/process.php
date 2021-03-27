@@ -4,7 +4,7 @@ require (__DIR__ . '/../vendor/autoload.php');
 include_once(dirname(__FILE__) . "/database.php"); 
 include_once(dirname(__FILE__) . "/functions.php");
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '../');
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
 use \Aws\Ses\SesClient;
