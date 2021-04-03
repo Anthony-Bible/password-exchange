@@ -34,7 +34,11 @@ storeMessageinDatabase($encryptedstring, $firstname, $lastname);
 function sendEmail(){
 	### TODO ### 
     # Create function with all variables in an array #
-	
+	echo "These are the environment variables";
+	print_r($_ENV);
+	echo "key_id";
+	echo getenv('AWS_ACCESS_KEY_ID');
+	echo getenv('AWS_SECRET_ACCESS_KEY');
 	$provider = CredentialProvider::env();
 echo '<?xml version="1.0" encoding="UTF-8" ?>'; 
 $SesClient = new SesClient([
@@ -43,13 +47,14 @@ $SesClient = new SesClient([
 	'credentials' => $provider
 ]);
 $sender_email = getenv('SENDEREMAIL');
+$configuration_set = 'test';
 
 	
 		$recieverEmail=[$_POST["email"], "anthony@anthonybible.com"];
 		$receiverid = $_POST["name"];
 		$subject = "Thanks for contacting me";
 		$plaintext_body = 'This email was sent with Amazon SES using the AWS SDK for PHP.' ;
-		$html_body =  '';
+		$html_body =  '';	
 		$char_set = 'UTF-8';
 	
 
