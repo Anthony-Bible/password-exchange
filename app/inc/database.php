@@ -23,13 +23,13 @@ class database{
     //connect to the database
   function connect() {
       try {
-        $user=getenv('PASSWORDEXCHANGEUSER');
-        $pass = getenv('PASSWORDEXCHANGEPASS');
-        $dbname=getenv('PASSWORDEXCHANGEDBNAME');
-        $servername=getenv('PASSWORDEXCHANGEHOST');
+       echo  $user=getenv('PASSWORDEXCHANGEUSER');
+       echo  $pass = getenv('PASSWORDEXCHANGEPASS');
+       echo  $dbname=getenv('PASSWORDEXCHANGEDBNAME');
+       echo  $servername=getenv('PASSWORDEXCHANGEHOST');
     //connect ot database using PDO
     $charset= 'utf8mb4';
-    $this->conn = new PDO('mysql:host='.$servername.';dbname='.$dbname. ';charset=' .$charset, $user, $pass,
+    $this->conn = new PDO('mysql:dbname='.$dbname.';host='.$servername.';charset=' .$charset, $user, $pass,
           [
                 PDO::ATTR_PERSISTENT            => true,
                 PDO::ATTR_ERRMODE               => PDO::ERRMODE_EXCEPTION
