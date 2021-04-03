@@ -13,3 +13,4 @@ updates:
     directory: "/app"
     schedule:
       interval: "daily"
+      
