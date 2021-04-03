@@ -35,7 +35,11 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
-        
+        with:
+          install: true
+      
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}        
       - name: Run tests
         run: |
           if [ -f docker-compose.test.yml ]; then
@@ -66,6 +70,11 @@ jobs:
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
+        with:
+          install: true
+      
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
 
       - name: Build image
         run: docker build . --file docker/Dockerfile --tag $IMAGE_NAME
