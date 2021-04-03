@@ -34,7 +34,7 @@ spec:
         - name: php-config 
           mountPath: "/usr/local/etc/php-fpm.d" 
       - name: nginx
-        image: nginx:1.19.0-alpine
+        image: nginx:1.19.9-alpine
         resources:
           requests:
             memory: "64Mi"
