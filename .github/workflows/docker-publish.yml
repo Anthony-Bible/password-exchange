@@ -22,8 +22,11 @@ jobs:
   # Run tests.
   # See also https://docs.docker.com/docker-hub/builds/automated-testing/
   test:
+    env:
+      DOCKER_BUILDKIT: 0
+      COMPOSE_DOCKER_CLI_BUILD: 0
     runs-on: ubuntu-latest
-
+   
     steps:
       - uses: actions/checkout@v2
       - name: Login to Docker Hub
