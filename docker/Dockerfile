@@ -1,9 +1,9 @@
-FROM alpine:3.13.0 as gitclone
+FROM alpine:3.13.4 as gitclone
 RUN apk update && apk add git  
 RUN git clone https://github.com/Anthony-Bible/password-exchange.git /password-exchange 
 
 
-FROM php:7.4-fpm-alpine as composerInstall
+FROM php:8.0.3-fpm-alpine as composerInstall
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 COPY --chown=82 --from=gitclone /password-exchange/app/ /password-exchange
 WORKDIR /password-exchange/
@@ -21,7 +21,7 @@ RUN composer install
 FROM nginx:stable-alpine as nginxconfig
 RUN apk add openssl-dev openssl
 RUN  openssl dhparam -out /etc/nginx/dhparam.pem 2048 
-FROM php:7.4-fpm-alpine as phpconfig
+FROM php:8.0.3-fpm-alpine as phpconfig
 RUN mkdir /etc/php
 #TODO
 ### 1. Pull from repo like nginx config
