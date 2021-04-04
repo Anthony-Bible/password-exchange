@@ -26,7 +26,7 @@ class database{
        $user=getenv('PASSWORDEXCHANGEUSER');
        $pass = getenv('PASSWORDEXCHANGEPASS');
        $dbname=getenv('PASSWORDEXCHANGEDBNAME');
-       $servername=getenv('PASSWORDEXCHANGEHOST')
+       $servername=getenv('PASSWORDEXCHANGEHOST');
        echo $user;
        echo $pass;
        echo $dbname;
