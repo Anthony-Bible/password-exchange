@@ -1,7 +1,7 @@
 <?php
 
 include_once(dirname(__FILE__) . "/database.php"); 
-
+$db=new database();
 
 error_reporting(E_ALL | E_WARNING | E_NOTICE);
 ini_set('display_errors', TRUE);
@@ -39,8 +39,9 @@ function DecryptMessage($messagedata, $encryption_key, $iv){
     $encryption = openssl_decrypt($messagedata, $ciphering, $encryption_key, $options=0, $iv); 
     return array($iv, $encryption, $encryption_key);
 }
-function storeMessageinDatabase($db=new database(), $encryptedstring, $firstname, $lastname)
+function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {   
+    global $db;
     echo "storing in database";
     $link=$db->connect();
     echo "connected";
