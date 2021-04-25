@@ -21,7 +21,8 @@ class database{
  
   var $conn;
     //connect to the database
-  function connect() {
+  
+  public function __construct() {
       try {
        $user=getenv('PASSWORDEXCHANGEUSER');
        $pass = getenv('PASSWORDEXCHANGEPASS');
@@ -32,6 +33,7 @@ class database{
        echo $dbname;
        echo $servername;
     //connect ot database using PDO
+
     $charset= 'utf8mb4';
     $this->conn = new PDO('mysql:host='.$servername.';dbname='.$dbname.';charset='.$charset, $user, $pass,array(
                 PDO::ATTR_PERSISTENT            => true,
