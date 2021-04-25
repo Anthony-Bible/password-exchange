@@ -45,20 +45,32 @@ function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
     global $db;
     echo "storing in database";
     $link=$db->connect();
+    echo "connected";
     if (!($encryptedstring==''|| $firstname==''||$lastname='')){
+        try{
         $sql = "INSERT INTO messages (message, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
           
           $sqlData  = array(
                     ":encryptedstring"=>$encryptedstring,
                     ":firstname"=>$firstname,
-                    ":lastname"=> $lastname
+                    ":lastname"=> $lastname,
                     );
            echo "<errors>".
                 " No Errors".
                 "</errors>";     
           $stmt = $link->prepare($sql);
           $stmt->execute($sqlData);
+                }
+                catch (Exception $e) {
 
+                    echo "<response>";
+                    echo "<message>";
+                    // output error message if fails
+                    echo $e->getMessage();
+                    echo "\n";
+                    echo "</message>";
+                    echo "</response>";
+        }
   }else{
        echo "<errors>".
             "You need to enter something in the content area".
