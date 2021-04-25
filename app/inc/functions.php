@@ -43,7 +43,7 @@ function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {   
     global $db;
     echo "storing in database";
-    $link=$db->connect();
+    $link=$db;
     echo "connected";
     if (!($encryptedstring==''|| $firstname==''||$lastname='')){
         try{
