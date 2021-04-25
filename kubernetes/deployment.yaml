@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: site-fpm
-        image: gimpyb/myphp-container:0.0.7
+        image: gimpyb/myphp-container:0.0.8
         resources:
           requests:
             memory: "64Mi"
