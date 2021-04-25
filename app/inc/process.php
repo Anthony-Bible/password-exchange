@@ -29,7 +29,7 @@ use PHPMailer\PHPMailer\Exception;
 // print_r($_POST);
 $firstname=$_POST['other_firstname'];
 $lastname=$_POST['other_lastname'];
-$fullname=$fistname.' '.$lastname;
+$fullname=$firstname.' '.$lastname;
 $token = RandomToken(64);
 list($iv, $encryptedstring, $key) = EncryptMessage($_POST['message'],$token);	
 storeMessageinDatabase($encryptedstring, $firstname, $lastname);
