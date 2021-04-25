@@ -5,7 +5,7 @@ include_once(dirname(__FILE__) . "/database.php");
 
 error_reporting(E_ALL | E_WARNING | E_NOTICE);
 ini_set('display_errors', TRUE);
-$db= new database();
+$db = new database();
 function redirect($place)
 {
 	header("Location: $place");
@@ -42,7 +42,6 @@ function DecryptMessage($messagedata, $encryption_key, $iv){
 }
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
-    global $db;
     echo "storing in database";
     $link=$db->connect();
     echo "connected";
