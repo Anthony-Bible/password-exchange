@@ -33,11 +33,10 @@ class database{
        echo $servername;
     //connect ot database using PDO
     $charset= 'utf8mb4';
-    $this->conn = new PDO('mysql:dbname='.$dbname.';host='.$servername.';charset=' .$charset, $user, $pass,
-          [
+    $this->conn = new PDO('mysql:host='.$servername.';dbname='.$dbname.';charset='.$charset, $user, $pass,array(
                 PDO::ATTR_PERSISTENT            => true,
-                PDO::ATTR_ERRMODE               => PDO::ERRMODE_EXCEPTION
-            ]);
+                PDO::ATTR_ERRMODE               => PDO::ERRMODE_EXCEPTION,
+    ));
     //$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     //use prepared statements for user submitted information
