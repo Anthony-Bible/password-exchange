@@ -6,14 +6,14 @@ include_once(dirname(__FILE__) . "/database.php");
 include_once(dirname(__FILE__) . "/functions.php");
 
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
-$dotenv->load();
-
 use \Aws\Ses\SesClient;
 use \Aws\Credentials\CredentialProvider;
 use \Aws\Exception\AwsException;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+$dotenv->load();
+
 #print_r($_POST);
 ### STEPS ###
 # 1. Generate Random string
@@ -32,6 +32,8 @@ $lastname=$_POST['other_lastname'];
 $fullname=$firstname.' '.$lastname;
 $token = RandomToken(64);
 list($iv, $encryptedstring, $key) = EncryptMessage($_POST['message'],$token);	
+echo "encrypted string".$encryptedstring;
+echo "firstname".$firstname;
 storeMessageinDatabase($encryptedstring, $firstname, $lastname);
 $mail = new PHPMailer(true);
 $sender_email = getenv('SENDEREMAIL');

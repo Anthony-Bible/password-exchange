@@ -43,6 +43,7 @@ function DecryptMessage($messagedata, $encryption_key, $iv){
 function storeMessageinDatabase($encryptedstring, $firstname, $lastname)
 {
     global $db;
+    echo "storing in database";
     $link=$db->connect();
     if (!($encryptedstring==''|| $firstname==''||$lastname='')){
         $sql = "INSERT INTO messages (message, firstname, lastname) VALUES (:encryptedstring, :firstname, :lastname )";
