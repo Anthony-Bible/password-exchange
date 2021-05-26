@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1 
 kind: Deployment
 metadata:
@@ -50,7 +51,7 @@ spec:
           mountPath: /etc/nginx
       initContainers:
       - name: setup
-        image:  gimpyb/passwordexchange-container-prod:0.0.3
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:97b27ffa7183c2430adaa1758a5c3714a7208712afd2983c2f77f15da14da59d
         command: ["sh", "-c", "aws configure set default.region us-west-2 && ls -lah /root/.aws/ && aws ssm get-parameters-by-path --path /password.exchange/dev/ --recursive --with-decryption --output text --query \"Parameters[].[Name,Value]\" | sed -E 's#/password.exchange/dev/([^[:space:]]*)[[:space:]](.*)#export \\1=\"\\2\"#' | sed -E 's/(export)([[:space:]].*=)/\\1\\U\\2/' > /var/www/html/.env && rsync -azh /var/www/html/ /code  &&  rm /etc/nginx/conf.d/default.conf && rsync -azh /etc/nginx/ /nginx && rsync -azh /etc/custom-nginx/ /nginx && rsync -azh /usr/local/etc/php-fpm.d/ /php"]
         volumeMounts:
         - name: html
