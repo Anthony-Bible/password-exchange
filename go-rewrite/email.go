@@ -56,7 +56,7 @@ func  (msg *Message) Deliver() error {
   })
 
   // Sending email.
-  err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, body.Bytes())
+  err := smtp.SendMail(smtpHost, auth, from, to, body.Bytes())
   fmt.Println(err)
   return err
 }
