@@ -50,7 +50,7 @@ spec:
         - name: nginx-config
           mountPath: /etc/nginx
       - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:43b51bea548badd91092af4e56b74ac8893e5ef103d6712164f81840e2c65ce7
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:b95ed9b6714fae5653bda6afb8da367b862c1ce4e3b244c3838ad3cac71e86f5
         env:
           - name: PASSWORDEXCHANGE_EMAILUSER
             valueFrom: 
