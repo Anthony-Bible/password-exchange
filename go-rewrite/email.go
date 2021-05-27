@@ -32,8 +32,9 @@ func  (msg *Message) Deliver() error {
   }
 
   // smtp server configuration.
-  smtpHost := GetViperVariable("emailhost")
-  smtpPort := GetViperVariable("emailport")
+  smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
+  // smtpPort := GetViperVariable("emailport")
+
 
 
   // Authentication.
