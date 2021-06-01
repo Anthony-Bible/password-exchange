@@ -33,7 +33,7 @@ func  (msg *Message) Deliver() error {
   }
   fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
-  smtpHost := strings.TrimSpace(GetViperVariable("emailhost") + ":" + GetViperVariable("emailport"))
+  smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
   // smtpPort := GetViperVariable("emailport")
   fmt.Println(smtpHost)
 
