@@ -9,11 +9,11 @@ import (
     "fmt"
 )
 
-// type Message struct {
-//     Email   string
-//     Subject string
-//     Message string
-// }
+type Message struct {
+    Email   string
+    Subject string
+    Message string
+}
 
 func main() {
   mux := pat.New()
@@ -35,22 +35,23 @@ func send(w http.ResponseWriter, r *http.Request) {
   // Step 1: Validate form
   // Step 2: Send message in an email
   // Step 3: Redirect to confirmation page
+  encryptionstring, randmError := GenerateRandomString(32)
+  if randmError != nil {
+    log.Fatal(randmError)
+  }
+  siteHost := GetViperVariable("host")
+
   msg := &Message{
 		Email:   r.PostFormValue("email"),
-		Content: r.PostFormValue("content"),
-	}
+
+  }
+    msg.Content = msg.Content +"please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + encryptionstring
 
 	if msg.Validate() == false {
 		render(w, "templates/home.html", msg)
 		return
 	}
-  encryptionstring, randmError := GenerateRandomString(32)
-    if randmError != nil {
-      log.Fatal(randmError)
-    }
-  siteHost := GetViperVariable("host")
-  fmt.Println(siteHost)
-  msg.Content = msg.Content +  "\n" + siteHost + "encrypt/" + encryptionstring
+
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
