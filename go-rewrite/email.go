@@ -3,13 +3,12 @@ package main
 import (
   "bytes"
   "fmt"
-  "log"
   "net/smtp"
   "text/template"
   "github.com/spf13/viper"
 )
 func GetViperVariable(envname string) string {
-    viperReturn := viper.GetStringSlice(envname)
+    viperReturn := viper.GetString(envname)
 
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)
