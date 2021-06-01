@@ -13,6 +13,9 @@ func GetViperVariable(envname string) string {
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)
     // }
+    if !viperReturn {
+      log.Fatalf("Environment variable not set %s", envname)
+    }
    return viperReturn
 
 }

@@ -6,6 +6,7 @@ import (
     "net/http"
     "log"
     "github.com/bmizerany/pat"
+    "fmt"
 )
 
 // type Message struct {
@@ -48,7 +49,7 @@ func send(w http.ResponseWriter, r *http.Request) {
       log.Fatal(randmError)
     }
   host := GetViperVariable("host")
-
+  fmt.Println(host)
   msg.Content = msg.Content + host + "encrypt/" + string
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
