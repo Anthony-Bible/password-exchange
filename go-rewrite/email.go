@@ -9,12 +9,11 @@ import (
   "github.com/spf13/viper"
 )
 func GetViperVariable(envname string) string {
-    viperReturn, ok := viper.Get(envname).(string)
+    viperReturn, ok := viper.Get(envname)
 
     if !ok {
      log.Fatalf("Invalid type assertion for %s", envname)
-     log.Fatalf(ok)
-   }
+]   }
    return viperReturn
 
 }
