@@ -8,7 +8,8 @@ import (
   "github.com/spf13/viper"
 )
 func GetViperVariable(envname string) string {
-    
+    viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
+    viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
     if viper.IsSet(envname){
       viperReturn := viper.GetString(envname)
       return viperReturn
@@ -23,8 +24,7 @@ func GetViperVariable(envname string) string {
 }
 func  (msg *Message) Deliver() error {
    //set neccessary info for environment variables
-  viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
-  viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
+
   // Sender data.
   password := GetViperVariable("emailpass")
   from := "server@password.exchange"
