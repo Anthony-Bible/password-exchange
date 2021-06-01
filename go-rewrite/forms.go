@@ -54,6 +54,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/confirmation", http.StatusSeeOther)
 
 }
+
 func confirmation(w http.ResponseWriter, r *http.Request) {
   render(w, "templates/confirmation.html", nil)
 }
