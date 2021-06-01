@@ -13,6 +13,7 @@ func GetViperVariable(envname string) string {
 
     if !ok {
      log.Fatalf("Invalid type assertion for %s", envname)
+     log.Fatalf(ok)
    }
    return viperReturn
 
