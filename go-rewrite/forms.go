@@ -44,13 +44,13 @@ func send(w http.ResponseWriter, r *http.Request) {
 		render(w, "templates/home.html", msg)
 		return
 	}
-  string, randmError := GenerateRandomString(32)
+  encryptionstring, randmError := GenerateRandomString(32)
     if randmError != nil {
       log.Fatal(randmError)
     }
   siteHost := GetViperVariable("host")
   fmt.Println(siteHost)
-  msg.Content = msg.Content +  "\n" siteHost + "encrypt/" + string
+  msg.Content = msg.Content +  "\n" + siteHost + "encrypt/" + encryptionstring
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
