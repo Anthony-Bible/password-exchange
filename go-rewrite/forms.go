@@ -48,9 +48,9 @@ func send(w http.ResponseWriter, r *http.Request) {
     if randmError != nil {
       log.Fatal(randmError)
     }
-  host := GetViperVariable("host")
-  fmt.Println(host)
-  msg.Content = msg.Content + host + "encrypt/" + string
+  siteHost := GetViperVariable("host")
+  fmt.Println(siteHost)
+  msg.Content = msg.Content + siteHost + "encrypt/" + string
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
