@@ -47,7 +47,8 @@ func send(w http.ResponseWriter, r *http.Request) {
     if randmError != nil {
       log.Fatal(randmError)
     }
-  
+  host := GetViperVariable("host")
+
   msg.Content = msg.Content + host + "encrypt/" + string
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
