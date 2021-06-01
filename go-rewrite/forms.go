@@ -6,14 +6,13 @@ import (
     "net/http"
     "log"
     "github.com/bmizerany/pat"
-    "fmt"
 )
 
-type Message struct {
-    Email   string
-    Subject string
-    Message string
-}
+// type Message struct {
+//     Email   string
+//     Subject string
+//     Message string
+// }
 
 func main() {
   mux := pat.New()
@@ -45,7 +44,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		Email:   r.PostFormValue("email"),
 
   }
-    msg.Content = msg.Content +"please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + encryptionstring
+    msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + encryptionstring
 
 	if msg.Validate() == false {
 		render(w, "templates/home.html", msg)
