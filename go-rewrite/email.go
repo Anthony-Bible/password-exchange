@@ -1,6 +1,7 @@
 package main
 
 import (
+  "bytes"
   "fmt"
   "log"
   "net/smtp"
@@ -41,7 +42,7 @@ func  (msg *Message) Deliver() error {
 
   t, _ := template.ParseFiles("templates/email_template.html")
 
-  // var body bytes.Buffer
+  var body bytes.Buffer
 
   mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
   body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
@@ -53,7 +54,7 @@ func  (msg *Message) Deliver() error {
   //   Name:    "Puneet Singh",
   //   Message: "This is a test message in a HTML template",
   // })
-  body := []byte(msg.Content)
+  body.Write(msg.Content)
   // Sending email.
   err := smtp.SendMail(smtpHost, auth, from, to, body)
   fmt.Println(err)
