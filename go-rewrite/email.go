@@ -7,7 +7,6 @@ import (
   "net/smtp"
   "text/template"
   "github.com/spf13/viper"
-  "strings"
 )
 func GetViperVariable(envname string) string {
     viperReturn, ok := viper.Get(envname).(string)
