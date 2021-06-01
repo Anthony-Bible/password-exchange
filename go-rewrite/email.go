@@ -50,15 +50,13 @@ func  (msg *Message) Deliver() error {
 
   mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
   body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
-  b := []byte(msg.Content)
-
-  body.Write(b)
+  
   t.Execute(&body, struct {
     Name    string
     Message string
   }{
     Name:    "Test Name",
-    Message: msg.Content,
+    Message:  msg.Content,
   })
 
   // Sending email.
