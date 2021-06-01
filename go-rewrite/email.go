@@ -7,6 +7,7 @@ import (
   "net/smtp"
   "text/template"
   "github.com/spf13/viper"
+  "strings"
 )
 func GetViperVariable(envname string) string {
     viperReturn, ok := viper.Get(envname).(string)
@@ -32,7 +33,7 @@ func  (msg *Message) Deliver() error {
   }
   fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
-  smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
+  smtpHost := strings.TrimSpace(GetViperVariable("emailhost") + ":" + GetViperVariable("emailport"))
   // smtpPort := GetViperVariable("emailport")
   fmt.Println(smtpHost)
 
