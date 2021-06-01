@@ -38,7 +38,7 @@ func  (msg *Message) Deliver() error {
 
 
   // Authentication.
-  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, smtpHost)
+  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, GetViperVariable("emailhost"))
 
   t, _ := template.ParseFiles("templates/email_template.html")
 
