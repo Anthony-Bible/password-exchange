@@ -22,6 +22,7 @@ func  (msg *Message) Deliver() error {
   viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
   viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
   // Sender data.
+  host := GetViperVariable("host")
   password := GetViperVariable("emailpass")
   from := "server@password.exchange"
   AWS_ACCESS_KEY_ID := GetViperVariable("emailuser")

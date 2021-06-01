@@ -47,7 +47,8 @@ func send(w http.ResponseWriter, r *http.Request) {
     if randmError != nil {
       log.Fatal(randmError)
     }
-  msg.Content = msg.Content + string
+  
+  msg.Content = msg.Content + host + "encrypt/" + string
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
