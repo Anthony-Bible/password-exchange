@@ -47,16 +47,16 @@ func  (msg *Message) Deliver() error {
   mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
   body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
 
-  t.Execute(&body, struct {
-    Name    string
-    Message string
-  }{
-    Name:    "Puneet Singh",
-    Message: "This is a test message in a HTML template",
-  })
+  // t.Execute(&body, struct {
+  //   Name    string
+  //   Message string
+  // }{
+  //   Name:    "Puneet Singh",
+  //   Message: "This is a test message in a HTML template",
+  // })
 
   // Sending email.
-  err := smtp.SendMail(smtpHost, auth, from, to, body.Bytes())
+  err := smtp.SendMail(smtpHost, auth, from, to, msg.Content)
   fmt.Println(err)
   return err
 }
