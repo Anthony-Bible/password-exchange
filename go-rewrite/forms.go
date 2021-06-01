@@ -8,11 +8,6 @@ import (
     "github.com/bmizerany/pat"
 )
 
-// type Message struct {
-//     Email   string
-//     Subject string
-//     Message string
-// }
 
 func main() {
   mux := pat.New()
