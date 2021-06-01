@@ -54,9 +54,9 @@ func  (msg *Message) Deliver() error {
   //   Name:    "Puneet Singh",
   //   Message: "This is a test message in a HTML template",
   // })
-
+  body := []byte(msg.Content)
   // Sending email.
-  err := smtp.SendMail(smtpHost, auth, from, to, msg.Content)
+  err := smtp.SendMail(smtpHost, auth, from, to, body)
   fmt.Println(err)
   return err
 }
