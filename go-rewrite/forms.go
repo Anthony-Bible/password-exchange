@@ -50,7 +50,7 @@ func send(w http.ResponseWriter, r *http.Request) {
     }
   siteHost := GetViperVariable("host")
   fmt.Println(siteHost)
-  msg.Content = msg.Content + siteHost + "encrypt/" + string
+  msg.Content = msg.Content +  "\n" siteHost + "encrypt/" + string
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
 		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
