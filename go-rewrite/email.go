@@ -30,7 +30,7 @@ func  (msg *Message) Deliver() error {
   to := []string{
     msg.Email,
   }
-
+  fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
   smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
   // smtpPort := GetViperVariable("emailport")
