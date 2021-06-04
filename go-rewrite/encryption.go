@@ -3,6 +3,7 @@ package main
 import (
     "crypto/rand"
     "encoding/base64"
+    "github.com/rs/xid"
 )
 
 
@@ -26,4 +27,8 @@ func GenerateRandomBytes(n int) ([]byte, error) {
 func GenerateRandomString(s int) (string, error) {
     b, err := GenerateRandomBytes(s)
     return base64.URLEncoding.EncodeToString(b), err
+}
+func Generateid() (string) {
+    guid := xid.New()
+    return guid.String()
 }

@@ -6,6 +6,7 @@ import (
     "net/http"
     "log"
     "github.com/bmizerany/pat"
+    "fmt"
 )
 
 
@@ -14,6 +15,7 @@ func main() {
   mux.Get("/", http.HandlerFunc(home))
   mux.Post("/", http.HandlerFunc(send))
   mux.Get("/confirmation", http.HandlerFunc(confirmation))
+  mux.Get("/decrypt", http.HandlerFunc(decrypt))
 
   log.Println("Listening...")
   err := http.ListenAndServe(":3000", mux)
@@ -54,9 +56,12 @@ func send(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/confirmation", http.StatusSeeOther)
 
 }
-
+  
 func confirmation(w http.ResponseWriter, r *http.Request) {
   render(w, "templates/confirmation.html", nil)
+}
+func decrypt(w http.ResponseWriter, r *http.Request) {
+  fmt.Println(r)
 }
 func render(w http.ResponseWriter, filename string, data interface{}) {
   tmpl, err := template.ParseFiles(filename)
