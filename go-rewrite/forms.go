@@ -2,32 +2,32 @@
 package main
 
 import (
-    "html/template"
-    "net/http"
     "log"
-    "github.com/bmizerany/pat"
+    "github.com/gin-gonic/gin"
+    "net/http"
     "fmt"
 )
 
 
 func main() {
-  mux := pat.New()
-  mux.Get("/", http.HandlerFunc(home))
-  mux.Post("/", http.HandlerFunc(send))
-  mux.Get("/confirmation", http.HandlerFunc(confirmation))
-  mux.Get("/decrypt", http.HandlerFunc(decrypt))
-
+  router := gin.Default()
+  router.LoadHTMLGlob("templates/*")
+  router.GET("/", home)
+  router.POST("/", send)
+  router.GET("/confirmation", confirmation)
+  
   log.Println("Listening...")
-  err := http.ListenAndServe(":3000", mux)
-  if err != nil {
-    log.Fatal(err)
-  }
+  // if err != nil {
+  //   log.Fatal(err)
+  // }
+  router.Run(":8080")
+
 }
 
-func home(w http.ResponseWriter, r *http.Request) {
-  render(w, "templates/home.html", nil)
+func home(c *gin.Context) {
+  render(c, "home.html", nil)
 }
-func send(w http.ResponseWriter, r *http.Request) {
+func send(c *gin.Context) {
   // Step 1: Validate form
   // Step 2: Send message in an email
   // Step 3: Redirect to confirmation page
@@ -38,41 +38,51 @@ func send(w http.ResponseWriter, r *http.Request) {
   siteHost := GetViperVariable("host")
 
   msg := &Message{
-		Email:   r.PostFormValue("email"),
+		Email:   c.PostForm("email"),
 
   }
     msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + encryptionstring
 
 	if msg.Validate() == false {
-		render(w, "templates/home.html", msg)
+		render(c, "home.html", msg)
 		return
 	}
 
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
-		http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
+    c.String(http.StatusInternalServerError, fmt.Sprintf("something wwnet wrong: %s", err))
+
 		return
 	}
-	http.Redirect(w, r, "/confirmation", http.StatusSeeOther)
+	c.Redirect( http.StatusSeeOther, "/confirmation")
 
 }
   
-func confirmation(w http.ResponseWriter, r *http.Request) {
-  render(w, "templates/confirmation.html", nil)
+func confirmation(c *gin.Context) {
+  render(c, "confirmation.html", nil)
 }
-func decrypt(w http.ResponseWriter, r *http.Request) {
-  fmt.Println(r)
-}
-func render(w http.ResponseWriter, filename string, data interface{}) {
-  tmpl, err := template.ParseFiles(filename)
-  if err != nil {
-    log.Println(err)
-    http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
+func render(c *gin.Context, filename string, data interface{}) {
+
+    
+
+      // Call the HTML method of the Context to render a template
+      c.HTML(
+        // Set the HTTP status to 200 (OK)
+        http.StatusOK,
+        // Use the index.html template
+        filename,
+        // Pass the data that the page uses (in this case, 'title')
+        gin.H{
+            "title": "Home Page", 
+        })
+    
+    
+    
   }
 
-  if err := tmpl.Execute(w, data); err != nil {
-    log.Println(err)
-    http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
-  }
-}
+//   if err := tmpl.Execute(w, data); err != nil {
+//     log.Println(err)
+//     http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
+//   }
+// }
 
