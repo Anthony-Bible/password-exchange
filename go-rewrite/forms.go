@@ -15,7 +15,7 @@ func main() {
   router.GET("/", home)
   router.POST("/", send)
   router.GET("/confirmation", confirmation)
-  
+  router.NoRoute(failedtoFind)
   log.Println("Listening...")
   // if err != nil {
   //   log.Fatal(err)
@@ -26,6 +26,9 @@ func main() {
 
 func home(c *gin.Context) {
   render(c, "home.html", nil)
+}
+func failedtoFind(c *gin.Context) {
+  render(c, "404.html", nil)
 }
 func send(c *gin.Context) {
   // Step 1: Validate form
