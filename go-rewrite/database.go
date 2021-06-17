@@ -10,7 +10,7 @@ func Connect(){
 	dbpass := GetViperVariable("dbpass")
 	dbuser := GetViperVariable("dbuser")
 	dbname := GetViperVariable("dbname")
-	dbport := GetViperVariable("dbport")
+	// dbport := GetViperVariable("dbport")
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
 
 	fmt.Println("this is the db string")
