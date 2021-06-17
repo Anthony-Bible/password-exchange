@@ -6,19 +6,20 @@ import (
 	"fmt"
 )
 func Connect(){
-	dbhost := GetViperVariable("dbhost")
-	dbpass := GetViperVariable("dbpass")
-	dbuser := GetViperVariable("dbuser")
-	dbname := GetViperVariable("dbname")
-	dbport := GetViperVariable("dbport")
-	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ":" + dbport + ")/" + dbname
+	dbHost := GetViperVariable("dbhost")
+	dbPass := GetViperVariable("dbpass")
+	dbUser := GetViperVariable("dbuser")
+	dbName := GetViperVariable("dbname")
+	dbPort := GetViperVariable("dbport")
+	// dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ":" + dbport + ")/" + dbname
+	dbConnectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPass, dbName)
 	// id:password@tcp(your-amazonaws-uri.com:3306)/dbname
 	fmt.Println("this is the db string")
-	fmt.Print(dbstring)
-	fmt.Sprintf("this is the dbstring: %s", dbstring)
-	db, err := sql.Open("mysql", dbstring)
+	fmt.Print(dbConnectionString)
+	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
+	db, err := sql.Open("mysql", dbConnectionString)
 	if err != nil {
-		fmt.Sprintf("this is the dbstring: %s", dbstring)
+		fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 	}
 	defer db.Close()
