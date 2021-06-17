@@ -10,7 +10,7 @@ func Connect(){
 	dbpass := GetViperVariable("dbpass")
 	dbuser := GetViperVariable("dbuser")
 	dbname := GetViperVariable("dbname")
-	dbport := GetViperVariable("dbport")
+	// dbport := GetViperVariable("dbport")
 	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ")/" + dbname
 	fmt.Sprintf("this is the dbstring: %s", dbstring)
 	db, err := sql.Open("mysql", dbstring)
