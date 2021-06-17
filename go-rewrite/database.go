@@ -11,7 +11,10 @@ func Connect(){
 	dbuser := GetViperVariable("dbuser")
 	dbname := GetViperVariable("dbname")
 	// dbport := GetViperVariable("dbport")
-	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ")/" + dbname
+	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ":" + dbport + ")/" + dbname
+	// id:password@tcp(your-amazonaws-uri.com:3306)/dbname
+	fmt.Println("this is the db string")
+	fmt.Println(dbstring)
 	fmt.Sprintf("this is the dbstring: %s", dbstring)
 	db, err := sql.Open("mysql", dbstring)
 	if err != nil {
