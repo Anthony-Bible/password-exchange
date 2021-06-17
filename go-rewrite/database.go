@@ -12,7 +12,7 @@ func Connect(){
 	dbName := GetViperVariable("dbname")
 	dbPort := GetViperVariable("dbport")
 	// dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ":" + dbport + ")/" + dbname
-	dbConnectionString := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", dbHost, dbPort, dbUser, dbPass, dbName)
+	dbConnectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbHost, dbPort, dbName)
 	// id:password@tcp(your-amazonaws-uri.com:3306)/dbname
 	fmt.Println("this is the db string")
 	fmt.Print(dbConnectionString)
