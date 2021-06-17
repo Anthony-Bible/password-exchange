@@ -1,10 +1,10 @@
 From golang:1.16.5-alpine3.13
-ENV GODEBUG=netdns=go
+ENV GODEBUG=netdns=cgo
 #COPY go-rewrite /app
 #WORKDIR /app
 #RUN go mod download 
 #RUN go build /app
-
+RUN echo $GODEBUG
 
 WORKDIR /go/src/app
 COPY go-rewrite/ .
