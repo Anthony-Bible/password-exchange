@@ -15,8 +15,10 @@ func main() {
   router.GET("/", home)
   router.POST("/", send)
   router.GET("/confirmation", confirmation)
+  router.GET("/encrypt")
   router.NoRoute(failedtoFind)
   log.Println("Listening...")
+
   // if err != nil {
   //   log.Fatal(err)
   // }
@@ -39,7 +41,7 @@ func send(c *gin.Context) {
     log.Fatal(randmError)
   }
   siteHost := GetViperVariable("host")
-
+  Connect()
   msg := &Message{
 		Email:   c.PostForm("email"),
 
@@ -76,7 +78,7 @@ func render(c *gin.Context, filename string, data interface{}) {
         filename,
         // Pass the data that the page uses (in this case, 'title')
         gin.H{
-            "title": "Home Page", 
+            "title": "Password Exchange", 
         })
     
     
