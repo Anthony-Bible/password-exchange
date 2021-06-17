@@ -1,4 +1,4 @@
-FROM alpine:3.13.5 as gitclone
+FROM alpine:3.14.0 as gitclone
 RUN apk update && apk add git  
 RUN git clone https://github.com/Anthony-Bible/password-exchange.git /password-exchange 
 

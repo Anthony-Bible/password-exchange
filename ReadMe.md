@@ -14,6 +14,7 @@ You fill out the form with the neccessary information including yours and their 
 3. [planned] Get notifications of the following
    a. email opened, page visited, Page viewed
 3. [planned] Expire after 7 days or 1 hour after viewing
+4. 
    a. In the future this will be configurable
 
 
