@@ -17,7 +17,7 @@ func Connect(){
 	fmt.Print(dbConnectionString)
 	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
 	fmt.Printf(dbConnectionString)
-	db, err := sql.Open("mysql", connectionString)
+	db, err := sql.Open("mysql", dbConnectionString)
 	if err != nil {
 		// fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
