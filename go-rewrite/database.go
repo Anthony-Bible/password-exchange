@@ -15,6 +15,7 @@ func Connect(){
 	fmt.Sprintf("this is the dbstring: %s", dbstring)
 	db, err := sql.Open("mysql", dbstring)
 	if err != nil {
+		fmt.Sprintf("this is the dbstring: %s", dbstring)
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 	}
 	defer db.Close()
