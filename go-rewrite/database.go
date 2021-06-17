@@ -12,7 +12,7 @@ func Connect(){
 	dbname := GetViperVariable("dbname")
 	dbport := GetViperVariable("dbport")
 	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost +":" + dbport + ")/" +dbname
-	fmt.Println(dbstring)
+	fmt.Sprintf("this is the dbstring: %s", dbstring)
 	db, err := sql.Open("mysql", dbstring)
 	if err != nil {
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
