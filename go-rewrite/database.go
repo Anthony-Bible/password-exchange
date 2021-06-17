@@ -14,7 +14,7 @@ func Connect(){
 	dbstring := dbuser + ":" + dbpass + "@tcp("  + dbhost  + ":" + dbport + ")/" + dbname
 	// id:password@tcp(your-amazonaws-uri.com:3306)/dbname
 	fmt.Println("this is the db string")
-	fmt.Printt(dbstring)
+	fmt.Print(dbstring)
 	fmt.Sprintf("this is the dbstring: %s", dbstring)
 	db, err := sql.Open("mysql", dbstring)
 	if err != nil {
