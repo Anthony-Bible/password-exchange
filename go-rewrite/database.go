@@ -14,6 +14,7 @@ func Connect(){
 	// dbport := GetViperVariable("dbport")	
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
 	fmt.Println(net.LookupHost(dbhost))
+	fmt.Println(net.LookupHost("database-1.cyhholo0eone.us-west-2.rds.amazonaws.com"))
 	fmt.Println("this is the db string")
 	fmt.Print(dbConnectionString)
 	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
