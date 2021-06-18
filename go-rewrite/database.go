@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
+	"net"
 )
 func Connect(){
 	dbhost := GetViperVariable("dbhost")
@@ -12,7 +13,7 @@ func Connect(){
 	dbname := GetViperVariable("dbname")
 	// dbport := GetViperVariable("dbport")
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
-
+	LookupHost(dbhst)
 	fmt.Println("this is the db string")
 	fmt.Print(dbConnectionString)
 	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
