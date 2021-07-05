@@ -13,7 +13,7 @@ type Message struct {
   OtherFirstName string
   OtherLastName string
   OtherEmail string
-  msg.Uniqueid
+  Uniqueid string
   Content string
   Errors  map[string]string
 }

@@ -40,9 +40,7 @@ func Connect()  (db *sql.DB) {
 
 func Insert(msgEncrypted *Message) {
     db := Connect()
-
-        name := r.FormValue("name")
-        city := r.FormValue("city")
+	
         _, err := db.exec("INSERT INTO messages(firstname, lastname, other_firstname, other_lastname, message, email, other_email, uniqueid) VALUES(?,?,?,?,?,?,?,?)", msgEncryptedEncrypted.Firstname,msgEncrypted.Lastname,msgEncrypted.OtherFirstName,msgEncrypted.Content,msgEncrypted.Email,msgEncrypted.OtherEmail,msgEncrypted.Uniqueid)
         if err != nil {
             panic(err.Error())
