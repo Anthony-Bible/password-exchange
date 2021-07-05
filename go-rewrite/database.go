@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
-	"net"
 )
 func Connect()  (db *sql.DB) {
 	dbhost := GetViperVariable("dbhost")
@@ -22,10 +21,10 @@ func Connect()  (db *sql.DB) {
 	return db
 }
 
-func Select(id string){
+func Select(id string	){
 	dbconn=Connect()
 	id := 1
-    var col string	
+	
     sqlStatement := `SELECT * FROM my_table WHERE id=$1`
     row := db.QueryRow(sqlStatement, id)
     err := row.Scan(&col)

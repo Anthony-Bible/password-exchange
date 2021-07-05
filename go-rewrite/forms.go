@@ -45,12 +45,12 @@ func send(c *gin.Context) {
   siteHost := GetViperVariable("host")
   Connect()
   msgEncrypted := &Message{
-		Email:   Encrypt(c.PostForm("email"), encryptionstring)
-    FirstName: Encrypt(c.PostForm("firstname"), encryptionstring)
-    OtherFirstName: Encrypt(c.PostForm("other_firstname"), encryptionstring)
-    OtherLastName: Encrypt(c.PostForm("other_lastname"), encryptionstring)
-    OtherEmail: Encrypt(c.PostForm("other_email"), encryptionstring)
-    Uniqueid: guid.String()
+		Email:   Encrypt(c.PostForm("email"), encryptionstring),
+    FirstName: Encrypt(c.PostForm("firstname"), encryptionstring),
+    OtherFirstName: Encrypt(c.PostForm("other_firstname"), encryptionstring),
+    OtherLastName: Encrypt(c.PostForm("other_lastname"), encryptionstring),
+    OtherEmail: Encrypt(c.PostForm("other_email"), encryptionstring),
+    Uniqueid: guid.String(),
   }
   msg := &Message{
     c.PostForm("email"),
