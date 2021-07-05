@@ -37,7 +37,7 @@ func Generateid() (string) {
     guid := xid.New()
     return guid.String()
 }
-func Encrypt(plaintext []byte, key *[32]byte) (ciphertext []byte, err error) {
+func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext []byte, err error) {
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err
