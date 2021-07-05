@@ -21,21 +21,21 @@ func Connect()  (db *sql.DB) {
 	return db
 }
 
-func Select(id string	){
-	dbconn=Connect()
-	id := 1
+// func Select(id string	){
+// 	dbconn=Connect()
+// 	id := 1
 	
-    sqlStatement := `SELECT * FROM my_table WHERE id=$1`
-    row := db.QueryRow(sqlStatement, id)
-    err := row.Scan(&col)
-    if err != nil {
-      if err == sql.ErrNoRows {
-          fmt.Println("Zero rows found")
-      } else {
-          panic(err)
-      }
-    }
-}
+//     sqlStatement := `SELECT * FROM my_table WHERE id=$1`
+//     row := db.QueryRow(sqlStatement, id)
+//     err := row.Scan(&col)
+//     if err != nil {
+//       if err == sql.ErrNoRows {
+//           fmt.Println("Zero rows found")
+//       } else {
+//           panic(err)
+//       }
+//     }
+// }
 
 
 func Insert(msgEncrypted *Message) {
