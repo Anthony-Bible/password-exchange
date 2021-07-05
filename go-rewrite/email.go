@@ -14,7 +14,7 @@ func GetViperVariable(envname string) string {
       viperReturn := viper.GetString(envname)
       return viperReturn
     }else{
-      panic(fmt.Sprintf("Environment variable not set %s", envname))
+      panic(fmt.Sprintf("Environment  variable not set %s", envname))
     }
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)

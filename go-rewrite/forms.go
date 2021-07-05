@@ -6,6 +6,7 @@ import (
     "github.com/gin-gonic/gin"
     "net/http"
     "fmt"
+    "github.com/rs/xid"
 )
 
 
@@ -40,18 +41,35 @@ func send(c *gin.Context) {
   if randmError != nil {
     log.Fatal(randmError)
   }
+  guid := xid.New()
   siteHost := GetViperVariable("host")
   Connect()
+  msgEncrypted := &Message{
+		Email:   Encrypt(c.PostForm("email"), encryptionstring)
+    FirstName: Encrypt(c.PostForm("firstname"), encryptionstring)
+    OtherFirstName: Encrypt(c.PostForm("other_firstname"), encryptionstring)
+    OtherLastName: Encrypt(c.PostForm("other_lastname"), encryptionstring)
+    OtherEmail: Encrypt(c.PostForm("other_email"), encryptionstring)
+    Uniqueid: guid.String()
+  }
   msg := &Message{
-		Email:   c.PostForm("email"),
+    c.PostForm("email"),
+    c.PostForm("firstname"),
+    c.PostForm("other_firstname"),
+    c.PostForm("other_lastname"),
+    c.PostForm("other_email"),
 
   }
-    msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + encryptionstring
+  
+  
+
 
 	if msg.Validate() == false {
 		render(c, "home.html", msg)
 		return
 	}
+  msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + encryptionstring
+  Insert(msgEncrypted)
 
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)

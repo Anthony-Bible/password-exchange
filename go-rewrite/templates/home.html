@@ -20,8 +20,8 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label for="form_namea">Firstname *</label>
-                    <input id="form_name" type="text" name="name" class="form-control" placeholder="Please enter your name*" required="required" data-error="Firstname is required.">
+                    <label for="firstname">Firstname *</label>
+                    <input id="firstname" type="text" name="name" class="form-control" placeholder="Please enter your name*" required="required" data-error="Firstname is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
@@ -30,8 +30,8 @@
                   {{ with .Errors.Email }}
                   <p class="error">{{ . }}</p>
                   {{ end }}
-                    <label for="form_lastname">Email *</label>
-                    <input id="form_email" type="email" name="email" class="form-control" placeholder="Please enter your email *" required="required" data-error="email is required.">
+                    <label for="email">Email *</label>
+                    <input id="email" type="email" name="email" class="form-control" placeholder="Please enter your email"  data-error="email is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
@@ -39,22 +39,22 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="form-group">
-                    <label for="form_other_firstname">Their Firstname</label>
-                    <input id="form_other_firstname" type="text" name="other_firstname" class="form-control" placeholder="Please enter their firstname*" required="required" data-error="Valid firstname is required.">
+                    <label for="other_firstname">Their Firstname</label>
+                    <input id="other_firstname" type="text" name="other_firstname" class="form-control" placeholder="Please enter their firstname*" required="required" data-error="Valid firstname is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="form-group">
-                    <label for="form_other_lastname">Their lastnamae</label>
-                    <input id="form_other_lastname" type="text" name="other_lastname" class="form-control" placeholder="Please enter their lastname*" required="required" data-error="Valid last is required.">
+                    <label for="other_lastname">Their lastnamae</label>
+                    <input id="other_lastname" type="text" name="other_lastname" class="form-control" placeholder="Please enter their lastname*" required="required" data-error="Valid last is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="form-group">
-                    <label for="form_other_email">Their email</label>
-                    <input id="form_other_email" type="email" name="other_email" class="form-control" placeholder="Please enter their Email*" required="required" data-error="Valid Email is required.">
+                    <label for="other_email">Their email</label>
+                    <input id="other_email" type="email" name="other_email" class="form-control" placeholder="Please enter their Email*" required="required" data-error="Valid Email is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>

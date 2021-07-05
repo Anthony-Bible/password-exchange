@@ -9,6 +9,11 @@ var rxEmail = regexp.MustCompile(".+@.+\\..+")
 
 type Message struct {
   Email   string
+  FirstName string
+  OtherFirstName string
+  OtherLastName string
+  OtherEmail string
+  msg.Uniqueid
   Content string
   Errors  map[string]string
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 )
-func Connect(){
+func Connect()  (db *sql.DB) {
 	dbhost := GetViperVariable("dbhost")
 	dbpass := GetViperVariable("dbpass")
 	dbuser := GetViperVariable("dbuser")
@@ -19,9 +19,33 @@ func Connect(){
 	if err != nil {
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 	}
-	defer db.Close()
-	err = db.Ping()
+	return db
+}
+
+func Select(id string, database){
+	dbconn=Connect()
+	id := 1
+    var col string	
+    sqlStatement := `SELECT * FROM my_table WHERE id=$1`
+    row := db.QueryRow(sqlStatement, id)
+    err := row.Scan(&col)
     if err != nil {
-      panic(err.Error()) // proper error handling instead of panic in your app
-   }
+      if err == sql.ErrNoRows {
+          fmt.Println("Zero rows found")
+      } else {
+          panic(err)
+      }
+    }
+}
+
+
+func Insert(msgEncrypted *Message) {
+    db := Connect()
+
+        name := r.FormValue("name")
+        city := r.FormValue("city")
+        _, err := db.exec("INSERT INTO messages(firstname, lastname, other_firstname, other_lastname, message, email, other_email, uniqueid) VALUES(?,?,?,?,?,?,?,?)", msgEncryptedEncrypted.Firstname,msgEncrypted.Lastname,msgEncrypted.OtherFirstName,msgEncrypted.Content,msgEncrypted.Email,msgEncrypted.OtherEmail,msgEncrypted.Uniqueid)
+        if err != nil {
+            panic(err.Error())
+        }
 }
