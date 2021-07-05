@@ -22,7 +22,7 @@ func Connect()  (db *sql.DB) {
 	return db
 }
 
-func Select(id string, database){
+func Select(id string){
 	dbconn=Connect()
 	id := 1
     var col string	
