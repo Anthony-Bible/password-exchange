@@ -1,4 +1,4 @@
-From golang:1.16.5-alpine3.13
+From golang:1.16.7-alpine3.13
 ENV GODEBUG=netdns=go+2
 #COPY go-rewrite /app
 #WORKDIR /app
