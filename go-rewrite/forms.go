@@ -43,17 +43,17 @@ func send(c *gin.Context) {
   fmt.Printf("type of postform email: %T\n", c.PostForm("email"))
 
   msgEncrypted := &Message{
-		Email:   MessageEncrypt([]byte(c.PostForm("email")), encryptionstring),
-    FirstName: MessageEncrypt([]byte(c.PostForm("firstname")), encryptionstring),
-    OtherFirstName: MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionstring),
-    OtherLastName: MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionstring),
-    OtherEmail: MessageEncrypt([]byte(c.PostForm("other_email")), encryptionstring),
+		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionstring)),
+    FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionstring)),
+    OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionstring)),
+    OtherLastName: string(MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionstring)),
+    OtherEmail: string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionstring)),
     Uniqueid: guid.String(),
   }
   msg := &MessagePost{
-    Email: c.PostForm("email"),
+    Email: []string{c.PostForm("email")},
     FirstName: c.PostForm("firstname"),
-    OtherFirstname: c.PostForm("other_firstname"),
+    OtherFirstName: c.PostForm("other_firstname"),
     OtherLastName: c.PostForm("other_lastname"),
     OtherEmail: c.PostForm("other_email"),
 
@@ -66,7 +66,7 @@ func send(c *gin.Context) {
 		render(c, "home.html", msg)
 		return
 	}
-  msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + encryptionstring
+  msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:])
   Insert(msgEncrypted)
   fmt.Sprintf("this is the msgEncrypted: %s", msgEncrypted)
 

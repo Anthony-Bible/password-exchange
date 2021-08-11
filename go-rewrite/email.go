@@ -31,7 +31,7 @@ func  (msg *MessagePost) Deliver() error {
   AWS_ACCESS_KEY_ID := GetViperVariable("emailuser")
 
   // Receiver email address.
-  to := []string(string{msg.Email})
+  to := msg.Email
   fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
   smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")

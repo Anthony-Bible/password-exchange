@@ -18,7 +18,7 @@ type Message struct {
   Errors  map[string]string
 }
 type MessagePost struct {
-  Email []byte
+  Email []string
   FirstName string
   OtherFirstName string
   OtherLastName string
@@ -30,7 +30,7 @@ type MessagePost struct {
 func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)
 
-  match := rxEmail.Match([]byte(msg.Email))
+  match := rxEmail.Match([]byte(strings.Join(msg.Email,"")))
   if match == false {
     msg.Errors["Email"] = "Please enter a valid email address"
   }
