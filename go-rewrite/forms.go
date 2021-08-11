@@ -37,27 +37,25 @@ func send(c *gin.Context) {
   // Step 1: Validate form
   // Step 2: Send message in an email
   // Step 3: Redirect to confirmation page
-  encryptionstring, randmError := GenerateRandomString(32)
-  if randmError != nil {
-    log.Fatal(randmError)
-  }
+  encryptionstring := GenerateRandomString()
   guid := xid.New()
   siteHost := GetViperVariable("host")
-  Connect()
+  fmt.Printf("type of postform email: %T\n", c.PostForm("email"))
+
   msgEncrypted := &Message{
-		Email:   MessageEncrypt(c.PostForm("email"), encryptionstring),
-    FirstName: MessageEncrypt(c.PostForm("firstname"), encryptionstring),
-    OtherFirstName: MessageEncrypt(c.PostForm("other_firstname"), encryptionstring),
-    OtherLastName: MessageEncrypt(c.PostForm("other_lastname"), encryptionstring),
-    OtherEmail: MessageEncrypt(c.PostForm("other_email"), encryptionstring),
+		Email:   MessageEncrypt([]byte(c.PostForm("email")), encryptionstring),
+    FirstName: MessageEncrypt([]byte(c.PostForm("firstname")), encryptionstring),
+    OtherFirstName: MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionstring),
+    OtherLastName: MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionstring),
+    OtherEmail: MessageEncrypt([]byte(c.PostForm("other_email")), encryptionstring),
     Uniqueid: guid.String(),
   }
-  msg := &Message{
-    c.PostForm("email"),
-    c.PostForm("firstname"),
-    c.PostForm("other_firstname"),
-    c.PostForm("other_lastname"),
-    c.PostForm("other_email"),
+  msg := &MessagePost{
+    Email: c.PostForm("email"),
+    FirstName: c.PostForm("firstname"),
+    OtherFirstname: c.PostForm("other_firstname"),
+    OtherLastName: c.PostForm("other_lastname"),
+    OtherEmail: c.PostForm("other_email"),
 
   }
   
@@ -70,10 +68,12 @@ func send(c *gin.Context) {
 	}
   msg.Content = "please click this link to get your encrypted message" +  "\n" + siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + encryptionstring
   Insert(msgEncrypted)
+  fmt.Sprintf("this is the msgEncrypted: %s", msgEncrypted)
+
 
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
-    c.String(http.StatusInternalServerError, fmt.Sprintf("something wwnet wrong: %s", err))
+    c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 
 		return
 	}
