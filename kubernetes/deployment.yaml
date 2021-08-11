@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:29b7798c1a85eda4157f1fd223e1670d351183c6bef0a9b854df68c51b8673cb
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:b95ed9b6714fae5653bda6afb8da367b862c1ce4e3b244c3838ad3cac71e86f5
         env:
           - name: PASSWORDEXCHANGE_EMAILUSER
             valueFrom: 
