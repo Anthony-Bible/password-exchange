@@ -21,36 +21,8 @@ spec:
         iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
     spec:
       containers:
-      - name: site-fpm
-        image: gimpyb/myphp-container:0.0.7
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "10m"
-        volumeMounts:
-        - name: php-socket
-          mountPath: /sock
-        - name: html
-          mountPath: "/var/www/html"
-        - name: php-config 
-          mountPath: "/usr/local/etc/php-fpm.d" 
-      - name: nginx
-        image: nginx:1.21.0-alpine
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "10m"
-        ports:
-        - containerPort: 80
-        volumeMounts:
-        - name: php-socket
-          mountPath: /sock
-        - name: html
-          mountPath: /var/www/html
-        - name: nginx-config
-          mountPath: /etc/nginx
       - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:43b51bea548badd91092af4e56b74ac8893e5ef103d6712164f81840e2c65ce7
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod@sha256:29b7798c1a85eda4157f1fd223e1670d351183c6bef0a9b854df68c51b8673cb
         env:
           - name: PASSWORDEXCHANGE_EMAILUSER
             valueFrom: 
@@ -62,7 +34,47 @@ spec:
               secretKeyRef:
                 name: test-secret
                 key: PASSWORDEXCHANGE_EMAILPASS
-              
+
+          - name: PASSWORDEXCHANGE_DBPORT
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_DBPORT
+          - name: PASSWORDEXCHANGE_DBNAME
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_DBNAME
+          - name: PASSWORDEXCHANGE_DBPASS
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_DBPASS
+          - name: PASSWORDEXCHANGE_DBUSER
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_DBUSER
+          - name: PASSWORDEXCHANGE_DBHOST
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_DBHOST
+          - name: PASSWORDEXCHANGE_EMAILHOST
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_EMAILHOST
+          - name: PASSWORDEXCHANGE_HOST
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_HOST
+          - name: PASSWORDEXCHANGE_EMAILPORT
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_EMAILPORT
         volumeMounts:
         - name: html
           mountPath: /code
@@ -93,8 +105,8 @@ spec:
   selector:
     app: passwordexchange 
   ports:
-    - name: http2
+    - name: http
       port: 80
-      targetPort: 80  
+      targetPort: 8080
       
 ---

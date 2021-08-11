@@ -22,7 +22,7 @@ func GetViperVariable(envname string) string {
 
 
 }
-func  (msg *Message) Deliver() error {
+func  (msg *MessagePost) Deliver() error {
    //set neccessary info for environment variables
 
   // Sender data.
@@ -31,7 +31,7 @@ func  (msg *Message) Deliver() error {
   AWS_ACCESS_KEY_ID := GetViperVariable("emailuser")
 
   // Receiver email address.
-  to := []string{msg.Email}
+  to := []string(string{msg.Email})
   fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
   smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")

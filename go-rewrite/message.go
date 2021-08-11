@@ -8,7 +8,7 @@ import (
 var rxEmail = regexp.MustCompile(".+@.+\\..+")
 
 type Message struct {
-  Email   string
+  Email string
   FirstName string
   OtherFirstName string
   OtherLastName string
@@ -17,8 +17,17 @@ type Message struct {
   Content string
   Errors  map[string]string
 }
-
-func (msg *Message) Validate() bool {
+type MessagePost struct {
+  Email []byte
+  FirstName string
+  OtherFirstName string
+  OtherLastName string
+  OtherEmail string
+  Uniqueid string
+  Content string
+  Errors  map[string]string
+}
+func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)
 
   match := rxEmail.Match([]byte(msg.Email))
