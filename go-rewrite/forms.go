@@ -50,6 +50,7 @@ func send(c *gin.Context) {
     OtherEmail: string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionstring)),
     Uniqueid: guid.String(),
   }
+  fmt.Printf("this is the encrypted Message %s", msgEncrypted)
   msg := &MessagePost{
     Email: []string{c.PostForm("email")},
     FirstName: c.PostForm("firstname"),
