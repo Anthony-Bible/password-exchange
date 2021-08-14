@@ -60,7 +60,7 @@ func send(c *gin.Context) {
 
   }
   
-  fmt.Printf("This is the unecrypted message %s" %msg )
+  fmt.Printf("This is the unecrypted message %s", msg )
 
 
 	if msg.Validate() == false {
