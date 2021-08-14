@@ -60,10 +60,11 @@ func send(c *gin.Context) {
 
   }
   
-  
+  fmt.Printf("This is the unecrypted message %s" %msg )
 
 
 	if msg.Validate() == false {
+    fmt.Println("unvalidated")
 		render(c, "home.html", msg)
 		return
 	}
