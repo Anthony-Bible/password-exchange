@@ -65,6 +65,7 @@ func send(c *gin.Context) {
 
 	if msg.Validate() == false {
     fmt.Println("unvalidated")
+    fmt.Println(msg.Errors)
 		render(c, "home.html", msg)
 		return
 	}
