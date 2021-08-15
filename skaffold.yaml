@@ -1,0 +1,14 @@
+apiVersion: skaffold/v2beta21
+kind: Config
+metadata:
+  name: password.exchange
+build:
+  artifacts:
+  - image: ghcr.io/anthony-bible/passwordexchange-container-prod
+    docker:
+      dockerfile: Dockerfile
+deploy:
+  kubectl:
+    manifests:
+    - kubernetes/deployment.yaml
+
