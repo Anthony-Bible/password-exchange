@@ -50,10 +50,10 @@ func  (msg *MessagePost) Deliver() error {
   body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
   
   t.Execute(&body, struct {
-    Name    string
+    Body    string
     Message string
   }{
-    Name:    "Test Name",
+    Body:    fmt.Sprintf("Hi %s, \n %s used our service at https://passsword.exchange to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
     Message:  msg.Content,
   })
 

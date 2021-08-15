@@ -3,6 +3,7 @@ package main
 import (
     "crypto/rand"
     "crypto/aes"
+	"encoding/base64"
     "github.com/rs/xid"
 	"crypto/cipher"
 	"errors"
@@ -15,20 +16,7 @@ import (
 // number generator fails to function correctly, in which
 // case the caller should not continue.
 
-func GenerateRandomBytes(n int) ([]byte, error) {
-    b := make([]byte, n)
-    _, err := rand.Read(b)
-    // Note that err == nil only if we read len(b) bytes.
-    if err != nil {
-        return nil, err
-    }
-
-    return b, nil
-}
-
-// GenerateRandomString returns a URL-safe, base64 encoded
-// securely generated random string.
-func GenerateRandomString() *[32]byte {
+func GenerateRandomBytes(n int) (*[32]byte) {
 	key := [32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
@@ -36,11 +24,21 @@ func GenerateRandomString() *[32]byte {
 	}
 	return &key
 }
+
+
+// GenerateRandomString returns a URL-safe, base64 encoded
+// securely generated random string.
+func GenerateRandomString(s int) (*[32]byte, string) {
+    b := GenerateRandomBytes(s)
+    return b, base64.URLEncoding.EncodeToString((b[:]))
+}
+
 func Generateid() (string) {
     guid := xid.New()
     return guid.String()
 }
-func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext []byte,) {
+func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext string) {
+
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		panic(err)
@@ -57,10 +55,10 @@ func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext []byte,) {
 		panic(err)
 	}
 
-	return gcm.Seal(nonce, nonce, plaintext, nil)
+	return base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
 }
 
-func Decrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err error) {
+func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err

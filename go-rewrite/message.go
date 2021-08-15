@@ -26,6 +26,7 @@ type MessagePost struct {
   Uniqueid string
   Content string
   Errors  map[string]string
+  Url string
 }
 func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)

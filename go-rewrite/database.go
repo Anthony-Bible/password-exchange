@@ -38,11 +38,21 @@ func Connect()  (db *sql.DB) {
 // }
 
 
+func Select(uuid string)(msgEncrypted MessagePost){
+	db := Connect()
+	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
+        
+	if err != nil {
+		panic(err.Error())
+  	}
+   return msgEncrypted
+}
 func Insert(msgEncrypted *Message) {
     db := Connect()
 
-        _, err := db.Exec("INSERT INTO messages(firstname, other_firstname, other_lastname, message, email, other_email, uniqueid) VALUES(?,?,?,?,?,?,?,?)", msgEncrypted.FirstName,msgEncrypted.OtherFirstName,msgEncrypted.Content,msgEncrypted.Email,msgEncrypted.OtherEmail,msgEncrypted.Uniqueid)
+        _, err := db.Exec("INSERT INTO messages(firstname, other_firstname, other_lastname, message, email, other_email, uniqueid) VALUES(?,?,?,?,?,?,?)", msgEncrypted.FirstName,msgEncrypted.OtherFirstName,msgEncrypted.OtherLastName,msgEncrypted.Content,msgEncrypted.Email,msgEncrypted.OtherEmail,msgEncrypted.Uniqueid)
         if err != nil {
             panic(err.Error())
         }
+		
 }
