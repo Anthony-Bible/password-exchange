@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
-//GetQueueUrl converts an ARN to a queue url
+//GetQueueURL converts an ARN to a queue url
 func GetQueueURL(sess *session.Session, queue *string) (*sqs.GetQueueUrlOutput, error) {
     // Create an SQS service client
     svc := sqs.New(sess)
@@ -21,7 +21,7 @@ func GetQueueURL(sess *session.Session, queue *string) (*sqs.GetQueueUrlOutput, 
 
     return result, nil
 }
-//SendSqs uses the aws sdk to send a message to SQS
+//SendSQS uses the aws sdk to send a message to SQS
 func SendSQS(session *session.Session, destination string, message string) {
 	svc := sqs.New(session, nil)
 

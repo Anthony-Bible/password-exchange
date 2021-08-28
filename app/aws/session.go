@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
-//Buildsession builds an aws session
+//BuildSession builds an aws session
 func BuildSession() *session.Session {
 
 
