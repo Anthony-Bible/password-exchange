@@ -8,6 +8,7 @@ import (
 	"crypto/cipher"
 	"errors"
 	"io"
+	"aws/main"
 )
 
 
@@ -54,8 +55,11 @@ func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext string) {
 	if err != nil {
 		panic(err)
 	}
-
-	return base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
+	urlEncodedString :=base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
+    sess := BuildSession()
+	queueurl := GetQueueURL(sess, 'arn:aws:sns:us-west-2:842805395457:my-test.fifo')
+	SendSQS(sess, queueurl, urlEncodedString)
+	return urlEncodedString
 }
 
 func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err error) {
