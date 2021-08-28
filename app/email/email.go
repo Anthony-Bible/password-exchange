@@ -1,46 +1,32 @@
-package main
+package email
 
 import (
   "bytes"
   "fmt"
   "net/smtp"
   "text/template"
-  "github.com/spf13/viper"
+  "password.exchange/commons"   
 )
-func GetViperVariable(envname string) string {
-    viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
-    viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
-    if viper.IsSet(envname){
-      viperReturn := viper.GetString(envname)
-      return viperReturn
-    }else{
-      panic(fmt.Sprintf("Environment  variable not set %s", envname))
-    }
-    // if !ok {
-    //  log.Fatalf("Invalid type assertion for %s", envname)
-    // }
 
-
-}
 func  (msg *MessagePost) Deliver() error {
    //set neccessary info for environment variables
 
   // Sender data.
-  password := GetViperVariable("emailpass")
+  password := commons.GetViperVariable("emailpass")
   from := "server@password.exchange"
-  AWS_ACCESS_KEY_ID := GetViperVariable("emailuser")
+  AWS_ACCESS_KEY_ID := commons.GetViperVariable("emailuser")
 
   // Receiver email address.
   to := msg.Email
-  fmt.Println(GetViperVariable("emailhost"))
+  fmt.Println(commons.GetViperVariable("emailhost"))
   // smtp server configuration.
-  smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
-  // smtpPort := GetViperVariable("emailport")
+  smtpHost := commons.GetViperVariable("emailhost") + ":" + commons.GetViperVariable("emailport")
+  // smtpPort := commons.GetViperVariable("emailport")
   fmt.Println(smtpHost)
 
 
   // Authentication.
-  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, GetViperVariable("emailhost"))
+  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, commons.GetViperVariable("emailhost"))
 
   t, _ := template.ParseFiles("templates/email_template.html")
 

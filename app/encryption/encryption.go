@@ -8,7 +8,8 @@ import (
 	"crypto/cipher"
 	"errors"
 	"io"
-	"aws/main"
+	"fmt"
+	b "password.exchange/aws"
 )
 
 
@@ -55,10 +56,7 @@ func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext string) {
 	if err != nil {
 		panic(err)
 	}
-	urlEncodedString :=base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
-    sess := BuildSession()
-	queueurl := GetQueueURL(sess, 'arn:aws:sns:us-west-2:842805395457:my-test.fifo')
-	SendSQS(sess, queueurl, urlEncodedString)
+	urlEncodedString := base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
 	return urlEncodedString
 }
 
@@ -82,4 +80,23 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 		ciphertext[gcm.NonceSize():],
 		nil,
 	)
+}
+
+
+func main() {
+	msgEncrypted := &Message{
+	Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
+    FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
+    OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),
+    OtherLastName: string(MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionbytes)),
+    OtherEmail: string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionbytes)),
+    Content: string(MessageEncrypt([]byte(c.PostForm("content")), encryptionbytes)),
+    Uniqueid: guid.String(),
+  }
+  sess := b.BuildSession()
+  // queueurl, _ := b.GetQueueURL(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo")
+  fmt.Println(len(urlEncodedString))
+  fmt.Println(urlEncodedString)
+
+  b.SendSNS(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo", msgEncrypted)
 }
