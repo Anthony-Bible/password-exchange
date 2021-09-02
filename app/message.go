@@ -22,7 +22,7 @@ type MessagePost struct {
   FirstName string
   OtherFirstName string
   OtherLastName string
-  OtherEmail string
+  OtherEmail []string
   Uniqueid string
   Content string
   Errors  map[string]string

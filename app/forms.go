@@ -86,7 +86,7 @@ func send(c *gin.Context) {
     FirstName: c.PostForm("firstname"),
     OtherFirstName: c.PostForm("other_firstname"),
     OtherLastName: c.PostForm("other_lastname"),
-    OtherEmail: c.PostForm("other_email"),
+    OtherEmail: []string{c.PostForm("other_email")},
     Content: c.PostForm("content"),
     Url: siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
   }
