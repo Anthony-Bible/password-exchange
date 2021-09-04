@@ -1,4 +1,4 @@
-From golang:1.16.7-alpine3.13
+From golang:1.17.0-alpine3.13
 
 #COPY go-rewrite /app
 #WORKDIR /app
