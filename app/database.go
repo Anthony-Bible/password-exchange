@@ -37,7 +37,7 @@ func Connect()  (db *sql.DB) {
 //     }
 // }
 
-
+//Get the information based on the uuid from the url
 func Select(uuid string)(msgEncrypted Message){
 	db := Connect()
 	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,email,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.Email,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
@@ -47,6 +47,7 @@ func Select(uuid string)(msgEncrypted Message){
   	}
    return msgEncrypted
 }
+//Insert encrypted information into database (this is base64 encoded)
 func Insert(msgEncrypted *Message) {
     db := Connect()
 
