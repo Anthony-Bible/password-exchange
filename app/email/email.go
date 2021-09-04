@@ -6,9 +6,10 @@ import (
   "net/smtp"
   "text/template"
   "password.exchange/commons"   
+  "password.exchange/message"
 )
 
-func  (msg *MessagePost) Deliver() error {
+func  Deliver(msg *message.MessagePost) error {
    //set neccessary info for environment variables
 
   // Sender data.

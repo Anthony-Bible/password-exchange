@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
+	"password.exchange/commons"
 )
 func Connect()  (db *sql.DB) {
-	dbhost := GetViperVariable("dbhost")
-	dbpass := GetViperVariable("dbpass")
-	dbuser := GetViperVariable("dbuser")
-	dbname := GetViperVariable("dbname")
+	dbhost := commons.GetViperVariable("dbhost")
+	dbpass := commons.GetViperVariable("dbpass")
+	dbuser := commons.GetViperVariable("dbuser")
+	dbname := commons.GetViperVariable("dbname")
 	// dbport := GetViperVariable("dbport")	
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
 

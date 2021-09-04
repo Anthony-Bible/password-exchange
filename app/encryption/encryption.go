@@ -1,4 +1,4 @@
-package main
+package encryption
 
 import (
     "crypto/rand"
@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"fmt"
+	"password.exchange/message"
 	b "password.exchange/aws"
 )
 
@@ -84,7 +85,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 
 
 func main() {
-	msgEncrypted := &Message{
+	msgEncrypted := &message.Message{
 	Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
     FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
     OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),

@@ -8,6 +8,9 @@ import (
     "net/http"
     "fmt"
     "github.com/rs/xid"
+    "password.exchange/encryption"
+    "password.exchange/message"
+    "password.exchange/commons"
 )
 
 type htmlHeaders struct{
@@ -70,7 +73,7 @@ func send(c *gin.Context) {
   // Step 3: Redirect to confirmation page
   encryptionbytes, encryptionstring := GenerateRandomString(32)
   guid := xid.New()
-  siteHost := GetViperVariable("host")
+  siteHost := commons.GetViperVariable("host")
   msgEncrypted := &Message{
 		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
     FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),

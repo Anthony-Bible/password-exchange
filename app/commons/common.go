@@ -1,9 +1,6 @@
 package commons
 import (
-	"bytes"
 	"fmt"
-	"net/smtp"
-	"text/template"
 	"github.com/spf13/viper"
   )
 func GetViperVariable(envname string) string {
