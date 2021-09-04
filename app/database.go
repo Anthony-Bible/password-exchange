@@ -11,7 +11,7 @@ func Connect()  (db *sql.DB) {
 	dbuser := GetViperVariable("dbuser")
 	dbname := GetViperVariable("dbname")
 	// dbport := GetViperVariable("dbport")	
-	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
+	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", dbuser, dbpass, dbhost, dbname)
 
 	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
 	db, err := sql.Open("mysql", dbConnectionString)
@@ -38,9 +38,9 @@ func Connect()  (db *sql.DB) {
 // }
 
 
-func Select(uuid string)(msgEncrypted MessagePost){
+func Select(uuid string)(msgEncrypted Message){
 	db := Connect()
-	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
+	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,email,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.Email,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
         
 	if err != nil {
 		panic(err.Error())
