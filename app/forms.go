@@ -23,7 +23,7 @@ func main() {
   router.GET("/", home)
   router.POST("/", send)
   router.GET("/confirmation", confirmation)
-  router.GET("/encrypt/:uuid/*key", displaydecrypted)
+  router.GET("/decrypt/:uuid/*key", displaydecrypted)
   router.NoRoute(failedtoFind)
   log.Println("Listening...")
 
@@ -88,7 +88,7 @@ func send(c *gin.Context) {
     OtherLastName: c.PostForm("other_lastname"),
     OtherEmail: []string{c.PostForm("other_email")},
     Content: c.PostForm("content"),
-    Url: siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+    Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
   }
 
 
