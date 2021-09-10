@@ -13,7 +13,7 @@ import (
 	"fmt"
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	"password.exchange/protos/encryption"
+	"password.exchange/protos/encryptionpb"
 	"google.golang.org/grpc"
 )
 
@@ -140,7 +140,7 @@ func main() {
 	fmt.Printf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
-	encryption.RegisterHelloServiceServer(s, &server{})
+	encryption.RegisterMessageServiceServer(s, &server{})
 
 	s.Serve(lis)
 }
