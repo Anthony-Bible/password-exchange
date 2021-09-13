@@ -27,6 +27,7 @@ type MessagePost struct {
   Content string
   Errors  map[string]string
   Url string
+  hidden string
 }
 func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)

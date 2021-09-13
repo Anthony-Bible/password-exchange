@@ -8,6 +8,7 @@ import (
     "net/http"
     "fmt"
     "github.com/rs/xid"
+    "strings"
 )
 
 type htmlHeaders struct{
@@ -89,6 +90,7 @@ func send(c *gin.Context) {
     OtherEmail: []string{c.PostForm("other_email")},
     Content: c.PostForm("content"),
     Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+    hidden: c.PostForm("other_information"),
   }
 
 
@@ -104,13 +106,14 @@ func send(c *gin.Context) {
 
   msg.Content = "please click this link to get your encrypted message" +  "\n <a href=\"" + msg.Url + "\"> here</a>"
   Insert(msgEncrypted)
-
+  if  len(strings.TrimSpace(msg.hidden)) ==0{
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
     c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 
 		return
 	}
+}
 	c.Redirect( http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url) )
 
 }
