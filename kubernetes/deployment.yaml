@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.11
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.12
         env:
           - name: PASSWORDEXCHANGE_EMAILUSER
             valueFrom: 
@@ -75,6 +75,18 @@ spec:
               secretKeyRef:
                 name: test-secret
                 key: PASSWORDEXCHANGE_EMAILPORT
+
+          - name: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+
+          - name: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
+            valueFrom: 
+              secretKeyRef:
+                name: test-secret
+                key: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
         volumeMounts:
         - name: html
           mountPath: /code

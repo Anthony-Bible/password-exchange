@@ -8,7 +8,9 @@ import (
     "net/http"
     "fmt"
     "github.com/rs/xid"
-    "strings"
+    "encoding/json"
+    "io/ioutil"
+    "net/url"
 )
 
 type htmlHeaders struct{
@@ -91,8 +93,8 @@ func send(c *gin.Context) {
     Content: c.PostForm("content"),
     Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
     hidden: c.PostForm("other_information"),
+    captcha: c.PostForm("h-captcha-response"),
   }
-
 
 	if msg.Validate() == false {
     fmt.Println("unvalidated")
@@ -106,7 +108,7 @@ func send(c *gin.Context) {
 
   msg.Content = "please click this link to get your encrypted message" +  "\n <a href=\"" + msg.Url + "\"> here</a>"
   Insert(msgEncrypted)
-  if  len(strings.TrimSpace(msg.hidden)) ==0{
+  if  checkBot(msg.captcha){
 	if err := msg.Deliver(); err != nil {
 		log.Println(err)
     c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
@@ -143,6 +145,38 @@ func render(c *gin.Context, filename string, data interface{}) {
     
     
   }
+  type test_struct struct {
+    Success bool `json:"success"`
+    Challenge_ts string `json:"challenge_ts"`
+    Hostname string `json:"hostname"`
+}
+func checkBot(hcaptchaResponse string) (returnstatus bool){
+  secret := GetViperVariable("hcaptcha_secret")
+  sitekey :=GetViperVariable("hcaptcha_sitekey")
+  u := make(url.Values)
+	u.Set("secret", secret)
+	u.Set("response", hcaptchaResponse)
+  u.Set("sitekey", sitekey)
+  response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
+
+if err != nil { 
+  log.Println("Something went wrong with hcaptcha")
+return false
+}
+	defer response.Body.Close()
+  body, err := ioutil.ReadAll(response.Body)
+  if err != nil {
+      panic(err)
+
+  }
+  var t test_struct
+  err = json.Unmarshal(body, &t)
+  if err != nil {
+      log.Println("Can't Unmarshal json")
+      return false 
+  }
+  return t.Success
+}
 
 //   if err := tmpl.Execute(w, data); err != nil {
 //     log.Println(err)

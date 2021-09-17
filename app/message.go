@@ -28,6 +28,7 @@ type MessagePost struct {
   Errors  map[string]string
   Url string
   hidden string
+  captcha string
 }
 func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)
