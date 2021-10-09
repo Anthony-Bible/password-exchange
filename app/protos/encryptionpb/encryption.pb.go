@@ -4,7 +4,7 @@
 // 	protoc        v3.15.8
 // source: encryption.proto
 
-package encryption
+package encryptionpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
