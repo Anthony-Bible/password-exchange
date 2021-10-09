@@ -37,10 +37,10 @@ func main() {
 }
 
 func home(c *gin.Context) {
-  render(c, "home.html", nil)
+  render(c, "home.html", 0, nil)
 }
 func failedtoFind(c *gin.Context) {
-  render(c, "404.html", nil)
+  render(c, "404.html", 404, nil)
 }
 func displaydecrypted(c *gin.Context) {
   uuid := c.Param("uuid")
@@ -65,7 +65,7 @@ func displaydecrypted(c *gin.Context) {
   }
   extraHeaders :=htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: msg.Content,}
 
-  render(c, "decryption.html", extraHeaders)
+  render(c, "decryption.html",0, extraHeaders)
 }
 func send(c *gin.Context) {
   // Step 1: Validate form
@@ -102,7 +102,7 @@ func send(c *gin.Context) {
     htmlHeaders :=htmlHeaders{
       Title: "Password Exchange",
     }
-		render(c, "home.html", htmlHeaders)
+		render(c, "home.html",0, htmlHeaders)
 		return
 	}
 
@@ -124,18 +124,20 @@ func confirmation(c *gin.Context) {
   content := c.Query("content")
   extraHeaders :=htmlHeaders{Title: "passwordExchange", Url: content,}
 
-  render(c, "confirmation.html", extraHeaders)
+  render(c, "confirmation.html", 0,extraHeaders)
 }
-func render(c *gin.Context, filename string, data interface{}) {
+func render(c *gin.Context, filename string, status int, data interface{}) {
 
     
-   
+       if status == 0{
+         status=200
+       }
 
       // Call the HTML method of the Context to render a template
       c.HTML(
         // Set the HTTP status to 200 (OK)
         //TODO: have this be settable
-        http.StatusOK,
+        status,
         // Use the index.html template
         filename,
         // Pass the data that the page uses (in this case, 'title')
