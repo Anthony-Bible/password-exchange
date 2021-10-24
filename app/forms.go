@@ -17,6 +17,7 @@ type htmlHeaders struct{
   Title string
   Url string
   DecryptedMessage string
+  Errors  map[string]string
   
 }
 func main() {
@@ -101,6 +102,7 @@ func send(c *gin.Context) {
     fmt.Println("errors: %s", msg.Errors)
     htmlHeaders :=htmlHeaders{
       Title: "Password Exchange",
+      Errors: msg.Errors,
     }
 		render(c, "home.html",500, htmlHeaders)
 		return
