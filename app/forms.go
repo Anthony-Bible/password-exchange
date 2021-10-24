@@ -102,7 +102,7 @@ func send(c *gin.Context) {
     htmlHeaders :=htmlHeaders{
       Title: "Password Exchange",
     }
-		render(c, "home.html",0, htmlHeaders)
+		render(c, "home.html",500, htmlHeaders)
 		return
 	}
 
