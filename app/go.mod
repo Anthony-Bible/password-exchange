@@ -11,7 +11,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/rs/xid v1.3.0
 	github.com/rs/zerolog v1.25.0
-	github.com/slack-go/slack v0.8.1
+	github.com/slack-go/slack v0.9.5
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/viper v1.8.1
 	github.com/ugorji/go v1.2.6 // indirect
