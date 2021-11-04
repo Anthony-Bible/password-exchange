@@ -6,10 +6,22 @@ import (
 	"fmt"
 )
 func Connect()  (db *sql.DB) {
-	dbhost := GetViperVariable("dbhost")
-	dbpass := GetViperVariable("dbpass")
-	dbuser := GetViperVariable("dbuser")
-	dbname := GetViperVariable("dbname")
+	dbhost,err := GetViperVariable("dbhost")
+	if err != nil {
+		panic(err)
+	}
+	dbpass,err := GetViperVariable("dbpass")
+	if err != nil {
+		panic(err)
+	}
+	dbuser,err := GetViperVariable("dbuser")
+	if err != nil {
+		panic(err)
+	}
+	dbname,err := GetViperVariable("dbname")
+	if err != nil {
+		panic(err)
+	}
 	// dbport := GetViperVariable("dbport")	
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", dbuser, dbpass, dbhost, dbname)
 

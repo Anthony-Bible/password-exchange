@@ -7,7 +7,7 @@ import (
     // "net/http"
     // "net/url"
     // "password.exchange/slackbot/drivers"
-    // "password.exchange/slackbot/controllers"
+    "password.exchange/slackbot/controllers"
     // "github.com/slack-go/slack/socketmode"
 )
 
@@ -27,6 +27,43 @@ func main() {
   
   
   }
+
+
+  func failedtoFind(c *gin.Context) {
+	render(c, "404.html", 404, nil)
+  }
+  
+  
+  func doAction(c *gin.Context) {
+	c.MultipartForm()
+	// for key, value := range c.Request.PostForm {
+	// 	log.Printf("%v = %v \n",key,value)
+	// }
+    controllers.SlashCommandHandler(c)
+  }
+
+
+  func render(c *gin.Context, filename string, status int, data interface{}) {
+
+    
+	if status == 0{
+	  status=200
+	}
+
+   // Call the HTML method of the Context to render a template
+   c.HTML(
+	 // Set the HTTP status to 200 (OK)
+	 //TODO: have this be settable
+	 status,
+	 // Use the index.html template
+	 filename,
+	 // Pass the data that the page uses (in this case, 'title')
+	 data,
+   )
+ 
+ 
+ 
+}
 // log.Info().Msg("connected to slack")
 // socketmodeHandler := socketmode.NewsSocketmodeHandler(client)
 // log.Info().Msg("Listening...")

@@ -1,20 +1,25 @@
 package main
 
 import (
+  "github.com/rs/zerolog/log"
   "bytes"
   "fmt"
+  "errors"
   "net/smtp"
   "text/template"
   "github.com/spf13/viper"
 )
-func GetViperVariable(envname string) string {
+func GetViperVariable(envname string) (string,error) {
     viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
     viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
     if viper.IsSet(envname){
       viperReturn := viper.GetString(envname)
-      return viperReturn
+      return viperReturn, nil
     }else{
-      panic(fmt.Sprintf("Environment  variable not set %s", envname))
+      err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
+      log.Error().Err(err).Msg("")
+      return "not right", err
+
     }
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)
@@ -26,21 +31,28 @@ func  (msg *MessagePost) Deliver() error {
    //set neccessary info for environment variables
 
   // Sender data.
-  password := GetViperVariable("emailpass")
+  password,err := GetViperVariable("emailpass")
+  if err != nil {
+		panic(err)
+	}
   from := "server@password.exchange"
-  AWS_ACCESS_KEY_ID := GetViperVariable("emailuser")
-
+  AWS_ACCESS_KEY_ID,err := GetViperVariable("emailuser")
+  if err != nil {
+		panic(err)
+	}
   // Receiver email address.
   to := msg.OtherEmail
-  fmt.Println(GetViperVariable("emailhost"))
   // smtp server configuration.
-  smtpHost := GetViperVariable("emailhost") + ":" + GetViperVariable("emailport")
+  smtpHost, err := GetViperVariable("emailhost") 
+  if err != nil {
+		panic(err)
+	}
   // smtpPort := GetViperVariable("emailport")
   fmt.Println(smtpHost)
 
 
   // Authentication.
-  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, GetViperVariable("emailhost"))
+  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, emailhost)
 
   t, _ := template.ParseFiles("templates/email_template.html")
 

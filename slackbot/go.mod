@@ -6,7 +6,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-test/deep v1.0.8
-	github.com/rs/xid v1.3.0
 	github.com/rs/zerolog v1.25.0
 	github.com/slack-go/slack v0.9.5
 	github.com/spf13/viper v1.9.0
@@ -44,4 +43,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/slack-go/slack => github.com/xnok/slack v0.8.1-0.20210508192837-9bc8016012b3
+

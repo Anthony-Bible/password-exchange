@@ -79,7 +79,6 @@ func displaydecrypted(c *gin.Context) {
   render(c, "decryption.html",0, extraHeaders)
 }
 func doAction(c *gin.Context) {
-  fmt.Println("hello")
   c.MultipartForm()
   for key, value := range c.Request.PostForm {
       log.Printf("%v = %v \n",key,value)
@@ -92,7 +91,10 @@ func send(c *gin.Context) {
   // Step 3: Redirect to confirmation page
   encryptionbytes, encryptionstring := GenerateRandomString(32)
   guid := xid.New()
-  siteHost := GetViperVariable("host")
+  siteHost,err := GetViperVariable("host")
+  if err != nil {
+		panic(err)
+	}
   msgEncrypted := &Message{
 		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
     FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
@@ -172,8 +174,14 @@ func render(c *gin.Context, filename string, status int, data interface{}) {
     Hostname string `json:"hostname"`
 }
 func checkBot(hcaptchaResponse string) (returnstatus bool){
-  secret := GetViperVariable("hcaptcha_secret")
-  sitekey :=GetViperVariable("hcaptcha_sitekey")
+  secret,err := GetViperVariable("hcaptcha_secret")
+  if err != nil {
+		panic(err)
+	}
+  sitekey,err :=GetViperVariable("hcaptcha_sitekey")
+  if err != nil {
+		panic(err)
+	}
   u := make(url.Values)
 	u.Set("secret", secret)
 	u.Set("response", hcaptchaResponse)
