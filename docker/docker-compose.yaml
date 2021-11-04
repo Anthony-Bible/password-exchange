@@ -20,4 +20,4 @@ services:
           - PORT=8080
 
         restart: always
-        image: 'ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.13'
+        image: 'ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.17'
