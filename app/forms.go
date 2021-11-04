@@ -2,15 +2,18 @@
 package main
 
 import (
-    "log"
-    "github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
     b64 "encoding/base64"
+    "github.com/gin-gonic/gin"
     "net/http"
+    "net/url"
     "fmt"
     "github.com/rs/xid"
     "encoding/json"
     "io/ioutil"
-    "net/url"
+    // "password.exchange/drivers"
+    // "password.exchange/controllers"
+    // "github.com/slack-go/slack/socketmode"
 )
 
 type htmlHeaders struct{
@@ -28,12 +31,19 @@ func main() {
   router.POST("/", send)
   router.GET("/confirmation", confirmation)
   router.GET("/decrypt/:uuid/*key", displaydecrypted)
-  router.NoRoute(failedtoFind)
-  log.Println("Listening...")
+  router.POST("/api/:app/*action",doAction)
+  router.POST("/api/:app",doAction)
 
+    router.NoRoute(failedtoFind)
+  log.Info().Msg("Listening...")
+
+	// Build a Slack App Home in Golang Using Socket Mode
+
+  
 	// By default it serves on :8080 unless a
 	// PORT environment variable was defined.
-  router.Run()
+    router.Run()
+
 
 }
 
@@ -68,6 +78,14 @@ func displaydecrypted(c *gin.Context) {
 
   render(c, "decryption.html",0, extraHeaders)
 }
+func doAction(c *gin.Context) {
+  fmt.Println("hello")
+  c.MultipartForm()
+  for key, value := range c.Request.PostForm {
+      log.Printf("%v = %v \n",key,value)
+  }
+
+}
 func send(c *gin.Context) {
   // Step 1: Validate form
   // Step 2: Send message in an email
@@ -98,8 +116,7 @@ func send(c *gin.Context) {
   }
 
 	if msg.Validate() == false {
-    fmt.Println("unvalidated")
-    fmt.Println("errors: %s", msg.Errors)
+    log.Debug().Msgf("errors: %s", msg.Errors)
     htmlHeaders :=htmlHeaders{
       Title: "Password Exchange",
       Errors: msg.Errors,
@@ -112,7 +129,7 @@ func send(c *gin.Context) {
   Insert(msgEncrypted)
   if  checkBot(msg.captcha){
 	if err := msg.Deliver(); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Msg("")
     c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 
 		return
@@ -164,8 +181,10 @@ func checkBot(hcaptchaResponse string) (returnstatus bool){
   response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
 
 if err != nil { 
-  log.Println("Something went wrong with hcaptcha")
-return false
+  log.Error().
+  Str("error", err.Error()).
+  Msg("Something went wrong with hcaptcha")
+  return false
 }
 	defer response.Body.Close()
   body, err := ioutil.ReadAll(response.Body)
@@ -176,7 +195,9 @@ return false
   var t test_struct
   err = json.Unmarshal(body, &t)
   if err != nil {
-      log.Println("Can't Unmarshal json")
+    
+      log.Error().
+      Msg("Can't Unmarshal json")
       return false 
   }
   return t.Success
