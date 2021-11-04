@@ -1,0 +1,13 @@
+apiVersion: skaffold/v2beta21
+kind: Config
+metadata:
+  name: slackbot
+build:
+  artifacts:
+  - image: ghcr.io/anthony-bible/slackbot-container-prod
+    docker:
+      dockerfile: Dockerfile
+deploy:
+  kubectl:
+    manifests:
+    - kubernetes/deployment.yaml
