@@ -43,12 +43,11 @@ func  (msg *MessagePost) Deliver() error {
   // Receiver email address.
   to := msg.OtherEmail
   // smtp server configuration.
-  smtpHost, err := GetViperVariable("emailhost") 
+  emailhost, err := GetViperVariable("emailhost") 
   if err != nil {
 		panic(err)
 	}
   // smtpPort := GetViperVariable("emailport")
-  fmt.Println(smtpHost)
 
 
   // Authentication.
@@ -70,7 +69,7 @@ func  (msg *MessagePost) Deliver() error {
   })
 
   // Sending email.
-  err := smtp.SendMail(smtpHost, auth, from, to, body.Bytes())
+  err = smtp.SendMail(emailhost, auth, from, to, body.Bytes())
   fmt.Println(err)
   return err
 }

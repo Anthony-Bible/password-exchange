@@ -35,7 +35,6 @@ func main() {
   
   
   func doAction(c *gin.Context) {
-	c.MultipartForm()
 	// for key, value := range c.Request.PostForm {
 	// 	log.Printf("%v = %v \n",key,value)
 	// }
