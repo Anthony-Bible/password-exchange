@@ -13,7 +13,7 @@ import (
 	"fmt"
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	"github.com/Anthony-Bible/password-exchange/app/protos/encryptionpb"
+	"password-exchange/app/protos/encryptionpb"
 	"google.golang.org/grpc"
 )
 

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"fmt"
-	"password.exchange/commons"
+	"github.com/Anthony-Bible/password-exchange/commons"
 )
 func Connect()  (db *sql.DB) {
 	dbhost,err := GetViperVariable("dbhost")

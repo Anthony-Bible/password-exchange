@@ -7,10 +7,10 @@ import (
     "net/http"
     "fmt"
     "github.com/rs/xid"
-    "password.exchange/encryption"
-    "password.exchange/message"
-    "password.exchange/commons"
-	"password.exchange/protos/encryptionpb"
+    "github.com/Anthony-Bible/password-exchange/encryption"
+    "github.com/Anthony-Bible/password-exchange/message"
+    "github.com/Anthony-Bible/password-exchange/commons"
+	"github.com/Anthony-Bible/password-exchange/protos/encryptionpb"
 	"google.golang.org/grpc"
 )
 

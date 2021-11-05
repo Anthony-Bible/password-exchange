@@ -7,8 +7,8 @@ import (
   "errors"
   "net/smtp"
   "text/template"
-  "password.exchange/commons"   
-  "password.exchange/message"
+  "github.com/Anthony-Bible/password-exchange/commons"   
+  "github.com/Anthony-Bible/password-exchange/message"
 )
 func GetViperVariable(envname string) (string,error) {
     viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically

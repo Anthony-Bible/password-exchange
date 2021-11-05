@@ -1,4 +1,4 @@
-module github.com/Anthony-Bible/password-exchange/app
+module github.com/Anthony-Bible/password-exchange
 
 go 1.16
 
@@ -24,5 +24,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/slack-go/slack => github.com/xnok/slack v0.8.1-0.20210508192837-9bc8016012b3
+
 

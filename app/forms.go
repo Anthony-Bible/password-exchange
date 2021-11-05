@@ -10,9 +10,9 @@ import (
     "fmt"
     "github.com/rs/xid"
 
-    "password.exchange/encryption"
-    "password.exchange/message"
-    "password.exchange/commons"
+    "github.com/Anthony-Bible/password-exchange/encryption"
+    "github.com/Anthony-Bible/password-exchange/message"
+    "github.com/Anthony-Bible/password-exchange/commons"
 
     "encoding/json"
     "io/ioutil"
