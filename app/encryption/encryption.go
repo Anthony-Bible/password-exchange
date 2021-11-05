@@ -116,14 +116,16 @@ func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 	// 	Greeting: "Hello " + name,
 	// }
 	// return response, nil
+	encryptionbytes, encryptionstring := GenerateRandomString(32)
+	guid := xid.New()
 
 	msgEncrypted := &encryptionpb.EncryptedMessage{
-		Email:          string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
-		FirstName:      string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
-		OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),
-		OtherLastName:  string(MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionbytes)),
-		OtherEmail:     string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionbytes)),
-		Content:        string(MessageEncrypt([]byte(c.PostForm("content")), encryptionbytes)),
+		Email:          string(MessageEncrypt([]byte(ctx.PostForm("email")), encryptionbytes)),
+		FirstName:      string(MessageEncrypt([]byte(ctx.PostForm("firstname")), encryptionbytes)),
+		OtherFirstName: string(MessageEncrypt([]byte(ctx.PostForm("other_firstname")), encryptionbytes)),
+		OtherLastName:  string(MessageEncrypt([]byte(ctx.PostForm("other_lastname")), encryptionbytes)),
+		OtherEmail:     string(MessageEncrypt([]byte(ctx.PostForm("other_email")), encryptionbytes)),
+		Content:        string(MessageEncrypt([]byte(ctx.PostForm("content")), encryptionbytes)),
 		Uniqueid:       guid.String(),
 	}
 	return msgEncrypted, nil
