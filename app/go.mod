@@ -3,7 +3,7 @@ module github.com/Anthony-Bible/password-exchange/app
 go 1.16
 
 require (
-	github.com/Anthony-Bible/password-exchange/app/encryption v0.0.0-20211105032113-3f677a185798
+	github.com/Anthony-Bible/password-exchange/app/encryption v0.0.0-20211105125150-22cc053a0ad4
 	github.com/aws/aws-sdk-go v1.41.18
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-sql-driver/mysql v1.6.0
