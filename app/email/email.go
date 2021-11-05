@@ -25,8 +25,7 @@ func GetViperVariable(envname string) (string,error) {
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)
     // }
-func  Deliver(msg *message.MessagePost) error {
-   //set neccessary info for environment variables
+func  (msg *MessagePost) Deliver() error {   //set neccessary info for environment variables
 
   // Sender data.
   password,err := GetViperVariable("emailpass")
@@ -57,7 +56,7 @@ func  Deliver(msg *message.MessagePost) error {
   var body bytes.Buffer
 
   mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-  body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
+  body.Write([]byte(fmt.Sprintf("Subject: Encrypted Message \n%s\n\n", mimeHeaders)))
   
   t.Execute(&body, struct {
     Body    string

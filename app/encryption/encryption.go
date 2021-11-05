@@ -9,7 +9,7 @@ import (
 	"errors"
 	"io"
 	"net"
-	"log"
+	"github.com/rs/zerolog/log"
 	"fmt"
 	// "password.exchange/message"
 	// b "password.exchange/aws"
@@ -27,8 +27,9 @@ func GenerateRandomBytes(n int) (*[32]byte) {
 	key := [32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
-		panic(err)
-	}
+		log.Fatal().
+        Err(err).
+        Msg("there's not enough randomness")	}
 	return &key
 }
 
@@ -111,14 +112,14 @@ type server struct {
 
 }
 
-func (*server) encryptMessage(ctx context.Context, request *encryption.Message) (*encryption.Message, error) {
+func (*server) encryptMessage(ctx context.Context, request *encryptionpb.Message) (*encryptionpb.Message, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
 	// }
 	// return response, nil
 
-	msgEncrypted := &encryption.Message{
+	msgEncrypted := &encryptionpb.Message{
 		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
 		FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
 		OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),
@@ -135,12 +136,14 @@ func main() {
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatalf("Error %v", err)
+		log.Fatal().
+        Err(err).
+        Msgf("Error: %s", service)
 	}
 	fmt.Printf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
-	encryption.RegisterMessageServiceServer(s, &server{})
+	encryptionpb.RegisterMessageServiceServer(s, &server{})
 
 	s.Serve(lis)
 }
