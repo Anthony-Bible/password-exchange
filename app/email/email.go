@@ -1,4 +1,4 @@
-package main
+package email
 
 import (
   "github.com/rs/zerolog/log"
@@ -7,7 +7,8 @@ import (
   "errors"
   "net/smtp"
   "text/template"
-  "github.com/spf13/viper"
+  "github.com/Anthony-Bible/password-exchange/commons"   
+  "github.com/Anthony-Bible/password-exchange/message"
 )
 func GetViperVariable(envname string) (string,error) {
     viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
@@ -24,10 +25,7 @@ func GetViperVariable(envname string) (string,error) {
     // if !ok {
     //  log.Fatalf("Invalid type assertion for %s", envname)
     // }
-
-
-}
-func  (msg *MessagePost) Deliver() error {
+func  Deliver(msg *message.MessagePost) error {
    //set neccessary info for environment variables
 
   // Sender data.
@@ -52,6 +50,7 @@ func  (msg *MessagePost) Deliver() error {
 
   // Authentication.
   auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, emailhost)
+
 
   t, _ := template.ParseFiles("templates/email_template.html")
 

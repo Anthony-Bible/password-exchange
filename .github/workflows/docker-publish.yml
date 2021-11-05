@@ -55,6 +55,7 @@ jobs:
 
       - name: Build image
         run: docker build . --file Dockerfile --tag $IMAGE_NAME
+
         
       -
         name: Login to GitHub Container Registry

@@ -1,4 +1,4 @@
-package main
+package message
 
 import (
   "regexp"
@@ -17,6 +17,7 @@ type Message struct {
   Content string
   Errors  map[string]string
 }
+
 type MessagePost struct {
   Email []string
   FirstName string
@@ -30,6 +31,7 @@ type MessagePost struct {
   hidden string
   captcha string
 }
+
 func (msg *MessagePost) Validate() bool {
   msg.Errors = make(map[string]string)
 
