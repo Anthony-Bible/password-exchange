@@ -1,4 +1,4 @@
-module github.com/Anthony-Bible/password-exchange
+module github.com/Anthony-Bible/password-exchange/app
 
 go 1.16
 

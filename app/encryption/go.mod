@@ -1,4 +1,4 @@
-module github.com/Anthony-Bible/password-exchange/encryption
+module github.com/Anthony-Bible/password-exchange/app/encryption
 
 go 1.17
 
