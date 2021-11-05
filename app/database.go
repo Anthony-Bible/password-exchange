@@ -7,15 +7,26 @@ import (
 	"password.exchange/commons"
 )
 func Connect()  (db *sql.DB) {
-	dbhost := commons.GetViperVariable("dbhost")
-	dbpass := commons.GetViperVariable("dbpass")
-	dbuser := commons.GetViperVariable("dbuser")
-	dbname := commons.GetViperVariable("dbname")
+	dbhost,err := GetViperVariable("dbhost")
+	if err != nil {
+		panic(err)
+	}
+	dbpass,err := GetViperVariable("dbpass")
+	if err != nil {
+		panic(err)
+	}
+	dbuser,err := GetViperVariable("dbuser")
+	if err != nil {
+		panic(err)
+	}
+	dbname,err := GetViperVariable("dbname")
+	if err != nil {
+		panic(err)
+	}
 	// dbport := GetViperVariable("dbport")	
-	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s", dbuser, dbpass, dbhost, dbname)
+	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", dbuser, dbpass, dbhost, dbname)
 
-	fmt.Sprintf("this is the dbstring: %s", dbConnectionString)
-	db, err := sql.Open("mysql", dbConnectionString)
+	db, err = sql.Open("mysql", dbConnectionString)
 	if err != nil {
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 	}
@@ -38,16 +49,17 @@ func Connect()  (db *sql.DB) {
 //     }
 // }
 
-
-func Select(uuid string)(msgEncrypted MessagePost){
+//Select Get the information based on the uuid from the url
+func Select(uuid string)(msgEncrypted Message){
 	db := Connect()
-	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
+	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,email,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName,&msgEncrypted.OtherFirstName,&msgEncrypted.OtherLastName,&msgEncrypted.Content,&msgEncrypted.Email,&msgEncrypted.OtherEmail,&msgEncrypted.Uniqueid)
         
 	if err != nil {
 		panic(err.Error())
   	}
    return msgEncrypted
 }
+//Insert encrypted information into database (this is base64 encoded)
 func Insert(msgEncrypted *Message) {
     db := Connect()
 

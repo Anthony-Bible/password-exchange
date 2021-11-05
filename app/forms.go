@@ -2,21 +2,27 @@
 package main
 
 import (
-    "log"
-    "github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
     b64 "encoding/base64"
+    "github.com/gin-gonic/gin"
     "net/http"
+    "net/url"
     "fmt"
     "github.com/rs/xid"
+
     "password.exchange/encryption"
     "password.exchange/message"
     "password.exchange/commons"
+
+    "encoding/json"
+    "io/ioutil"
 )
 
 type htmlHeaders struct{
   Title string
   Url string
   DecryptedMessage string
+  Errors  map[string]string
   
 }
 func main() {
@@ -26,21 +32,28 @@ func main() {
   router.GET("/", home)
   router.POST("/", send)
   router.GET("/confirmation", confirmation)
-  router.GET("/encrypt/:uuid/*key", displaydecrypted)
-  router.NoRoute(failedtoFind)
-  log.Println("Listening...")
+  router.GET("/decrypt/:uuid/*key", displaydecrypted)
+  router.POST("/api/:app/*action",doAction)
+  router.POST("/api/:app",doAction)
 
+    router.NoRoute(failedtoFind)
+  log.Info().Msg("Listening...")
+
+	// Build a Slack App Home in Golang Using Socket Mode
+
+  
 	// By default it serves on :8080 unless a
 	// PORT environment variable was defined.
-  router.Run()
+    router.Run()
+
 
 }
 
 func home(c *gin.Context) {
-  render(c, "home.html", nil)
+  render(c, "home.html", 0, nil)
 }
 func failedtoFind(c *gin.Context) {
-  render(c, "404.html", nil)
+  render(c, "404.html", 404, nil)
 }
 func displaydecrypted(c *gin.Context) {
   uuid := c.Param("uuid")
@@ -65,7 +78,14 @@ func displaydecrypted(c *gin.Context) {
   }
   extraHeaders :=htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: msg.Content,}
 
-  render(c, "decryption.html", extraHeaders)
+  render(c, "decryption.html",0, extraHeaders)
+}
+func doAction(c *gin.Context) {
+  c.MultipartForm()
+  for key, value := range c.Request.PostForm {
+      log.Printf("%v = %v \n",key,value)
+  }
+
 }
 func send(c *gin.Context) {
   // Step 1: Validate form
@@ -73,7 +93,10 @@ func send(c *gin.Context) {
   // Step 3: Redirect to confirmation page
   encryptionbytes, encryptionstring := GenerateRandomString(32)
   guid := xid.New()
-  siteHost := commons.GetViperVariable("host")
+  siteHost,err := GetViperVariable("host")
+  if err != nil {
+		panic(err)
+	}
   msgEncrypted := &Message{
 		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
     FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
@@ -89,31 +112,33 @@ func send(c *gin.Context) {
     FirstName: c.PostForm("firstname"),
     OtherFirstName: c.PostForm("other_firstname"),
     OtherLastName: c.PostForm("other_lastname"),
-    OtherEmail: c.PostForm("other_email"),
+    OtherEmail: []string{c.PostForm("other_email")},
     Content: c.PostForm("content"),
-    Url: siteHost + "encrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+    Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+    hidden: c.PostForm("other_information"),
+    captcha: c.PostForm("h-captcha-response"),
   }
 
-
 	if msg.Validate() == false {
-    fmt.Println("unvalidated")
-    fmt.Println("errors: %s", msg.Errors)
+    log.Debug().Msgf("errors: %s", msg.Errors)
     htmlHeaders :=htmlHeaders{
       Title: "Password Exchange",
+      Errors: msg.Errors,
     }
-		render(c, "home.html", htmlHeaders)
+		render(c, "home.html",500, htmlHeaders)
 		return
 	}
 
   msg.Content = "please click this link to get your encrypted message" +  "\n <a href=\"" + msg.Url + "\"> here</a>"
   Insert(msgEncrypted)
-
+  if  checkBot(msg.captcha){
 	if err := msg.Deliver(); err != nil {
-		log.Println(err)
+		log.Error().Err(err).Msg("")
     c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 
 		return
 	}
+}
 	c.Redirect( http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url) )
 
 }
@@ -122,18 +147,20 @@ func confirmation(c *gin.Context) {
   content := c.Query("content")
   extraHeaders :=htmlHeaders{Title: "passwordExchange", Url: content,}
 
-  render(c, "confirmation.html", extraHeaders)
+  render(c, "confirmation.html", 0,extraHeaders)
 }
-func render(c *gin.Context, filename string, data interface{}) {
+func render(c *gin.Context, filename string, status int, data interface{}) {
 
     
-   
+       if status == 0{
+         status=200
+       }
 
       // Call the HTML method of the Context to render a template
       c.HTML(
         // Set the HTTP status to 200 (OK)
         //TODO: have this be settable
-        http.StatusOK,
+        status,
         // Use the index.html template
         filename,
         // Pass the data that the page uses (in this case, 'title')
@@ -143,6 +170,48 @@ func render(c *gin.Context, filename string, data interface{}) {
     
     
   }
+  type test_struct struct {
+    Success bool `json:"success"`
+    Challenge_ts string `json:"challenge_ts"`
+    Hostname string `json:"hostname"`
+}
+func checkBot(hcaptchaResponse string) (returnstatus bool){
+  secret,err := GetViperVariable("hcaptcha_secret")
+  if err != nil {
+		panic(err)
+	}
+  sitekey,err :=GetViperVariable("hcaptcha_sitekey")
+  if err != nil {
+		panic(err)
+	}
+  u := make(url.Values)
+	u.Set("secret", secret)
+	u.Set("response", hcaptchaResponse)
+  u.Set("sitekey", sitekey)
+  response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
+
+if err != nil { 
+  log.Error().
+  Str("error", err.Error()).
+  Msg("Something went wrong with hcaptcha")
+  return false
+}
+	defer response.Body.Close()
+  body, err := ioutil.ReadAll(response.Body)
+  if err != nil {
+      panic(err)
+
+  }
+  var t test_struct
+  err = json.Unmarshal(body, &t)
+  if err != nil {
+    
+      log.Error().
+      Msg("Can't Unmarshal json")
+      return false 
+  }
+  return t.Success
+}
 
 //   if err := tmpl.Execute(w, data); err != nil {
 //     log.Println(err)

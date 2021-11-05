@@ -22,59 +22,68 @@ spec:
     spec:
       containers:
       - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.7
-        env:
-          - name: PASSWORDEXCHANGE_EMAILUSER
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_EMAILUSER
-          - name: PASSWORDEXCHANGE_EMAILPASS
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_EMAILPASS
-
-          - name: PASSWORDEXCHANGE_DBPORT
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_DBPORT
-          - name: PASSWORDEXCHANGE_DBNAME
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_DBNAME
-          - name: PASSWORDEXCHANGE_DBPASS
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_DBPASS
-          - name: PASSWORDEXCHANGE_DBUSER
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_DBUSER
-          - name: PASSWORDEXCHANGE_DBHOST
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_DBHOST
-          - name: PASSWORDEXCHANGE_EMAILHOST
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_EMAILHOST
-          - name: PASSWORDEXCHANGE_HOST
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_HOST
-          - name: PASSWORDEXCHANGE_EMAILPORT
-            valueFrom: 
-              secretKeyRef:
-                name: test-secret
-                key: PASSWORDEXCHANGE_EMAILPORT
+        image:  ghcr.io/anthony-bible/passwordexchange-container-prod:0.0.17
+        envFrom:
+          - secretRef:
+              name: test-secret
+#          - name: PASSWORDEXCHANGE_EMAILPASS
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILPASS
+#
+#          - name: PASSWORDEXCHANGE_DBPORT
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBPORT
+#          - name: PASSWORDEXCHANGE_DBNAME
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBNAME
+#          - name: PASSWORDEXCHANGE_DBPASS
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBPASS
+#          - name: PASSWORDEXCHANGE_DBUSER
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBUSER
+#          - name: PASSWORDEXCHANGE_DBHOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBHOST
+#          - name: PASSWORDEXCHANGE_EMAILHOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILHOST
+#          - name: PASSWORDEXCHANGE_HOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HOST
+#          - name: PASSWORDEXCHANGE_EMAILPORT
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILPORT
+#
+#          - name: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+#
+#          - name: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
         volumeMounts:
         - name: html
           mountPath: /code

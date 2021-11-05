@@ -1,33 +1,56 @@
 package email
 
 import (
+  "github.com/rs/zerolog/log"
   "bytes"
   "fmt"
+  "errors"
   "net/smtp"
   "text/template"
   "password.exchange/commons"   
   "password.exchange/message"
 )
+func GetViperVariable(envname string) (string,error) {
+    viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
+    viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
+    if viper.IsSet(envname){
+      viperReturn := viper.GetString(envname)
+      return viperReturn, nil
+    }else{
+      err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
+      log.Error().Err(err).Msg("")
+      return "not right", err
 
+    }
+    // if !ok {
+    //  log.Fatalf("Invalid type assertion for %s", envname)
+    // }
 func  Deliver(msg *message.MessagePost) error {
    //set neccessary info for environment variables
 
   // Sender data.
-  password := commons.GetViperVariable("emailpass")
+  password,err := GetViperVariable("emailpass")
+  if err != nil {
+		panic(err)
+	}
   from := "server@password.exchange"
-  AWS_ACCESS_KEY_ID := commons.GetViperVariable("emailuser")
-
+  AWS_ACCESS_KEY_ID,err := GetViperVariable("emailuser")
+  if err != nil {
+		panic(err)
+	}
   // Receiver email address.
-  to := msg.Email
-  fmt.Println(commons.GetViperVariable("emailhost"))
+  to := msg.OtherEmail
   // smtp server configuration.
-  smtpHost := commons.GetViperVariable("emailhost") + ":" + commons.GetViperVariable("emailport")
-  // smtpPort := commons.GetViperVariable("emailport")
-  fmt.Println(smtpHost)
+  emailhost, err := GetViperVariable("emailhost") 
+  if err != nil {
+		panic(err)
+	}
+  // smtpPort := GetViperVariable("emailport")
 
 
   // Authentication.
-  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, commons.GetViperVariable("emailhost"))
+  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, emailhost)
+
 
   t, _ := template.ParseFiles("templates/email_template.html")
 
@@ -45,7 +68,7 @@ func  Deliver(msg *message.MessagePost) error {
   })
 
   // Sending email.
-  err := smtp.SendMail(smtpHost, auth, from, to, body.Bytes())
+  err = smtp.SendMail(emailhost, auth, from, to, body.Bytes())
   fmt.Println(err)
   return err
 }

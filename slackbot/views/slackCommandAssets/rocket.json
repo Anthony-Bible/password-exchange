@@ -1,0 +1,9 @@
+{
+	"blocks": [
+		{
+			"type": "image",
+			"image_url": "https://github.com/xNok/slack-go-demo-socketmode/raw/main/views/slackCommandAssets/rocket{{ .Number }}.png",
+			"alt_text": "inspiration"
+		}
+	]
+}

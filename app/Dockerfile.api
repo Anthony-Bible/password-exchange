@@ -7,9 +7,9 @@ From golang:1.17.0-alpine3.13
 # RUN echo $GODEBUG
 
 WORKDIR /go/src/app
-COPY app/ .
+COPY api/ .
 
 RUN go get -d -v ./...
 RUN go install -v ./...
 
-CMD ["password.exchange"]
+CMD ["go run /go/src/app/main.go"]
