@@ -1,6 +1,6 @@
 syntax = "proto3";
 package encryptionpb;
-option go_package = "github.com/Anthony-Bible/password-exchange/protos/encryptionpb";
+option go_package = "github.com/Anthony-Bible/password-exchange/app/encryptionpb";
 
 message PlainMessage{
   string Email = 1;
