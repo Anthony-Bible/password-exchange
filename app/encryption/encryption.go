@@ -110,7 +110,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 
 type server struct{}
 
-func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMessage) (*encryptionpb.EncryptedMessage, error) {
+func (*server) EncryptMessage(ctx context.Context, request *encryptionpb.PlainMessage) (*encryptionpb.EncryptedMessage, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
@@ -126,9 +126,9 @@ func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 	// Content:        string(MessageEncrypt([]byte(ctx.PostForm("content")), encryptionbytes)),
 	msgEncrypted := &encryptionpb.EncryptedMessage{
 		Email:          string(MessageEncrypt([]byte(request.Email), encryptionbytes)),
-		FirstName:      string(MessageEncrypt([]byte(request.Firstname), encryptionbytes)),
+		FirstName:      string(MessageEncrypt([]byte(request.FirstName), encryptionbytes)),
 		OtherFirstName: string(MessageEncrypt([]byte(request.OtherFirstName), encryptionbytes)),
-		OtherLastName:  string(MessageEncrypt([]byte(request.OtherLastname), encryptionbytes)),
+		OtherLastName:  string(MessageEncrypt([]byte(request.OtherLastName), encryptionbytes)),
 		OtherEmail:     string(MessageEncrypt([]byte(request.OtherEmail), encryptionbytes)),
 		Content:        string(MessageEncrypt([]byte(request.Content), encryptionbytes)),
 		Uniqueid:       guid.String(),
@@ -137,13 +137,28 @@ func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 }
 
 func main() {
+	// Email:          []byte(ctx.PostForm("email"))
+	// FirstName:      []byte(ctx.PostForm("firstname"))
+	// OtherFirstName: []byte(ctx.PostForm("other_firstname"))
+	// OtherLastName:  []byte(ctx.PostForm("other_lastname"))
+	// OtherEmail:     []byte(ctx.PostForm("other_email"))
+	// Content:        []byte(ctx.PostForm("content"))
+
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Msgf("Error: %s")
+			Msgf("Failed to listen: %v", err)
 	}
+	// plainMessage := &encryptionpb.PlainMessage{
+	// Email:          []byte(ctx.PostForm("email")),
+	// FirstName:      []byte(ctx.PostForm("firstname")),
+	// OtherFirstName: []byte(ctx.PostForm("other_firstname")),
+	// OtherLastName:  []byte(ctx.PostForm("other_lastname")),
+	// OtherEmail:     []byte(ctx.PostForm("other_email")),
+	// Content:        []byte(ctx.PostForm("content"))
+	// }
 	log.Info().Msgf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
