@@ -110,7 +110,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 
 type server struct{}
 
-func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMessage) (*encryptionpb.PlainMessage, error) {
+func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMessage) (*encryptionpb.EncryptedMessage, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
@@ -118,14 +118,19 @@ func (*server) encryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 	// return response, nil
 	encryptionbytes, encryptionstring := GenerateRandomString(32)
 	guid := xid.New()
-
+	// Email:          string(MessageEncrypt([]byte(ctx.PostForm("email")), encryptionbytes)),
+	// FirstName:      string(MessageEncrypt([]byte(ctx.PostForm("firstname")), encryptionbytes)),
+	// OtherFirstName: string(MessageEncrypt([]byte(ctx.PostForm("other_firstname")), encryptionbytes)),
+	// OtherLastName:  string(MessageEncrypt([]byte(ctx.PostForm("other_lastname")), encryptionbytes)),
+	// OtherEmail:     string(MessageEncrypt([]byte(ctx.PostForm("other_email")), encryptionbytes)),
+	// Content:        string(MessageEncrypt([]byte(ctx.PostForm("content")), encryptionbytes)),
 	msgEncrypted := &encryptionpb.EncryptedMessage{
-		Email:          string(MessageEncrypt([]byte(ctx.PostForm("email")), encryptionbytes)),
-		FirstName:      string(MessageEncrypt([]byte(ctx.PostForm("firstname")), encryptionbytes)),
-		OtherFirstName: string(MessageEncrypt([]byte(ctx.PostForm("other_firstname")), encryptionbytes)),
-		OtherLastName:  string(MessageEncrypt([]byte(ctx.PostForm("other_lastname")), encryptionbytes)),
-		OtherEmail:     string(MessageEncrypt([]byte(ctx.PostForm("other_email")), encryptionbytes)),
-		Content:        string(MessageEncrypt([]byte(ctx.PostForm("content")), encryptionbytes)),
+		Email:          string(MessageEncrypt([]byte(request.Email), encryptionbytes)),
+		FirstName:      string(MessageEncrypt([]byte(request.Firstname), encryptionbytes)),
+		OtherFirstName: string(MessageEncrypt([]byte(request.OtherFirstName), encryptionbytes)),
+		OtherLastName:  string(MessageEncrypt([]byte(request.OtherLastname), encryptionbytes)),
+		OtherEmail:     string(MessageEncrypt([]byte(request.OtherEmail), encryptionbytes)),
+		Content:        string(MessageEncrypt([]byte(request.Content), encryptionbytes)),
 		Uniqueid:       guid.String(),
 	}
 	return msgEncrypted, nil
@@ -137,16 +142,16 @@ func main() {
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Msgf("Error: %s", service)
+			Msgf("Error: %s")
 	}
-	log.Info.Msgf("Server is listening on %v ...", address)
+	log.Info().Msgf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
 	encryptionpb.RegisterMessageServiceServer(s, &server{})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
-		log.Fatal().Msgf("failed to serve: %v", err)
+		log.Fatal().String().Msgf("failed to serve: %v", err)
 	}
 	s.Serve(lis)
 }
