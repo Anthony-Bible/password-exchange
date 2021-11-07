@@ -109,7 +109,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 // }
 
 type server struct {
-	pb.mustEmbedUnimplementedMessageServiceServer
+	pb.UnimplementedMessageServiceServer
 }
 
 func (s *server) EncryptMessage(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
