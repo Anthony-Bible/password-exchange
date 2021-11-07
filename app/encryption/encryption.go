@@ -110,7 +110,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 
 type server struct{}
 
-func (s *server) encryptionpb.mustEmbedUnimplementedMessageServiceServer(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
+func (s *server) mustEmbedUnimplementedMessageServiceServer(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
