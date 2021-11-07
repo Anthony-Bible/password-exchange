@@ -15,7 +15,7 @@ import (
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	"github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -110,7 +110,7 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 
 type server struct{}
 
-func (*server) EncryptMessage(ctx context.Context, request *encryptionpb.PlainMessage) (*encryptionpb.EncryptedMessage, error) {
+func (s *server) EncryptMessage(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
@@ -125,7 +125,7 @@ func (*server) EncryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 	// OtherLastName:  string(MessageEncrypt([]byte(ctx.PostForm("other_lastname")), encryptionbytes)),
 	// OtherEmail:     string(MessageEncrypt([]byte(ctx.PostForm("other_email")), encryptionbytes)),
 	// Content:        string(MessageEncrypt([]byte(ctx.PostForm("content")), encryptionbytes)),
-	msgEncrypted := &encryptionpb.EncryptedMessage{
+	msgEncrypted := &pb.EncryptedMessage{
 		Email:          string(MessageEncrypt([]byte(request.Email), encryptionbytes)),
 		FirstName:      string(MessageEncrypt([]byte(request.FirstName), encryptionbytes)),
 		OtherFirstName: string(MessageEncrypt([]byte(request.OtherFirstName), encryptionbytes)),
@@ -152,7 +152,7 @@ func main() {
 			Err(err).
 			Msgf("Failed to listen: %v", err)
 	}
-	// plainMessage := &encryptionpb.PlainMessage{
+	// plainMessage := &pb.PlainMessage{
 	// Email:          []byte(ctx.PostForm("email")),
 	// FirstName:      []byte(ctx.PostForm("firstname")),
 	// OtherFirstName: []byte(ctx.PostForm("other_firstname")),
@@ -162,13 +162,14 @@ func main() {
 	// Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
 
 	// }
-	log.Info().Msgf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
-	encryptionpb.RegisterMessageServiceServer(s, &server{})
+	pb.RegisterMessageServiceServer(s, &server{})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		log.Fatal().Msgf("failed to serve: %v", err)
 	}
+	log.Info().Msgf("Server is listening on %v ...", address)
+
 }
