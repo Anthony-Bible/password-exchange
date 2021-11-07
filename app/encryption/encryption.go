@@ -150,7 +150,6 @@ func main() {
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Str("error").
 			Msgf("Failed to listen: %v", err)
 	}
 	// plainMessage := &encryptionpb.PlainMessage{
@@ -170,6 +169,6 @@ func main() {
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
-		log.Fatal().Str().Msgf("failed to serve: %v", err)
+		log.Fatal().Msgf("failed to serve: %v", err)
 	}
 }
