@@ -117,6 +117,7 @@ func (*server) EncryptMessage(ctx context.Context, request *encryptionpb.PlainMe
 	// }
 	// return response, nil
 	encryptionbytes, encryptionstring := GenerateRandomString(32)
+	log.Info().Msg(encryptionstring)
 	guid := xid.New()
 	// Email:          string(MessageEncrypt([]byte(ctx.PostForm("email")), encryptionbytes)),
 	// FirstName:      string(MessageEncrypt([]byte(ctx.PostForm("firstname")), encryptionbytes)),
@@ -149,8 +150,8 @@ func main() {
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Str("error", err)
-		Msgf("Failed to listen: %v", err)
+			Str("error").
+			Msgf("Failed to listen: %v", err)
 	}
 	// plainMessage := &encryptionpb.PlainMessage{
 	// Email:          []byte(ctx.PostForm("email")),
@@ -165,11 +166,10 @@ func main() {
 	log.Info().Msgf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
+	encryptionpb.RegisterMessageServiceServer(s, &server{})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		log.Fatal().Str().Msgf("failed to serve: %v", err)
 	}
-	encryptionpb.RegisterMessageServiceServer(s, &server{})
-
 }
