@@ -108,9 +108,11 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 //   b.SendSNS(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo", msgEncrypted)
 // }
 
-type server struct{}
+type server struct {
+	server.mustEmbedUnimplementedMessageServiceServer
+}
 
-func (s *server) mustEmbedUnimplementedMessageServiceServer(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
+func (s *server) EncryptMessage(ctx context.Context, request *pb.PlainMessage) (*pb.EncryptedMessage, error) {
 	// name := request.Name
 	// response := &hellopb.HelloResponse{
 	// 	Greeting: "Hello " + name,
