@@ -3,7 +3,7 @@ module github.com/Anthony-Bible/password-exchange/app/encryption
 go 1.17
 
 require (
-	github.com/Anthony-Bible/password-exchange/app v0.0.0-20211105031907-0f584def735e
+	github.com/Anthony-Bible/password-exchange/app v0.0.0-20211107202830-884fd0691571
 	github.com/rs/xid v1.3.0
 	github.com/rs/zerolog v1.25.0
 	google.golang.org/grpc v1.40.0
