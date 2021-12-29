@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MessageServiceClient interface {
-	EncryptMessage(ctx context.Context, in *PlainMessage, opts ...grpc.CallOption) (*EncryptedMessage, error)
+	EncryptMessage(ctx context.Context, in *PlainString, opts ...grpc.CallOption) (*EncryptionString, error)
 }
 
 type messageServiceClient struct {
@@ -29,8 +29,8 @@ func NewMessageServiceClient(cc grpc.ClientConnInterface) MessageServiceClient {
 	return &messageServiceClient{cc}
 }
 
-func (c *messageServiceClient) EncryptMessage(ctx context.Context, in *PlainMessage, opts ...grpc.CallOption) (*EncryptedMessage, error) {
-	out := new(EncryptedMessage)
+func (c *messageServiceClient) EncryptMessage(ctx context.Context, in *PlainString, opts ...grpc.CallOption) (*EncryptionString, error) {
+	out := new(EncryptionString)
 	err := c.cc.Invoke(ctx, "/encryptionpb.messageService/encryptMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (c *messageServiceClient) EncryptMessage(ctx context.Context, in *PlainMess
 // All implementations must embed UnimplementedMessageServiceServer
 // for forward compatibility
 type MessageServiceServer interface {
-	EncryptMessage(context.Context, *PlainMessage) (*EncryptedMessage, error)
+	EncryptMessage(context.Context, *PlainString) (*EncryptionString, error)
 	mustEmbedUnimplementedMessageServiceServer()
 }
 
@@ -50,7 +50,7 @@ type MessageServiceServer interface {
 type UnimplementedMessageServiceServer struct {
 }
 
-func (UnimplementedMessageServiceServer) EncryptMessage(context.Context, *PlainMessage) (*EncryptedMessage, error) {
+func (UnimplementedMessageServiceServer) EncryptMessage(context.Context, *PlainString) (*EncryptionString, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EncryptMessage not implemented")
 }
 func (UnimplementedMessageServiceServer) mustEmbedUnimplementedMessageServiceServer() {}
@@ -67,7 +67,7 @@ func RegisterMessageServiceServer(s grpc.ServiceRegistrar, srv MessageServiceSer
 }
 
 func _MessageService_EncryptMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PlainMessage)
+	in := new(PlainString)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func _MessageService_EncryptMessage_Handler(srv interface{}, ctx context.Context
 		FullMethod: "/encryptionpb.messageService/encryptMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessageServiceServer).EncryptMessage(ctx, req.(*PlainMessage))
+		return srv.(MessageServiceServer).EncryptMessage(ctx, req.(*PlainString))
 	}
 	return interceptor(ctx, in, info, handler)
 }

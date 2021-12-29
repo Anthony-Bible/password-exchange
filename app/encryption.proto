@@ -1,6 +1,6 @@
 syntax = "proto3";
 package encryptionpb;
-option go_package = "github.com/Anthony-Bible/password-exchange/protos/encryptionpb";
+option go_package = "github.com/Anthony-Bible/password-exchange/app/encryptionpb";
 
 message PlainMessage{
   string Email = 1;
@@ -22,6 +22,12 @@ message EncryptedMessage{
 
 
 }
+message PlainString{
+  string PlainText = 1;
+}
+message EncryptionString{
+  string EncryptedText = 1;
+}
 service messageService{
-  rpc encryptMessage(PlainMessage) returns (EncryptedMessage) {}
+  rpc encryptMessage(PlainString) returns (EncryptionString) {}
 }
