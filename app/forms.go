@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	b64 "encoding/base64"
 	"fmt"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 
 	"encoding/json"
 	"io/ioutil"
-	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/message"
 
@@ -32,12 +32,13 @@ type htmlHeaders struct {
 }
 
 // this type contains state of the server
-type serverContext struct {
+type EncryptionClient struct {
 	// client to GRPC service
-	messageClient pb.MessageServiceClient
+	Client pb.MessageServiceClient
+	conn   *grpc.ClientConn
 
 	// default timeout
-	timeout time.Duration
+	// Timeout time.Duration
 
 	// some other useful objects, like config
 	// or logger (to replace global logging)
@@ -45,29 +46,25 @@ type serverContext struct {
 }
 
 // constructor for server context
-func newServerContext(endpoint string) (*serverContext, error) {
+func newServerContext(endpoint string) (*EncryptionClient, error) {
 	userConn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
-	ctx := &serverContext{
-		messageClient: pb.NewMessageServiceClient(userConn),
-		timeout:       time.Second,
+	client := pb.NewMessageServiceClient(userConn)
+	ctx := &EncryptionClient{
+		Client: client,
+		conn:   userConn,
 	}
 	return ctx, nil
 }
 
-type server struct {
-	context *serverContext
-}
-
 func main() {
 
-	serverCtx, err := newServerContext(os.Getenv("USER_SERVICE_URL"))
+	s, err := newServerContext(os.Getenv("USER_SERVICE_URL"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("something went wrong with contacting grpc server")
 	}
-	s := &server{serverCtx}
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 	router.Static("/assets", "./assets")
@@ -93,7 +90,7 @@ func home(c *gin.Context) {
 func failedtoFind(c *gin.Context) {
 	render(c, "404.html", 404, nil)
 }
-func (s *server) displaydecrypted(c *gin.Context) {
+func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	uuid := c.Param("uuid")
 	key := c.Param("key")
 	decodedKey, err := b64.URLEncoding.DecodeString(key[1:])
@@ -107,7 +104,7 @@ func (s *server) displaydecrypted(c *gin.Context) {
 	}
 	var arr [32]byte
 	copy(arr[:], decodedKey)
-	content, err := s.context.messageClient.MessageDecrypt([]byte(decodedContent), &arr)
+	content, err := s.Client.MessageDecrypt([]byte(decodedContent), &arr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Something went wrong with decryption")
 	}
@@ -118,18 +115,19 @@ func (s *server) displaydecrypted(c *gin.Context) {
 
 	render(c, "decryption.html", 0, extraHeaders)
 }
-func (s *server) doAction(c *gin.Context) {
+func (s *EncryptionClient) doAction(c *gin.Context) {
 	c.MultipartForm()
 	for key, value := range c.Request.PostForm {
 		log.Info().Msgf("%v = %v \n", key, value)
 	}
 
 }
-func (s *server) send(c *gin.Context) {
+func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// Step 3: Redirect to confirmation page
-	encryptionbytes, err := s.context.messageClient.GenerateRandomString(s.context, &pb.Randomrequest{RandomLength: 32})
+	ctx := context.Background()
+	encryptionbytes, err := s.Client.GenerateRandomString(s.context, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with generating random string")
 	}
@@ -138,19 +136,17 @@ func (s *server) send(c *gin.Context) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with env variable")
 	}
-
+	//TODO: pass in struct & Handle two return values
 	msgEncrypted := &message.Message{
-		Email:          c.PostForm("email"),
-		FirstName:      c.PostForm("firstname"),
-		Content:        c.PostForm("content"),
-		OtherFirstName: c.PostForm("other_firstname"),
-		OtherLastName:  c.PostForm("other_lastname"),
-		OtherEmail:     c.PostForm("other_email"),
+		Email:          s.Client.EncryptMessage(ctx, c.PostForm("email")),
+		FirstName:      s.Client.EncryptMessage(ctx, c.PostForm("firstname")),
+		Content:        s.Client.EncryptMessage(ctx, c.PostForm("content")),
+		OtherFirstName: s.Client.EncryptMessage(ctx, c.PostForm("other_firstname")),
+		OtherLastName:  s.Client.EncryptMessage(ctx, c.PostForm("other_lastname")),
+		OtherEmail:     s.Client.EncryptMessage(ctx, c.PostForm("other_email")),
 		Uniqueid:       guid.String(),
 	}
 	//start here: Need to work on return values and carry on
-	slicedStruct := []string{msgEncrypted.Email, msgEncrypted.FirstName, msgEncrypted.Content, msgEncrypted.OtherFirstName, msgEncrypted.OtherLastName, msgEncrypted.OtherEmail}
-	encryptedStuff, err := s.context.messageClient.EncryptMessage(s.context, &pb.EncryptedMessageRequest{PlainText: slicedStruct, Key: encryptionbytes})
 
 	msg := &message.MessagePost{
 		Email:          []string{c.PostForm("email")},
