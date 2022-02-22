@@ -1,29 +1,35 @@
 package encryption
 
 import (
-    "crypto/rand"
-    "crypto/aes"
-	"encoding/base64"
-    "github.com/rs/xid"
+	"context"
+	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net"
-	"log"
-	"fmt"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/rs/xid"
+
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	"github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"google.golang.org/grpc"
 )
-
 
 // GenerateRandomBytes returns securely generated random bytes.
 // It will return an error if the system's secure random
 // number generator fails to function correctly, in which
 // case the caller should not continue.
+type server struct {
+	pb.UnimplementedMessageServiceServer
+}
 
-func GenerateRandomBytes(n int) (*[32]byte) {
+func GenerateRandomBytes(n int) *[32]byte {
 	key := [32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
@@ -32,40 +38,23 @@ func GenerateRandomBytes(n int) (*[32]byte) {
 	return &key
 }
 
-
 // GenerateRandomString returns a URL-safe, base64 encoded
 // securely generated random string.
 func GenerateRandomString(s int) (*[32]byte, string) {
-    b := GenerateRandomBytes(s)
-    return b, base64.URLEncoding.EncodeToString((b[:]))
+
 }
 
-func Generateid() (string) {
-    guid := xid.New()
-    return guid.String()
-}
-func MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext string) {
-
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		panic(err)
-	}
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		panic(err)
-	}
-
-	nonce := make([]byte, gcm.NonceSize())
-	_, err = io.ReadFull(rand.Reader, nonce)
-	if err != nil {
-		panic(err)
-	}
-	urlEncodedString := base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
-	return urlEncodedString
+func Generateid() string {
+	guid := xid.New()
+	return guid.String()
 }
 
-func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err error) {
+// func (*server) MessageEncrypt(plaintext []byte, key *[32]byte) (ciphertext string) {
+
+// }
+
+func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*pb.DecryptedMessageResponse, error) {
+	key := request.GetKey()
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err
@@ -75,18 +64,23 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 	if err != nil {
 		return nil, err
 	}
-
-	if len(ciphertext) < gcm.NonceSize() {
-		return nil, errors.New("malformed ciphertext")
+	CipherText := request.GetCipherText()
+	for i := 0; i < len(CipherText); i++ {
+		ciphertext := CipherText[i]
+		if len(ciphertext) < gcm.NonceSize() {
+			return nil, errors.New("malformed ciphertext")
+		}
+		&pb.DecryptedMessageResponse.Plaintext[i], err = gcm.Open(nil,
+			ciphertext[:gcm.NonceSize()],
+			ciphertext[gcm.NonceSize():],
+			nil,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	return gcm.Open(nil,
-		ciphertext[:gcm.NonceSize()],
-		ciphertext[gcm.NonceSize():],
-		nil,
-	)
+	return &pb.DecryptedMessageResponse, nil
 }
-
 
 // func main() {
 // 	msgEncrypted := &message.Message{
@@ -106,31 +100,39 @@ func MessageDecrypt(ciphertext []byte, key *[32]byte) (plaintext []byte, err err
 //   b.SendSNS(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo", msgEncrypted)
 // }
 
+func (*server) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageRequest) (*pb.EncryptedMessageResponse, error) {
+	key := []byte(request.GetKey())
+	PlainText := request.GetPlainText()
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		log.Fatal().Err(err).Msg("something went wrong with NewCipher")
+		return nil, err
+	}
 
-type server struct {
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		log.Fatal().Err(err).Msg("something went wrong Creating new encryption key")
+		return nil, err
+	}
 
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = io.ReadFull(rand.Reader, nonce)
+	if err != nil {
+		log.Fatal().Err(err).Msg("something went wrong with reading random")
+		return nil, err
+	}
+	for i := 0; i < len(plaintext); i++ {
+		plaintext := PlainText[i]
+		&pb.EncryptedMessageResponse.Plaintext[i] = base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
+	}
+	return &pb.EncryptedMessageResponse, nil
 }
 
-func (*server) encryptMessage(ctx context.Context, request *encryption.Message) (*encryption.Message, error) {
-	// name := request.Name
-	// response := &hellopb.HelloResponse{
-	// 	Greeting: "Hello " + name,
-	// }
-	// return response, nil
-
-	msgEncrypted := &encryption.Message{
-		Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
-		FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
-		OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),
-		OtherLastName: string(MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionbytes)),
-		OtherEmail: string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionbytes)),
-		Content: string(MessageEncrypt([]byte(c.PostForm("content")), encryptionbytes)),
-		Uniqueid: guid.String(),
-	  }
-	  return msgEncrypted
+func (*server) GenerateRandomBytes(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
+	s := request.GetRandomLength()
+	b := GenerateRandomBytes(s)
+	return &pb.Randomresponse{Encryptionbytes: b, EncryptionString: base64.URLEncoding.EncodeToString((b[:]))}, nil
 }
-
-
 func main() {
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
@@ -140,7 +142,7 @@ func main() {
 	fmt.Printf("Server is listening on %v ...", address)
 
 	s := grpc.NewServer()
-	encryption.RegisterMessageServiceServer(s, &server{})
+	pb.RegisterMessageServiceServer(s, &server{})
 
 	s.Serve(lis)
 }
