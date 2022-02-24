@@ -17,7 +17,7 @@ import (
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	pb "../encryptionpb"
 	"google.golang.org/grpc"
 )
 
@@ -29,7 +29,7 @@ type server struct {
 	pb.UnimplementedMessageServiceServer
 }
 
-func GenerateRandomBytes(n int) *[32]byte {
+func GenerateRandomBytes(n int32) *[32]byte {
 	key := [32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
@@ -40,9 +40,9 @@ func GenerateRandomBytes(n int) *[32]byte {
 
 // GenerateRandomString returns a URL-safe, base64 encoded
 // securely generated random string.
-func GenerateRandomString(s int) (*[32]byte, string) {
+// func GenerateRandomString(s int) (*[32]byte, string) {
 
-}
+// }
 
 func Generateid() string {
 	guid := xid.New()
@@ -64,13 +64,15 @@ func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	CipherText := request.GetCipherText()
-	for i := 0; i < len(CipherText); i++ {
-		ciphertext := CipherText[i]
+	CipherText := request.GetCiphertext()
+	response := &pb.DecryptedMessageResponse{}
+	for i := range CipherText {
+		ciphertext := []byte(CipherText[i])
 		if len(ciphertext) < gcm.NonceSize() {
 			return nil, errors.New("malformed ciphertext")
 		}
-		&pb.DecryptedMessageResponse.Plaintext[i], err = gcm.Open(nil,
+		//TODO do i need to create a sice then assign? or is there a function to assign to repeated fields
+		plaintext, err := gcm.Open(nil,
 			ciphertext[:gcm.NonceSize()],
 			ciphertext[gcm.NonceSize():],
 			nil,
@@ -78,8 +80,9 @@ func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*
 		if err != nil {
 			return nil, err
 		}
+		response.Plaintext = append(response.Plaintext, string(plaintext))
 	}
-	return &pb.DecryptedMessageResponse, nil
+	return response, nil
 }
 
 // func main() {
@@ -121,23 +124,25 @@ func (*server) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageR
 		log.Fatal().Err(err).Msg("something went wrong with reading random")
 		return nil, err
 	}
-	for i := 0; i < len(plaintext); i++ {
+	response := &pb.EncryptedMessageResponse{}
+	for i := range PlainText {
 		plaintext := PlainText[i]
-		&pb.EncryptedMessageResponse.Plaintext[i] = base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, plaintext, nil))
+		response.Ciphertext = append(response.Ciphertext, string(base64.URLEncoding.EncodeToString(gcm.Seal(nonce, nonce, []byte(plaintext), nil))))
 	}
-	return &pb.EncryptedMessageResponse, nil
+	return response, nil
 }
 
 func (*server) GenerateRandomBytes(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
 	s := request.GetRandomLength()
 	b := GenerateRandomBytes(s)
-	return &pb.Randomresponse{Encryptionbytes: b, EncryptionString: base64.URLEncoding.EncodeToString((b[:]))}, nil
+	return &pb.Randomresponse{Encryptionbytes: b[:], EncryptionString: base64.URLEncoding.EncodeToString((b[:]))}, nil
 }
+
 func main() {
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Fatalf("Error %v", err)
+		log.Fatal().Err(err).Msg("Problem with starting grpc server")
 	}
 	fmt.Printf("Server is listening on %v ...", address)
 

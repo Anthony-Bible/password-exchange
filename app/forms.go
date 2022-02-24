@@ -127,7 +127,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 2: Send message in an email
 	// Step 3: Redirect to confirmation page
 	ctx := context.Background()
-	encryptionbytes, err := s.Client.GenerateRandomString(s.context, &pb.Randomrequest{RandomLength: 32})
+	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with generating random string")
 	}
@@ -137,16 +137,11 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		log.Fatal().Err(err).Msg("Problem with env variable")
 	}
 	//TODO: pass in struct & Handle two return values
-	msgEncrypted := &message.Message{
-		Email:          s.Client.EncryptMessage(ctx, c.PostForm("email")),
-		FirstName:      s.Client.EncryptMessage(ctx, c.PostForm("firstname")),
-		Content:        s.Client.EncryptMessage(ctx, c.PostForm("content")),
-		OtherFirstName: s.Client.EncryptMessage(ctx, c.PostForm("other_firstname")),
-		OtherLastName:  s.Client.EncryptMessage(ctx, c.PostForm("other_lastname")),
-		OtherEmail:     s.Client.EncryptMessage(ctx, c.PostForm("other_email")),
-		Uniqueid:       guid.String(),
-	}
-	//start here: Need to work on return values and carry on
+	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
+
+	msgEncrypted, err = s.Client.EncryptMessage(ctx, &pb.EncryptedMessageRequest{encryptionbytes, []string{c.PostForm("email"), c.PostForm("firstname"), c.PostForm("content"), c.PostForm("other_firstname"), c.PostForm("other_lastname"), c.PostForm("other_email")}})
+
+	// msgEncrypted.Uniqueid = guid.String()
 
 	msg := &message.MessagePost{
 		Email:          []string{c.PostForm("email")},
