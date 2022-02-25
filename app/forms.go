@@ -19,6 +19,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/message"
 
 	"github.com/Anthony-Bible/password-exchange/app/commons"
+	db "github.com/Anthony-Bible/password-exchange/app/database"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 
 	"google.golang.org/grpc"
@@ -104,7 +105,7 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	}
 	var arr [32]byte
 	copy(arr[:], decodedKey)
-	content, err := s.Client.MessageDecrypt([]byte(decodedContent), &arr)
+	content, err := s.Client.DecryptMessage([]byte(decodedContent), &arr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Something went wrong with decryption")
 	}
@@ -139,10 +140,9 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	//TODO: pass in struct & Handle two return values
 	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
 
-	msgEncrypted, err = s.Client.EncryptMessage(ctx, &pb.EncryptedMessageRequest{encryptionbytes, []string{c.PostForm("email"), c.PostForm("firstname"), c.PostForm("content"), c.PostForm("other_firstname"), c.PostForm("other_lastname"), c.PostForm("other_email")}})
-
+	encryptedStrings, err := s.Client.EncryptMessage(ctx, &pb.EncryptedMessageRequest{encryptionbytes, []string(c.PostForm("content"))})
+	encryptedStringSlice := encryptedStrings.GetCipherText()
 	// msgEncrypted.Uniqueid = guid.String()
-
 	msg := &message.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
@@ -150,7 +150,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
 		Content:        c.PostForm("content"),
-		Url:            siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+		Url:            siteHost + "decrypt/" + guid.String() + "/" + string(encryptionstring[:]),
 		Hidden:         c.PostForm("other_information"),
 		Captcha:        c.PostForm("h-captcha-response"),
 	}
@@ -166,7 +166,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
-	Insert(msgEncrypted)
+	db.Insert(&message.Message{Uniqueid: guid.String(), Content: string(encryptedStringSlice)})
 	if checkBot(msg.Captcha) {
 		if err := msg.Deliver(); err != nil {
 			log.Error().Err(err).Msg("")

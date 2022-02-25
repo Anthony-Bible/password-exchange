@@ -1,4 +1,4 @@
-package encryption
+package main
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	pb "../encryptionpb"
+	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"google.golang.org/grpc"
 )
 
@@ -133,6 +133,7 @@ func (*server) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageR
 }
 
 func (*server) GenerateRandomBytes(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
+	//todo add goroutines
 	s := request.GetRandomLength()
 	b := GenerateRandomBytes(s)
 	return &pb.Randomresponse{Encryptionbytes: b[:], EncryptionString: base64.URLEncoding.EncodeToString((b[:]))}, nil

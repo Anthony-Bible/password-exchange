@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"database/sql"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/commons"
 	"github.com/Anthony-Bible/password-exchange/app/message"
+	"github.com/rs/zerolog/log"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -56,10 +57,10 @@ func Connect() (db *sql.DB) {
 //Select Get the information based on the uuid from the url
 func Select(uuid string) (msgEncrypted message.Message) {
 	db := Connect()
-	err := db.QueryRow("select firstname,other_firstname,other_lastname,message,email,other_email,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.FirstName, &msgEncrypted.OtherFirstName, &msgEncrypted.OtherLastName, &msgEncrypted.Content, &msgEncrypted.Email, &msgEncrypted.OtherEmail, &msgEncrypted.Uniqueid)
+	err := db.QueryRow("select message,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.Content, &msgEncrypted.Uniqueid)
 
 	if err != nil {
-		panic(err.Error())
+		log.Fatal().Err(err).Msg("Something went wrong with selecting from database")
 	}
 	return msgEncrypted
 }
@@ -68,9 +69,9 @@ func Select(uuid string) (msgEncrypted message.Message) {
 func Insert(msgEncrypted *message.Message) {
 	db := Connect()
 
-	_, err := db.Exec("INSERT INTO messages(firstname, other_firstname, other_lastname, message, email, other_email, uniqueid) VALUES(?,?,?,?,?,?,?)", msgEncrypted.FirstName, msgEncrypted.OtherFirstName, msgEncrypted.OtherLastName, msgEncrypted.Content, msgEncrypted.Email, msgEncrypted.OtherEmail, msgEncrypted.Uniqueid)
+	_, err := db.Exec("INSERT INTO messages( message, uniqueid) VALUES(?,?)", msgEncrypted.Content, msgEncrypted.Uniqueid)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal().Err(err).Msg("Something went wrong with Inserting into database")
 	}
 
 }
