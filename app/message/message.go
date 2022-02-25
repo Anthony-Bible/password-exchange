@@ -3,6 +3,7 @@ package message
 import (
 	"regexp"
 	"strings"
+	// "github.com/Anthony-Bible/password-exchange/app/commons"
 )
 
 var rxEmail = regexp.MustCompile(".+@.+\\..+")

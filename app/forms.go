@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
@@ -16,9 +17,11 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/Anthony-Bible/password-exchange/app/email"
 	"github.com/Anthony-Bible/password-exchange/app/message"
 
 	"github.com/Anthony-Bible/password-exchange/app/commons"
+
 	db "github.com/Anthony-Bible/password-exchange/app/database"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 
@@ -92,25 +95,29 @@ func failedtoFind(c *gin.Context) {
 	render(c, "404.html", 404, nil)
 }
 func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
+	ctx := context.Background()
+
 	uuid := c.Param("uuid")
 	key := c.Param("key")
 	decodedKey, err := b64.URLEncoding.DecodeString(key[1:])
 	if err != nil {
 		log.Fatal().Err(err).Msg("Something went wrong with b64 decoding")
 	}
-	selectResult := Select(uuid)
-	decodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
+	selectResult := db.Select(uuid)
+	bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Something went wrong with base64 decoding")
 	}
+	var decodedContent []string
+	decodedContent = append(decodedContent, string(bytesDecodedContent))
 	var arr [32]byte
 	copy(arr[:], decodedKey)
-	content, err := s.Client.DecryptMessage([]byte(decodedContent), &arr)
+	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
 		log.Fatal().Err(err).Msg("Something went wrong with decryption")
 	}
 	msg := &message.MessagePost{
-		Content: string(content),
+		Content: strings.Join((content.GetPlaintext()), ""),
 	}
 	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: msg.Content}
 
@@ -139,9 +146,13 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 	//TODO: pass in struct & Handle two return values
 	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
+	encryptionRequest := &pb.EncryptedMessageRequest{
+		Key: encryptionbytes.GetEncryptionbytes(),
+	}
+	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
 
-	encryptedStrings, err := s.Client.EncryptMessage(ctx, &pb.EncryptedMessageRequest{encryptionbytes, []string(c.PostForm("content"))})
-	encryptedStringSlice := encryptedStrings.GetCipherText()
+	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
+	encryptedStringSlice := encryptedStrings.GetCiphertext()
 	// msgEncrypted.Uniqueid = guid.String()
 	msg := &message.MessagePost{
 		Email:          []string{c.PostForm("email")},
@@ -149,8 +160,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		OtherFirstName: c.PostForm("other_firstname"),
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
-		Content:        c.PostForm("content"),
-		Url:            siteHost + "decrypt/" + guid.String() + "/" + string(encryptionstring[:]),
+		Url:            siteHost + "decrypt/" + guid.String() + "/" + strings.Join(encryptedStringSlice, ""),
 		Hidden:         c.PostForm("other_information"),
 		Captcha:        c.PostForm("h-captcha-response"),
 	}
@@ -166,9 +176,10 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
-	db.Insert(&message.Message{Uniqueid: guid.String(), Content: string(encryptedStringSlice)})
+	db.Insert(&message.Message{Uniqueid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
 	if checkBot(msg.Captcha) {
-		if err := msg.Deliver(); err != nil {
+		// TODO Figure out how to use a fucntion from another package on a struct on another package
+		if err := email.Deliver(msg); err != nil {
 			log.Error().Err(err).Msg("")
 			c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 

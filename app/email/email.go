@@ -30,9 +30,9 @@ func GetViperVariable(envname string) (string, error) {
 // if !ok {
 //  log.Fatalf("Invalid type assertion for %s", envname)
 // }
-type MyMessage message.MessagePost
+// type MyMessage message.MessagePost
 
-func (msg MyMessage) Deliver() error {
+func Deliver(msg *message.MessagePost) error {
 	//set neccessary info for environment variables
 
 	// Sender data.
