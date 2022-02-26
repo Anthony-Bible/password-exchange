@@ -67,7 +67,7 @@ func main() {
 
 	s, err := newServerContext(os.Getenv("USER_SERVICE_URL"))
 	if err != nil {
-		log.Fatal().Err(err).Msg("something went wrong with contacting grpc server")
+		log.Error().Err(err).Msg("something went wrong with contacting grpc server")
 	}
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
@@ -101,12 +101,12 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	key := c.Param("key")
 	decodedKey, err := b64.URLEncoding.DecodeString(key[1:])
 	if err != nil {
-		log.Fatal().Err(err).Msg("Something went wrong with b64 decoding")
+		log.Error().Err(err).Msg("Something went wrong with b64 decoding")
 	}
 	selectResult := db.Select(uuid)
 	bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Something went wrong with base64 decoding")
+		log.Error().Err(err).Msg("Something went wrong with base64 decoding")
 	}
 	var decodedContent []string
 	decodedContent = append(decodedContent, string(bytesDecodedContent))
@@ -114,7 +114,7 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	copy(arr[:], decodedKey)
 	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
-		log.Fatal().Err(err).Msg("Something went wrong with decryption")
+		log.Error().Err(err).Msg("Something went wrong with decryption")
 	}
 	msg := &message.MessagePost{
 		Content: strings.Join((content.GetPlaintext()), ""),
@@ -137,12 +137,12 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	ctx := context.Background()
 	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
-		log.Fatal().Err(err).Msg("Problem with generating random string")
+		log.Error().Err(err).Msg("Problem with generating random string")
 	}
 	guid := xid.New()
 	siteHost, err := commons.GetViperVariable("host")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Problem with env variable")
+		log.Error().Err(err).Msg("Problem with env variable")
 	}
 	//TODO: pass in struct & Handle two return values
 	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
@@ -224,11 +224,11 @@ type test_struct struct {
 func checkBot(hcaptchaResponse string) (returnstatus bool) {
 	secret, err := commons.GetViperVariable("hcaptcha_secret")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Problem with env variable")
+		log.Error().Err(err).Msg("Problem with env variable")
 	}
 	sitekey, err := commons.GetViperVariable("hcaptcha_sitekey")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Problem with env variable")
+		log.Error().Err(err).Msg("Problem with env variable")
 	}
 	u := make(url.Values)
 	u.Set("secret", secret)
@@ -245,7 +245,7 @@ func checkBot(hcaptchaResponse string) (returnstatus bool) {
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Problem with env variable")
+		log.Error().Err(err).Msg("Problem with env variable")
 
 	}
 	var t test_struct

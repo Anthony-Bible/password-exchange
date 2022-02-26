@@ -16,7 +16,7 @@ func GetViperVariable(envname string) (string, error) {
 		return viperReturn, nil
 	} else {
 		err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
-		log.Error().Err(err).Msg("")
+		log.Fatal().Err(err).Msg("")
 		return "not right", err
 
 	}

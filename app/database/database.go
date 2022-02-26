@@ -60,7 +60,7 @@ func Select(uuid string) (msgEncrypted message.Message) {
 	err := db.QueryRow("select message,uniqueid from messages where uniqueid=?", uuid).Scan(&msgEncrypted.Content, &msgEncrypted.Uniqueid)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("Something went wrong with selecting from database")
+		log.Error().Err(err).Msg("Something went wrong with selecting from database")
 	}
 	return msgEncrypted
 }
@@ -71,7 +71,7 @@ func Insert(msgEncrypted *message.Message) {
 
 	_, err := db.Exec("INSERT INTO messages( message, uniqueid) VALUES(?,?)", msgEncrypted.Content, msgEncrypted.Uniqueid)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Something went wrong with Inserting into database")
+		log.Error().Err(err).Msg("Something went wrong with Inserting into database")
 	}
 
 }
