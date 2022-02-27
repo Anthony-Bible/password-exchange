@@ -1,0 +1,24 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "encryptionpb_proto",
+    srcs = ["encryption.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "encryptionpb_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/encryptionpb",
+    proto = ":encryptionpb_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "encryptionpb",
+    embed = [":encryptionpb_go_proto"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/encryptionpb",
+    visibility = ["//visibility:public"],
+)
