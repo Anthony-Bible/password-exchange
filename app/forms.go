@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -64,8 +63,11 @@ func newServerContext(endpoint string) (*EncryptionClient, error) {
 }
 
 func main() {
-
-	s, err := newServerContext(os.Getenv("USER_SERVICE_URL"))
+	encryptionServiceName, err := commons.GetViperVariable("encryptionservice")
+	if err != nil {
+		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
+	}
+	s, err := newServerContext(encryptionServiceName)
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong with contacting grpc server")
 	}
