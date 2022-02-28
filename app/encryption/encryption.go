@@ -133,7 +133,7 @@ func (*server) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageR
 	return response, nil
 }
 
-func (*server) GenerateRandomBytes(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
+func (*server) GenerateRandomString(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
 	//todo add goroutines
 	s := request.GetRandomLength()
 	b := GenerateRandomBytes(s)
