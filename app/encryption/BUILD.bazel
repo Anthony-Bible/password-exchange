@@ -1,4 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 
 go_library(
     name = "encryption_lib",
@@ -6,15 +8,16 @@ go_library(
     importpath = "github.com/Anthony-Bible/password-exchange/app/encryption",
     visibility = ["//visibility:private"],
     deps = [
-        "//protos:encryptionpb",
+        "//app/protos:encryptionpb",
         "@com_github_rs_xid//:xid",
         "@com_github_rs_zerolog//log",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )
 
-go_binary(
+go_image(
     name = "encryption",
     embed = [":encryption_lib"],
     visibility = ["//visibility:public"],
+    pure = "on",
 )

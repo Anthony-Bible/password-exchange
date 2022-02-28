@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/Anthony-Bible/password-exchange/app/email",
     visibility = ["//visibility:public"],
     deps = [
-        "//message",
+        "//app/message",
         "@com_github_rs_zerolog//log",
         "@com_github_spf13_viper//:viper",
     ],

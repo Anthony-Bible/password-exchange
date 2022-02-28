@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/Anthony-Bible/password-exchange/app/database",
     visibility = ["//visibility:public"],
     deps = [
-        "//commons",
-        "//message",
+        "//app/commons",
+        "//app/message",
         "@com_github_go_sql_driver_mysql//:mysql",
         "@com_github_rs_zerolog//log",
     ],

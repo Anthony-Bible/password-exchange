@@ -70,7 +70,7 @@ func main() {
 		log.Error().Err(err).Msg("something went wrong with contacting grpc server")
 	}
 	router := gin.Default()
-	router.LoadHTMLGlob("templates/*")
+	router.LoadHTMLGlob("/templates/*")
 	router.Static("/assets", "./assets")
 	router.GET("/", home)
 	router.POST("/", s.send)
