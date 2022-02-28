@@ -64,7 +64,7 @@ func Deliver(msg *message.MessagePost) error {
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
 
-	t.Execute(&body, struct {
+	err = t.Execute(&body, struct {
 		Body    string
 		Message string
 	}{
@@ -72,6 +72,10 @@ func Deliver(msg *message.MessagePost) error {
 		Message: msg.Content,
 	})
 
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with rendering email template")
+
+	}
 	// Sending email.
 	err = smtp.SendMail(emailhost, auth, from, to, body.Bytes())
 	fmt.Println(err)

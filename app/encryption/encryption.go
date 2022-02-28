@@ -70,9 +70,9 @@ func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*
 	for i := range CipherText {
 		ciphertext := []byte(CipherText[i])
 		if len(ciphertext) < gcm.NonceSize() {
+			log.Error().Err(err).Msg("Malformed Ciphertext")
 			return nil, errors.New("malformed ciphertext")
 		}
-		//TODO do i need to create a sice then assign? or is there a function to assign to repeated fields
 		plaintext, err := gcm.Open(nil,
 			ciphertext[:gcm.NonceSize()],
 			ciphertext[gcm.NonceSize():],
@@ -81,7 +81,9 @@ func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*
 		if err != nil {
 			return nil, err
 		}
-		response.Plaintext = append(response.Plaintext, string(plaintext))
+
+		response.Plaintext = append(response.Plaintext, string(base64.URLEncoding.EncodeToString(plaintext)))
+		fmt.Println(response)
 	}
 	return response, nil
 }

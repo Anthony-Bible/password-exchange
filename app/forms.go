@@ -164,10 +164,12 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		OtherFirstName: c.PostForm("other_firstname"),
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
-		Url:            siteHost + "decrypt/" + guid.String() + "/" + strings.Join(encryptedStringSlice, ""),
-		Hidden:         c.PostForm("other_information"),
-		Captcha:        c.PostForm("h-captcha-response"),
+
+		Url:     siteHost + "decrypt/" + guid.String() + "/" + strings.Join(encryptedStringSlice, ""),
+		Hidden:  c.PostForm("other_information"),
+		Captcha: c.PostForm("h-captcha-response"),
 	}
+	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 
 	if msg.Validate() == false {
 		log.Debug().Msgf("errors: %s", msg.Errors)
@@ -179,7 +181,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		return
 	}
 
-	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
+	// msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 	db.Insert(&message.Message{Uniqueid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
 	if checkBot(msg.Captcha) {
 		// TODO Figure out how to use a fucntion from another package on a struct on another package
@@ -262,9 +264,3 @@ func checkBot(hcaptchaResponse string) (returnstatus bool) {
 	}
 	return t.Success
 }
-
-//   if err := tmpl.Execute(w, data); err != nil {
-//     log.Println(err)
-//     http.Error(w, "Sorry, something went wrong", http.StatusInternalServerError)
-//   }
-// }
