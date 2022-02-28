@@ -64,6 +64,7 @@ func newServerContext(endpoint string) (*EncryptionClient, error) {
 
 func main() {
 	encryptionServiceName, err := commons.GetViperVariable("encryptionservice")
+	//TODO put port in environment variable
 	encryptionServiceName += ":50051"
 	if err != nil {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
