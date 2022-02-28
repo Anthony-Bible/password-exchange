@@ -398,7 +398,6 @@ go_repository(
     sum = "h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=",
     version = "v1.16.0",
 )
-
 go_repository(
     name = "com_github_hashicorp_consul_api",
     importpath = "github.com/hashicorp/consul/api",
@@ -1062,8 +1061,15 @@ go_repository(
     importpath = "google.golang.org/grpc",
     sum = "h1:AGJ0Ih4mHjSeibYkFGh1dD9KJ/eOtZ93I6hoHhukQ5Q=",
     version = "v1.40.0",
+    build_file_proto_mode = "disable"
 )
 
+go_repository(
+    name = "org_golang_google_grpc_reflection",
+    sum = "h1:AGJ0Ih4mHjSeibYkFGh1dD9KJ/eOtZ93I6hoHhukQ5Q=",
+    importpath = "google.golang.org/grpc/reflection",
+    version = "v1.44.0",
+)
 go_repository(
     name = "org_golang_google_protobuf",
     importpath = "google.golang.org/protobuf",

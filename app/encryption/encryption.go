@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/rs/xid"
+	"google.golang.org/grpc/reflection"
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
@@ -149,6 +150,7 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterMessageServiceServer(s, &server{})
+	reflection.Register(s)
 
 	s.Serve(lis)
 }
