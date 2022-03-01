@@ -1,73 +1,92 @@
 package email
 
 import (
-  "github.com/rs/zerolog/log"
-  "bytes"
-  "fmt"
-  "errors"
-  "net/smtp"
-  "text/template"
-  "github.com/Anthony-Bible/password-exchange/app/commons"   
-  "github.com/Anthony-Bible/password-exchange/app/message"
+	"bytes"
+	"errors"
+	"fmt"
+	"net/smtp"
+	"text/template"
+
+	"github.com/spf13/viper"
+
+	"github.com/Anthony-Bible/password-exchange/app/message"
+	"github.com/rs/zerolog/log"
 )
-func GetViperVariable(envname string) (string,error) {
-    viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
-    viper.AutomaticEnv() //will automatically load every env variable with PASSWORDEXCHANGE_
-    if viper.IsSet(envname){
-      viperReturn := viper.GetString(envname)
-      return viperReturn, nil
-    }else{
-      err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
-      log.Error().Err(err).Msg("")
-      return "not right", err
 
-    }
-    // if !ok {
-    //  log.Fatalf("Invalid type assertion for %s", envname)
-    // }
-func  (msg *MessagePost) Deliver() error {   //set neccessary info for environment variables
+func GetViperVariable(envname string) (string, error) {
+	viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
+	viper.AutomaticEnv()                   //will automatically load every env variable with PASSWORDEXCHANGE_
+	if viper.IsSet(envname) {
+		viperReturn := viper.GetString(envname)
+		return viperReturn, nil
+	} else {
+		err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
+		log.Error().Err(err).Msg("")
+		return "not right", err
 
-  // Sender data.
-  password,err := GetViperVariable("emailpass")
-  if err != nil {
+	}
+}
+
+// if !ok {
+//  log.Fatalf("Invalid type assertion for %s", envname)
+// }
+// type MyMessage message.MessagePost
+
+func Deliver(msg *message.MessagePost) error {
+	//set neccessary info for environment variables
+
+	// Sender data.
+	password, err := GetViperVariable("emailpass")
+	if err != nil {
 		panic(err)
 	}
-  from := "server@password.exchange"
-  AWS_ACCESS_KEY_ID,err := GetViperVariable("emailuser")
-  if err != nil {
+	from := "server@password.exchange"
+	AWS_ACCESS_KEY_ID, err := GetViperVariable("emailuser")
+	if err != nil {
 		panic(err)
 	}
-  // Receiver email address.
-  to := msg.OtherEmail
-  // smtp server configuration.
-  emailhost, err := GetViperVariable("emailhost") 
-  if err != nil {
+	// Receiver email address.
+	to := msg.OtherEmail
+	// smtp server configuration.
+	authHost, err := GetViperVariable("emailhost")
+	if err != nil {
 		panic(err)
 	}
-  // smtpPort := GetViperVariable("emailport")
+	emailPort, err := GetViperVariable("emailport")
+	if err != nil {
+		return err
+	}
+	emailHost := authHost + ":" + emailPort
+	// Authentication.
+	auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, authHost)
 
+	t, err := template.ParseFiles("/templates/email_template.html")
+	if err != nil {
+		log.Error().Err(err).Msg("template not found")
 
-  // Authentication.
-  auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, emailhost)
+		return err
+	}
 
+	var body bytes.Buffer
 
-  t, _ := template.ParseFiles("templates/email_template.html")
+	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
+	err = t.Execute(&body, struct {
+		Body    string
+		Message string
+	}{
+		Body:    fmt.Sprintf("Hi %s, \n %s used our service at https://passsword.exchange to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
+		Message: msg.Content,
+	})
 
-  var body bytes.Buffer
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with rendering email template")
+		return err
+	}
+	// Sending email.
+	if err = smtp.SendMail(emailHost, auth, from, to, body.Bytes()); err != nil {
+		log.Error().Err(err).Msgf("emailhost: %s from: %s to: %s authHost: %s", emailHost, from, to, authHost)
+	}
 
-  mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-  body.Write([]byte(fmt.Sprintf("Subject: Encrypted Message \n%s\n\n", mimeHeaders)))
-  
-  t.Execute(&body, struct {
-    Body    string
-    Message string
-  }{
-    Body:    fmt.Sprintf("Hi %s, \n %s used our service at https://passsword.exchange to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
-    Message:  msg.Content,
-  })
-
-  // Sending email.
-  err = smtp.SendMail(emailhost, auth, from, to, body.Bytes())
-  fmt.Println(err)
-  return err
+	return err
 }

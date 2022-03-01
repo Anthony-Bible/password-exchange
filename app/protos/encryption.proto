@@ -1,27 +1,52 @@
 syntax = "proto3";
 package encryptionpb;
-option go_package = "github.com/Anthony-Bible/password-exchange/app/encryptionpb";
+option go_package = "github.com/Anthony-Bible/password-exchange/protos/encryptionpb";
 
-message PlainMessage{
-  string Email = 1;
-  string FirstName  = 2;
-  string OtherFirstName = 3 ;
-  string OtherLastName = 4;
-  string OtherEmail = 5;
-  string Uniqueid = 6;
-  string Content = 7;
+ /**   message PlainMessage{
+      string Email = 1;
+      string FirstName  = 2;
+      string OtherFirstName = 3 ;
+      string OtherLastName = 4;
+      string OtherEmail = 5;
+      string Uniqueid = 6;
+      string Content = 7;
+    }
+    message EncryptedMessage{
+      string Email = 1;
+      string FirstName  = 2;
+      string OtherFirstName = 3 ;
+      string OtherLastName = 4;
+      string OtherEmail = 5;
+      string Uniqueid = 6;
+      string Content = 7;
+    }
+
+    **/
+
+message EncryptedMessageRequest{
+  repeated string PlainText = 1;
+  bytes Key = 2;
 }
-message EncryptedMessage{
-  string Email = 1;
-  string FirstName  = 2;
-  string OtherFirstName = 3 ;
-  string OtherLastName = 4;
-  string OtherEmail = 5;
-  string Uniqueid = 6;
-  string Content = 7;
-
-
+message EncryptedMessageResponse{
+  repeated string Ciphertext = 1;
 }
+message DecryptedMessageRequest{
+  repeated string Ciphertext = 1;
+  bytes key = 2;
+}
+message DecryptedMessageResponse{
+  repeated string plaintext = 1;
+}
+message Randomresponse{
+bytes encryptionbytes = 1;
+string encryptionString = 2;
+}
+message  Randomrequest{
+int32 randomLength = 1;
+}
+
 service messageService{
-  rpc encryptMessage(PlainMessage) returns (EncryptedMessage) {}
+  rpc encryptMessage(EncryptedMessageRequest) returns (EncryptedMessageResponse) {}
+  rpc DecryptMessage(DecryptedMessageRequest) returns (DecryptedMessageResponse) {}
+  rpc GenerateRandomString(Randomrequest) returns (Randomresponse) {}
 }

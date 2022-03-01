@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+
+go_library(
+    name = "encryption_lib",
+    srcs = ["encryption.go"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/encryption",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//app/protos:encryptionpb",
+        "@com_github_rs_xid//:xid",
+        "@com_github_rs_zerolog//log",
+        "@org_golang_google_grpc//:go_default_library",
+	"@org_golang_google_grpc//reflection"
+    ],
+)
+
+go_image(
+    name = "encryption",
+    embed = [":encryption_lib"],
+    visibility = ["//visibility:public"],
+    pure = "on",
+)
+container_push(
+   name = "encryption_push",
+   image = ":encryption",
+   format = "Docker",
+   registry = "ghcr.io",
+   repository = "anthony-bible/encryption",
+   tag = "dev",
+)

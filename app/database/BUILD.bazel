@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "database",
+    srcs = ["database.go"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/database",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//app/commons",
+        "//app/message",
+        "@com_github_go_sql_driver_mysql//:mysql",
+        "@com_github_rs_zerolog//log",
+    ],
+)
