@@ -54,7 +54,7 @@ func Generateid() string {
 
 // }
 
-func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*pb.DecryptedMessageResponse, error) {
+func (*server) DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*pb.DecryptedMessageResponse, error) {
 	key := request.GetKey()
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
@@ -68,7 +68,13 @@ func DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*
 	CipherText := request.GetCiphertext()
 	response := &pb.DecryptedMessageResponse{}
 	for i := range CipherText {
-		ciphertext := []byte(CipherText[i])
+		decodecCipher, err := base64.URLEncoding.DecodeString(CipherText[i])
+		if err != nil {
+			log.Error().Err(err).Msg("Something went wrong with decoding ciphertext")
+			return nil, err
+		}
+
+		ciphertext := []byte(decodecCipher)
 		if len(ciphertext) < gcm.NonceSize() {
 			log.Error().Err(err).Msg("Malformed Ciphertext")
 			return nil, errors.New("malformed ciphertext")

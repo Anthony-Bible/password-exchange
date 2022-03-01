@@ -108,22 +108,29 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 		log.Error().Err(err).Msg("Something went wrong with b64 decoding")
 	}
 	selectResult := db.Select(uuid)
-	bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
+	// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with base64 decoding")
 	}
 	var decodedContent []string
-	decodedContent = append(decodedContent, string(bytesDecodedContent))
+	decodedContent = append(decodedContent, string(selectResult.Content))
 	var arr [32]byte
 	copy(arr[:], decodedKey)
 	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
+		log.Debug().Msg(selectResult.Content)
+		marshaledSelect, _ := json.Marshal(selectResult)
+		marshaledStruct, _ := json.Marshal(&pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
+		log.Debug().Msg(string(marshaledStruct))
+		log.Debug().Msg(string(marshaledSelect))
+
 		log.Error().Err(err).Msg("Something went wrong with decryption")
 	}
 	msg := &message.MessagePost{
 		Content: strings.Join((content.GetPlaintext()), ""),
 	}
-	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: msg.Content}
+	decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
+	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: string(decryptedContent)}
 
 	render(c, "decryption.html", 0, extraHeaders)
 }
@@ -151,7 +158,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	//TODO: pass in struct & Handle two return values
 	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
 	encryptionRequest := &pb.EncryptedMessageRequest{
-		Key: encryptionbytes.GetEncryptionbytes(),
+		Key: []byte(encryptionbytes.GetEncryptionbytes()),
 	}
 	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
 
@@ -165,7 +172,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
 
-		Url:     siteHost + "decrypt/" + guid.String() + "/" + strings.Join(encryptedStringSlice, ""),
+		Url:     siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
 		Hidden:  c.PostForm("other_information"),
 		Captcha: c.PostForm("h-captcha-response"),
 	}
@@ -186,7 +193,8 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	if checkBot(msg.Captcha) {
 		// TODO Figure out how to use a fucntion from another package on a struct on another package
 		if err := email.Deliver(msg); err != nil {
-			log.Error().Err(err).Msg("")
+			marshaledMesage, _ := json.Marshal(msg)
+			log.Error().Err(err).Msg(string(marshaledMesage))
 			c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
 
 			return
