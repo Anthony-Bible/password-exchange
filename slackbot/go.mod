@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-test/deep v1.0.8
 	github.com/rs/zerolog v1.25.0
-	github.com/slack-go/slack v0.9.5
+	github.com/slack-go/slack v0.10.2
 	github.com/spf13/viper v1.9.0
 )
 
