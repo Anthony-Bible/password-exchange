@@ -48,22 +48,29 @@ func Deliver(msg *message.MessagePost) error {
 	// Receiver email address.
 	to := msg.OtherEmail
 	// smtp server configuration.
-	emailhost, err := GetViperVariable("emailhost")
+	authHost, err := GetViperVariable("emailhost")
 	if err != nil {
 		panic(err)
 	}
-	// smtpPort := GetViperVariable("emailport")
-
+	emailPort, err := GetViperVariable("emailport")
+	if err != nil {
+		return err
+	}
+	emailHost := authHost + ":" + emailPort
 	// Authentication.
-	auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, emailhost)
+	auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, authHost)
 
-	t, _ := template.ParseFiles("templates/email_template.html")
+	t, err := template.ParseFiles("/templates/email_template.html")
+	if err != nil {
+		log.Error().Err(err).Msg("template not found")
+
+		return err
+	}
 
 	var body bytes.Buffer
 
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
-
 	err = t.Execute(&body, struct {
 		Body    string
 		Message string
@@ -74,10 +81,12 @@ func Deliver(msg *message.MessagePost) error {
 
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with rendering email template")
-
+		return err
 	}
 	// Sending email.
-	err = smtp.SendMail(emailhost, auth, from, to, body.Bytes())
-	fmt.Println(err)
+	if err = smtp.SendMail(emailHost, auth, from, to, body.Bytes()); err != nil {
+		log.Error().Err(err).Msgf("emailhost: %s from: %s to: %s authHost: %s", emailHost, from, to, authHost)
+	}
+
 	return err
 }
