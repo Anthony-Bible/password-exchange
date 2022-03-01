@@ -89,7 +89,6 @@ func (*server) DecryptMessage(ctx context.Context, request *pb.DecryptedMessageR
 		}
 
 		response.Plaintext = append(response.Plaintext, string(base64.URLEncoding.EncodeToString(plaintext)))
-		fmt.Println(response)
 	}
 	return response, nil
 }

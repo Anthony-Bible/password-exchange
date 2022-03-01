@@ -195,7 +195,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		if err := email.Deliver(msg); err != nil {
 			marshaledMesage, _ := json.Marshal(msg)
 			log.Error().Err(err).Msg(string(marshaledMesage))
-			c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong: %s", err))
+			c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
 
 			return
 		}
