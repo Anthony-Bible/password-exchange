@@ -1251,8 +1251,8 @@ container_pull(
     name = "alpine_linux_amd64",
     registry = "index.docker.io",
     repository = "library/alpine",
-    tag = "3.8",
-    digest="sha256:2bb501e6173d9d006e56de5bce2720eb06396803300fe1687b58a7ff32bf4c14"
+    tag = "3.15",
+    digest="sha256:21a3deaa0d32a8057914f36584b5288d2e5ecc984380bc0118285c70fa8c9300"
 )
 http_archive(
     name = "io_bazel_rules_k8s",
