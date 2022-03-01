@@ -20,6 +20,7 @@ import (
 	// b "password.exchange/aws"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // GenerateRandomBytes returns securely generated random bytes.
@@ -34,7 +35,9 @@ func GenerateRandomBytes(n int32) *[32]byte {
 	key := [32]byte{}
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
-		panic(err)
+		log.Fatal().
+			Err(err).
+			Msg("there's not enough randomness")
 	}
 	return &key
 }
@@ -148,16 +151,31 @@ func (*server) GenerateRandomString(ctx context.Context, request *pb.Randomreque
 }
 
 func main() {
+	// Email:          []byte(ctx.PostForm("email"))
+	// FirstName:      []byte(ctx.PostForm("firstname"))
+	// OtherFirstName: []byte(ctx.PostForm("other_firstname"))
+	// OtherLastName:  []byte(ctx.PostForm("other_lastname"))
+	// OtherEmail:     []byte(ctx.PostForm("other_email"))
+	// Content:        []byte(ctx.PostForm("content"))
+
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with starting grpc server")
 	}
-	fmt.Printf("Server is listening on %v ...", address)
+	// plainMessage := &pb.PlainMessage{
+	// Email:          []byte(ctx.PostForm("email")),
+	// FirstName:      []byte(ctx.PostForm("firstname")),
+	// OtherFirstName: []byte(ctx.PostForm("other_firstname")),
+	// OtherLastName:  []byte(ctx.PostForm("other_lastname")),
+	// OtherEmail:     []byte(ctx.PostForm("other_email")),
+	// Content:        []byte(ctx.PostForm("content"))
+	// Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
+
+	// }
 
 	s := grpc.NewServer()
 	pb.RegisterMessageServiceServer(s, &server{})
 	reflection.Register(s)
 
-	s.Serve(lis)
 }
