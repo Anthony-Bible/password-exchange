@@ -25,5 +25,8 @@ jobs:
       - uses: actions/checkout@v2
 
       # build
+      - name: get bazel version
+        run: bazel version
       - name: Build the code
         run: bazel build //...
+
