@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 
@@ -20,7 +19,6 @@ import (
 	// b "password.exchange/aws"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 // GenerateRandomBytes returns securely generated random bytes.
@@ -177,5 +175,7 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterMessageServiceServer(s, &server{})
 	reflection.Register(s)
-
+        if err := s.Serve(lis); err != nil {
+                log.Fatal().Msgf("failed to serve: %v", err)
+        }
 }
