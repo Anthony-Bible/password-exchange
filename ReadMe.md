@@ -34,6 +34,9 @@ Future (hopeful) Intergrations:
 ---
 
 ### Installation
+#### BUILDING
+1. Run `bazel build //...`
+2. To deploy kubernetes manifests `bazel run //kubernetes:password.create`
 ##### Docker
 1. Clone this repo locally
 2. run docker compose
