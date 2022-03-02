@@ -28,5 +28,5 @@ jobs:
       - name: get bazel version
         run: bazel version
       - name: Build the code
-        run: bazel build //...
+        run: bazel build --sandbox_debug //... 
 
