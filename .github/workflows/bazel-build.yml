@@ -14,8 +14,10 @@ jobs:
         env:
           cache-name: bazel-cache
         with:
-          path: ~/.cache/bazelisk
-          key: ${{ runner.os }}-${{ env.cache-name }}-${{ github.ref }}
+          path: |
+            ~/.cache/bazelisk
+            ~/.cache/bazel     
+          key: ${{ runner.os }}-${{ env.cache-name }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-development
 
