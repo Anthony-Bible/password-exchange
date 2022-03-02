@@ -1210,7 +1210,7 @@ go_dependencies()
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "host")
+go_register_toolchains(version = "1.17")
 
 gazelle_dependencies()
 
@@ -1254,12 +1254,26 @@ container_pull(
     tag = "3.15",
     digest="sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3"
 )
+#kubectl download
 http_archive(
     name = "io_bazel_rules_k8s",
     strip_prefix = "rules_k8s-0.6",
     urls = ["https://github.com/bazelbuild/rules_k8s/archive/v0.6.tar.gz"],
     sha256 = "51f0977294699cd547e139ceff2396c32588575588678d2054da167691a227ef",
 )
+load("@io_bazel_rules_k8s//toolchains/kubectl:kubectl_configure.bzl", "kubectl_configure")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name="k8s_binary",
+    downloaded_file_path = "kubectl",
+    sha256="9f74f2fa7ee32ad07e17211725992248470310ca1988214518806b39b1dad9f0",
+    executable=True,
+    urls=["https://dl.k8s.io/release/v1.21.0/bin/linux/amd64/kubectl"],
+)
+kubectl_configure(name="k8s_config", kubectl_path="@k8s_binary//file")
+
+#k8s rules loading
 
 load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories")
 
