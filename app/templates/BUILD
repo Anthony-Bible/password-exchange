@@ -6,12 +6,12 @@ filegroup(
         "**",
     ]),
 )
+
 pkg_tar(
     name = "tarred_file",
     srcs = [":template_files"],
-    package_dir = "/templates",
-    mode = "0o644",
-    visibility = ["//visibility:public"],
     extension = "tgz",
+    mode = "0o644",
+    package_dir = "/templates",
+    visibility = ["//visibility:public"],
 )
-
