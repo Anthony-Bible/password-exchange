@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/smtp"
+	"strings"
 	"text/template"
 
 	"github.com/spf13/viper"
@@ -67,11 +68,12 @@ func Deliver(msg *message.MessagePost) error {
 		return err
 	}
 
-	var body bytes.Buffer
-
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	body.Write([]byte(fmt.Sprintf("Subject: This is a test subject \n%s\n\n", mimeHeaders)))
-	err = t.Execute(&body, struct {
+	body := []byte("To: " + strings.Join(to, "") + "\r\n" +
+		"Subject: Encrypted Messsage from Password exchange \r\n" +
+		mimeHeaders)
+	buf := bytes.NewBuffer(body)
+	err = t.Execute(buf, struct {
 		Body    string
 		Message string
 	}{
@@ -84,7 +86,7 @@ func Deliver(msg *message.MessagePost) error {
 		return err
 	}
 	// Sending email.
-	if err = smtp.SendMail(emailHost, auth, from, to, body.Bytes()); err != nil {
+	if err = smtp.SendMail(emailHost, auth, from, to, buf.Bytes()); err != nil {
 		log.Error().Err(err).Msgf("emailhost: %s from: %s to: %s authHost: %s", emailHost, from, to, authHost)
 	}
 
