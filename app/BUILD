@@ -1,9 +1,7 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-
-
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/Anthony-Bible/password-exchange/app
@@ -32,9 +30,9 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//app/commons",
-        "//app/database",
         "//app/email",
         "//app/message",
+        "//app/protos:databasepb",
         "//app/protos:encryptionpb",
         "@com_github_gin_gonic_gin//:gin",
         "@com_github_rs_xid//:xid",
@@ -43,21 +41,19 @@ go_library(
     ],
 )
 
-
 container_image(
     name = "forms_image",
     base = "@alpine_linux_amd64//image",
-    tars = ["//app/templates:tarred_file"],
-    files= ["//app/templates:tarred_file"],
     data_path = "/",
-
+    files = ["//app/templates:tarred_file"],
+    tars = ["//app/templates:tarred_file"],
 )
 
 go_image(
-    name="app",
+    name = "app",
+    base = ":forms_image",
     basename = "app",
     embed = [":app_lib"],
+    pure = "on",
     visibility = ["//visibility:public"],
-    base = ":forms_image",
-    pure= "on",
 )

@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: database-deployment
+  namespace: default
+  labels:
+    app: database 
+spec:
+  selector:
+    matchLabels:
+      app: database 
+  replicas: 2
+  template: 
+    metadata:
+      labels:
+        app: database
+        name: "database"
+        phase: "prod" 
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+    spec:
+      containers:
+      - name: setup
+        image:  ghcr.io/anthony-bible/passwordexchange-database
+        envFrom:
+          - secretRef:
+              name: test-secret
+#          - name: PASSWORDEXCHANGE_EMAILPASS
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILPASS
+#
+#          - name: PASSWORDEXCHANGE_DBPORT
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBPORT
+#          - name: PASSWORDEXCHANGE_DBNAME
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBNAME
+#          - name: PASSWORDEXCHANGE_DBPASS
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBPASS
+#          - name: PASSWORDEXCHANGE_DBUSER
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBUSER
+#          - name: PASSWORDEXCHANGE_DBHOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_DBHOST
+#          - name: PASSWORDEXCHANGE_EMAILHOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILHOST
+#          - name: PASSWORDEXCHANGE_HOST
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HOST
+#          - name: PASSWORDEXCHANGE_EMAILPORT
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_EMAILPORT
+#
+#          - name: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HCAPTCHA_SECRET
+#
+#          - name: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
+#            valueFrom: 
+#              secretKeyRef:
+#                name: test-secret
+#                key: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
+        volumeMounts:
+        - name: html
+          mountPath: /code
+        - name: nginx-config
+          mountPath: /nginx 
+        - name: php-config 
+          mountPath: /php
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - name: php-socket
+        emptyDir: {}
+      - name: html
+        emptyDir: {}        
+      - name: nginx-config
+        emptyDir: {}        
+      - name: php-config 
+        emptyDir: {}
