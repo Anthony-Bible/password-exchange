@@ -21,7 +21,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/commons"
 
-	db "github.com/Anthony-Bible/password-exchange/app/database"
+	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 
 	"google.golang.org/grpc"
@@ -37,8 +37,10 @@ type htmlHeaders struct {
 // this type contains state of the server
 type EncryptionClient struct {
 	// client to GRPC service
-	Client pb.MessageServiceClient
-	conn   *grpc.ClientConn
+	Client   pb.MessageServiceClient
+	DbClient db.DbServiceClient
+	conn     *grpc.ClientConn
+	dbconn   *grpc.ClientConn
 
 	// default timeout
 	// Timeout time.Duration
@@ -49,30 +51,55 @@ type EncryptionClient struct {
 }
 
 // constructor for server context
-func newServerContext(endpoint string) (*EncryptionClient, error) {
-	userConn, err := grpc.Dial(endpoint, grpc.WithInsecure())
+func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, error) {
+	userConn, err := grpc.Dial(endpoint1, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
+	userConn2, err := grpc.Dial(endpoint2, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	dbclient := db.NewDbServiceClient(userConn2)
+
 	client := pb.NewMessageServiceClient(userConn)
 	ctx := &EncryptionClient{
-		Client: client,
-		conn:   userConn,
+		Client:   client,
+		DbClient: dbclient,
+		conn:     userConn,
+		dbconn:   userConn2,
 	}
+	fmt.Println("in function", ctx)
 	return ctx, nil
 }
 
+// func newDbServerContext(endpoint1 string, enpdpoint2) (*EncryptionClient, error) {
+// 	dbuserConn, err := grpc.Dial(endpoint1, grpc.WithInsecure())
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	dbclient := db.NewDbServiceClient(dbuserConn)
+// 	ctx := &EncryptionClient{
+// 		DbClient: dbclient,
+// 		dbconn:   dbuserConn,
+// 	}
+// 	return ctx, nil
+// }
+
 func main() {
 	encryptionServiceName, err := commons.GetViperVariable("encryptionservice")
+	dbServiceName, err := commons.GetViperVariable("databaseservice")
 	//TODO put port in environment variable
 	encryptionServiceName += ":50051"
 	if err != nil {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
-	s, err := newServerContext(encryptionServiceName)
+	s, err := newServerContext(encryptionServiceName, dbServiceName)
 	if err != nil {
-		log.Error().Err(err).Msg("something went wrong with contacting grpc server")
+		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
 	}
+
+	fmt.Println(s)
 	router := gin.Default()
 	router.LoadHTMLGlob("/templates/*")
 	router.Static("/assets", "./assets")
@@ -107,18 +134,18 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with b64 decoding")
 	}
-	selectResult := db.Select(uuid)
+	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
 	// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 	if err != nil {
-		log.Error().Err(err).Msg("Something went wrong with base64 decoding")
+		log.Error().Err(err).Msg("Something went wrong with select from db")
 	}
 	var decodedContent []string
-	decodedContent = append(decodedContent, string(selectResult.Content))
+	decodedContent = append(decodedContent, string(selectResult.GetContent()))
 	var arr [32]byte
 	copy(arr[:], decodedKey)
 	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
-		log.Debug().Msg(selectResult.Content)
+		log.Debug().Msg(selectResult.GetContent())
 		marshaledSelect, _ := json.Marshal(selectResult)
 		marshaledStruct, _ := json.Marshal(&pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 		log.Debug().Msg(string(marshaledStruct))
@@ -189,7 +216,11 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	// msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
-	db.Insert(&message.Message{Uniqueid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
+	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with insert")
+	}
+
 	if checkBot(msg.Captcha) {
 		// TODO Figure out how to use a fucntion from another package on a struct on another package
 		if err := email.Deliver(msg); err != nil {

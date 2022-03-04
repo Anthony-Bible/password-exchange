@@ -13,11 +13,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/rs/xid"
-	"google.golang.org/grpc/reflection"
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	"google.golang.org/grpc/reflection"
+
 	"google.golang.org/grpc"
 )
 
@@ -175,7 +176,7 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterMessageServiceServer(s, &server{})
 	reflection.Register(s)
-        if err := s.Serve(lis); err != nil {
-                log.Fatal().Msgf("failed to serve: %v", err)
-        }
+	if err := s.Serve(lis); err != nil {
+		log.Fatal().Msgf("failed to serve: %v", err)
+	}
 }

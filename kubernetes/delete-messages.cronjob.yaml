@@ -1,0 +1,35 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: delete-messages 
+            image: mariadb 
+            env:
+              - name: PASSWORDEXCHANGE_DBPASS
+                valueFrom: 
+                  secretKeyRef:
+                   name: test-secret
+                   key: PASSWORDEXCHANGE_DBPASS
+              - name: PASSWORDEXCHANGE_DBUSER
+                valueFrom: 
+                  secretKeyRef:
+                   name: test-secret
+                   key: PASSWORDEXCHANGE_DBUSER
+              - name: PASSWORDEXCHANGE_DBHOST
+                valueFrom: 
+                  secretKeyRef:
+                   name: test-secret
+                   key: PASSWORDEXCHANGE_DBHOST
+            imagePullPolicy: IfNotPresent
+            command:
+            - mysql
+            - -h $PASSWORDEXCHANGE_DBHOST -u $PASSWORDEXCHANGE_DBUSER -p$PASSWORDEXCHANGE_DBPASS
+            - -c "delete from messages where created < now() - interval 7 DAY;"
+          restartPolicy: OnFailure

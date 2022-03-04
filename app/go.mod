@@ -8,6 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/rs/xid v1.3.0
+        github.com/golang/protobuf/ptypes/empty v1.27.0
 	github.com/rs/zerolog v1.25.0
 	github.com/spf13/viper v1.8.1
 	github.com/ugorji/go v1.2.6 // indirect

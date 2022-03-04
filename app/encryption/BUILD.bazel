@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
@@ -13,21 +13,22 @@ go_library(
         "@com_github_rs_xid//:xid",
         "@com_github_rs_zerolog//log",
         "@org_golang_google_grpc//:go_default_library",
-	"@org_golang_google_grpc//reflection"
+        "@org_golang_google_grpc//reflection",
     ],
 )
 
 go_image(
     name = "encryption",
     embed = [":encryption_lib"],
-    visibility = ["//visibility:public"],
     pure = "on",
+    visibility = ["//visibility:public"],
 )
+
 container_push(
-   name = "encryption_push",
-   image = ":encryption",
-   format = "Docker",
-   registry = "ghcr.io",
-   repository = "anthony-bible/encryption",
-   tag = "dev",
+    name = "encryption_push",
+    format = "Docker",
+    image = ":encryption",
+    registry = "ghcr.io",
+    repository = "anthony-bible/encryption",
+    tag = "dev",
 )
