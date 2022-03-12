@@ -139,6 +139,11 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with select from db")
 	}
+	if len(selectResult.GetContent()) == 0 {
+		render(c, "404.html", 404, nil)
+
+		return
+	}
 	var decodedContent []string
 	decodedContent = append(decodedContent, string(selectResult.GetContent()))
 	var arr [32]byte
