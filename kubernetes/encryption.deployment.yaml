@@ -1,104 +1,49 @@
----
-apiVersion: apps/v1 
+apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app: encryption
   name: encryption-deployment
   namespace: default
-  labels:
-    app: encryption 
 spec:
+  replicas: 2
   selector:
     matchLabels:
-      app: encryption 
-  replicas: 2
-  template: 
+      app: encryption
+  template:
     metadata:
-      labels:
-        app: encryption
-        name: "encryption"
-        phase: "prod" 
       annotations:
         iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: encryption
+        name: encryption
+        phase: prod
     spec:
       containers:
-      - name: setup
-        image:  ghcr.io/anthony-bible/passwordexchange-encryption
-        envFrom:
-          - secretRef:
-              name: test-secret
-#          - name: PASSWORDEXCHANGE_EMAILPASS
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_EMAILPASS
-#
-#          - name: PASSWORDEXCHANGE_DBPORT
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_DBPORT
-#          - name: PASSWORDEXCHANGE_DBNAME
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_DBNAME
-#          - name: PASSWORDEXCHANGE_DBPASS
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_DBPASS
-#          - name: PASSWORDEXCHANGE_DBUSER
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_DBUSER
-#          - name: PASSWORDEXCHANGE_DBHOST
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_DBHOST
-#          - name: PASSWORDEXCHANGE_EMAILHOST
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_EMAILHOST
-#          - name: PASSWORDEXCHANGE_HOST
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_HOST
-#          - name: PASSWORDEXCHANGE_EMAILPORT
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_EMAILPORT
-#
-#          - name: PASSWORDEXCHANGE_HCAPTCHA_SECRET
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_HCAPTCHA_SECRET
-#
-#          - name: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
-#            valueFrom: 
-#              secretKeyRef:
-#                name: test-secret
-#                key: PASSWORDEXCHANGE_HCAPTCHA_SITEKEY
+      - envFrom:
+        - secretRef:
+            name: test-secret
+        image: ghcr.io/anthony-bible/passwordexchange-encryption
+        name: setup
         volumeMounts:
-        - name: html
-          mountPath: /code
-        - name: nginx-config
-          mountPath: /nginx 
-        - name: php-config 
-          mountPath: /php
+        - mountPath: /code
+          name: html
+        - mountPath: /nginx
+          name: nginx-config
+        - mountPath: /php
+          name: php-config
       imagePullSecrets:
       - name: regcred
       volumes:
-      - name: php-socket
-        emptyDir: {}
-      - name: html
-        emptyDir: {}        
-      - name: nginx-config
-        emptyDir: {}        
-      - name: php-config 
-        emptyDir: {}
+      - emptyDir: {}
+        name: php-socket
+      - emptyDir: {}
+        name: html
+      - emptyDir: {}
+        name: nginx-config
+      - emptyDir: {}
+        name: php-config
+---
+
+
