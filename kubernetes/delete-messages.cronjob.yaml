@@ -7,29 +7,37 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            cronjob: "deleteMessages"
         spec:
           containers:
           - name: delete-messages 
             image: mariadb 
             env:
-              - name: PASSWORDEXCHANGE_DBPASS
+              - name: DELETEMESSAGES_PASS
                 valueFrom: 
                   secretKeyRef:
                    name: test-secret
-                   key: PASSWORDEXCHANGE_DBPASS
-              - name: PASSWORDEXCHANGE_DBUSER
+                   key: DELETEMESSAGES_PASS
+              - name: DELETEMESSAGES_USER
                 valueFrom: 
                   secretKeyRef:
                    name: test-secret
-                   key: PASSWORDEXCHANGE_DBUSER
+                   key: DELETEMESSAGES_USER
               - name: PASSWORDEXCHANGE_DBHOST
                 valueFrom: 
                   secretKeyRef:
                    name: test-secret
                    key: PASSWORDEXCHANGE_DBHOST
+              - name: PASSWORDEXCHANGE_DBNAME
+                valueFrom: 
+                  secretKeyRef:
+                   name: test-secret
+                   key: PASSWORDEXCHANGE_DBNAME
             imagePullPolicy: IfNotPresent
             command:
-            - mysql
-            - -h $PASSWORDEXCHANGE_DBHOST -u $PASSWORDEXCHANGE_DBUSER -p$PASSWORDEXCHANGE_DBPASS
-            - -c "delete from messages where created < now() - interval 7 DAY;"
+             - /bin/bash 
+             - -c
+             - mysql -h $PASSWORDEXCHANGE_DBHOST -u $DELETEMESSAGES_USER -p$DELETEMESSAGES_PASS  -E -e "delete from messages where created < now() - interval 7 DAY;" $PASSWORDEXCHANGE_DBNAME
           restartPolicy: OnFailure
