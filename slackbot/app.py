@@ -1,65 +1,60 @@
 import os
-# Use the package we installed
-from slack_bolt import App
+import re
+import base64
+from flask import Flask, request
+from slack_sdk import WebClient
+from slack_bolt import App, Say
+from slack_bolt.adapter.flask import SlackRequestHandler
+import client
+app = Flask(__name__)
+slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+bolt_app = App(token=os.environ.get("SLACK_BOT_TOKEN"), signing_secret=os.environ.get("SLACK_SIGNING_SECRET"))
 
-# Initializes your app with your bot token and signing secret
-app = App(
-    token=os.environ.get("SLACK_BOT_TOKEN"),
-    signing_secret=os.environ.get("SLACK_SIGNING_SECRET")
-)
+@bolt_app.message("hello slacky")
+def greetings(payload: dict, say: Say):
+    """ This will check all the message and pass only those which has 'hello slacky' in it """
+    user = payload.get("user")
+    say(f"Hi <@{user}>")
 
-# Add functionality here
-# @app.event("app_home_opened") etc
+client = client.EncryptionServiceClient()
 
-@app.event("app_home_opened")
-def update_home_tab(client, event, logger):
-  try:
-    # views.publish is the method that your app uses to push a view to the Home tab
-    client.views_publish(
-      # the user that opened your app's app home
-      user_id=event["user"],
-      # the view object that appears in the app home
-      view={
-        "type": "home",
-        "callback_id": "home_view",
-
-        # body of the view
+@bolt_app.message(re.compile("(hi|hello|hey) slacky"))
+def reply_in_thread(payload: dict):
+    """ This will reply in thread instead of creating a new thread """
+    response = slackclient.chat_postMessage(channel=payload.get('channel'),
+                                     thread_ts=payload.get('ts'),
+                                     text=f"Hi<@{payload['user']}>")
+@bolt_app.command("/encrypt")
+def help_command(say, payload: dict, ack):
+    ack()
+    slack_text=payload.get('text')
+    print(slack_text)
+    key, guid = client.encrypt_text(slack_text)
+    #TODO: put encoding to base64 in a separate function
+    #slteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
+    message_bytes = key.encode('ascii')
+    base64_bytes = base64.b64encode(message_bytes)
+    base64_key = base64_bytes.decode('ascii')
+    url = sitehost + "decrypt/" + guid + "/" + base64_key
+    text = {
         "blocks": [
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": "*Welcome to your _App's Home_* :tada:"
-            }
-          },
-          {
-            "type": "divider"
-          },
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": "This button won't do much for now but you can set up a listener for it using the `actions()` method and passing its unique `action_id`. See an example in the `examples` folder within your Bolt app."
-            }
-          },
-          {
-            "type": "actions",
-            "elements": [
-              {
-                "type": "button",
+            {
+                "type": "section",
                 "text": {
-                  "type": "plain_text",
-                  "text": "Click me!"
+                    "type": "mrkdwn",
+                    "text": url
                 }
-              }
-            ]
-          }
+            }
         ]
-      }
-    )
-  
-  except Exception as e:
-    logger.error(f"Error publishing home tab: {e}")
-# Start your app
-if __name__ == "__main__":
-    app.start(port=int(os.environ.get("PORT", 3000)))
+    }
+    say(text=text)
+
+@app.route("/slack/events", methods=["POST"])
+def slack_events():
+    """ Declaring the route where slack will post a request """
+    return handler.handle(request)
+
+handler = SlackRequestHandler(bolt_app)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=3000, debug=True)
