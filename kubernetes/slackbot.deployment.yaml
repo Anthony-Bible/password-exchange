@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: slackbot
+  name: slackbot-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: slackbot
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: slackbot
+        name: slackbot
+        phase: prod
+    spec:
+      containers:
+      - image: ghcr.io/anthony-bible/passwordexchange-slackbot
+        env:
+          - name: SLACK_BOT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: SLACK_BOT_TOKEN
+                name: test-secret
+          - name: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
+            valueFrom:
+              secretKeyRef:
+                key: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
+                name: test-secret
+          - name: PASSWORDEXCHANGE_DATABASESERVICE
+            valueFrom:
+              secretKeyRef:
+                key: PASSWORDEXCHANGE_DATABASESERVICE
+                name: test-secret
+          - name: PASSWORDEXCHANGE_HOST
+            valueFrom:
+              secretKeyRef:
+                key: PASSWORDEXCHANGE_HOST
+                name: test-secret
+          - name: SLACK_SIGNING_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: SLACK_SIGNING_SECRET
+                name: test-secret        
+        name: setup
+        volumeMounts:
+        - mountPath: /code
+          name: html
+        - mountPath: /nginx
+          name: nginx-config
+        - mountPath: /php
+          name: php-config
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - emptyDir: {}
+        name: php-socket
+      - emptyDir: {}
+        name: html
+      - emptyDir: {}
+        name: nginx-config
+      - emptyDir: {}
+        name: php-config
