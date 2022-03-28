@@ -1,19 +1,8 @@
-apiVersion: skaffold/v2beta21
+apiVersion: skaffold/v2beta28
 kind: Config
-metadata:
-  name: password.exchange
 build:
   artifacts:
-  - image: ghcr.io/anthony-bible/passwordexchange-container-prod
+  - image: ghcr.io/anthony-bible/passwordexchange-slackbot
     bazel:
-      target: //app:forms_image.tar
-  - image: ghcr.io/anthony-bible/slackbot-container-prod
-    context: slackbot
-    docker:
-      dockerfile: Dockerfile
-deploy:
-  kubectl:
-    manifests:
-    - kubernetes/deployment.yaml
-    - slackbot/kubernetes/deployment.yaml
+      target: //slackbot:slackbot_bin.tar
 

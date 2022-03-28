@@ -1,8 +1,11 @@
 
 import grpc
-
-import database_pb2
-import database_pb2_grpc
+import os
+import re
+#gazelle:resolve py database_pb2 //protos:database_pb2
+#gazelle:resolve py database_pb2_grpc //protos:database_pb2_grpc
+from protos import database_pb2
+from protos import database_pb2_grpc
 
 SERVER_ADDRESS = os.environ['PASSWORDEXCHANGE_DATABASESERVICE']
 PORT = 8080
@@ -21,22 +24,8 @@ class databaseServiceClient(object):
         Returns:
             None.
         """
-        self.channel = grpc.insecure_channel(f'{SERVER_ADDRESS}:{PORT}')
-        self.stub = database_pb2_grpc.databaseServiceStub(self.channel)
-    def generate_random_strng(self, length):
-        """Generates a cryptographically rand string from the given length
-
-        Args:
-            length (int): Length of string you want generated.
-        """
-        try:
-            random_request = encryption_pb2.Randomrequest(RandomLength=length)
-            encryptionbytes = self.stub.GenerateRandomString(random_request)
-            return encryptionbytes
-        except grpc.RpcError as err:
-            print(err.details()) #pylint: disable=no-member
-            print('{}, {}'.format(err.code().name, err.code().value)) #pylint: disable=no-member
-
+        self.channel = grpc.insecure_channel(f'{SERVER_ADDRESS}')
+        self.stub = database_pb2_grpc.dbServiceStub(self.channel)
     def insert_message(self, request):
         """calls grpc function Insert and inserts UUID content
 
@@ -51,6 +40,7 @@ class databaseServiceClient(object):
         
         if required_fields <= request.keys() <= required_fields:
           try:
+             print("inserting into database")
              response = self.stub.Insert(request)  
           except grpc.RpcError as err:
             print(err.details()) #pylint: disable=no-member

@@ -44,3 +44,18 @@ k8s_object(
     # A template of a Kubernetes Deployment object yaml.
     template = ":database.deployment.yaml",
 )
+
+k8s_object(
+    name = "slackbot",
+    cluster = "cluster.anthony.bible",
+
+    # An optional collection of docker_build images to publish
+    # when this target is bazel run.  The digest of the published
+    # image is substituted as a part of the resolution process.
+    images = {
+        "ghcr.io/anthony-bible/passwordexchange-slackbot": "//slackbot:slackbot_bin",
+    },
+    kind = "deployment",
+    # A template of a Kubernetes Deployment object yaml.
+    template = ":slackbot.deployment.yaml",
+)

@@ -87,6 +87,7 @@ func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with Inserting into database")
 	}
+	print("inserted into database")
 	e := &emptypb.Empty{}
 	return e, nil
 
