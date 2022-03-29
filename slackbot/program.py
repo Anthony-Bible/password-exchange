@@ -30,10 +30,7 @@ def reply_in_thread(payload: dict):
 @bolt_app.command("/encrypt")
 def encrypt_command(say, payload: dict, ack):
     ack()
-    print(payload)
     slack_text=payload.get('text')
-    sys.stdout.flush()                      # <--- added line to flush output
-
     key, guid = client.encrypt_text(slack_text)
     #TODO: put encoding to base64 in a separate function
     #slteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),

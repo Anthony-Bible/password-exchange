@@ -38,7 +38,6 @@ class EncryptionServiceClient(object):
         try:
             random_request = encryption_pb2.Randomrequest(randomLength=length)
             encryptionbytes = self.stub.GenerateRandomString(random_request)
-            print(encryptionbytes)
             return encryptionbytes
         except grpc.RpcError as err:
             print(err.details()) #pylint: disable=no-member

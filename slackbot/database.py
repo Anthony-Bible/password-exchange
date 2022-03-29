@@ -49,7 +49,6 @@ class databaseServiceClient(object):
         if required_fields <= request.keys() <= required_fields:
           try:
              request_serialized = database_pb2.SelectResponse()
-             print(type(request))
              json_format.Parse(json.dumps(request), request_serialized)
              self.stub.Insert(request_serialized)  
           except grpc.RpcError as err:
