@@ -2,13 +2,19 @@ import uuid
 import os
 import base64
 from google.protobuf import field_mask_pb2
+from google.protobuf import empty_pb2
 import grpc
-# gazelle:ignore database
+#gazelle:resolve py encryption_pb2 //protos:encryption_pb2
+#gazelle:resolve py database_pb2_grpc //protos:encryption_pb2_grpc
+#gazelle:resolve py protos //protos:encryption_pb2_grpc
+
 from protos import encryption_pb2
 from protos import encryption_pb2_grpc
+#gazelle:ignore database
 import database
 SERVER_ADDRESS = os.environ['PASSWORDEXCHANGE_ENCRYPTIONSERVICE']
 PORT = 50051
+db = database.databaseServiceClient()
 
 class EncryptionServiceClient(object):
     def __init__(self):
@@ -50,20 +56,14 @@ class EncryptionServiceClient(object):
         request = encryption_pb2.EncryptedMessageRequest()
         request.PlainText.append(plaintext)
 
-        db = database.databaseServiceClient()
 
         try:    
-            print("encryting text")
-            print(type(plaintext))            
             request.Key = self.generate_random_strng(32).encryptionbytes
-            print(request)
             guid = uuid.uuid4().hex
             encrypt_response = self.stub.encryptMessage(request)
-            
-            insert_request = {'Uuid': guid, 'Content': encrypt_response.Ciphertext}
-            print(insert_request)
-            db.insert_message(insert_request)
-            print("inserted into  database")
+            for i in encrypt_response.Ciphertext:
+                insert_request = {'uuid': guid, 'content': i}
+                db.insert_message(insert_request)
             return request.Key, str(guid)
 
         except grpc.RpcError as err:

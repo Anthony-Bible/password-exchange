@@ -1,11 +1,18 @@
 
 import grpc
 import os
+import sys
 import re
 #gazelle:resolve py database_pb2 //protos:database_pb2
 #gazelle:resolve py database_pb2_grpc //protos:database_pb2_grpc
 from protos import database_pb2
 from protos import database_pb2_grpc
+from google.protobuf import empty_pb2
+from google.protobuf import json_format
+from google.protobuf.json_format import MessageToJson
+
+import json
+
 
 SERVER_ADDRESS = os.environ['PASSWORDEXCHANGE_DATABASESERVICE']
 PORT = 8080
@@ -30,18 +37,21 @@ class databaseServiceClient(object):
         """calls grpc function Insert and inserts UUID content
 
         Arguments:
-           request (dict): {'Uuid', 'Content'}
+           request (dict): {'uuid', 'content'}
+           may have to extract using for loop
         
         Returns:
            None
         """
-        required_fields = {'Uuid', 'Content'}
-
+        required_fields = {'uuid', 'content'}
+        
         
         if required_fields <= request.keys() <= required_fields:
           try:
-             print("inserting into database")
-             response = self.stub.Insert(request)  
+             request_serialized = database_pb2.SelectResponse()
+             print(type(request))
+             json_format.Parse(json.dumps(request), request_serialized)
+             self.stub.Insert(request_serialized)  
           except grpc.RpcError as err:
             print(err.details()) #pylint: disable=no-member
             print('{}, {}'.format(err.code().name, err.code().value)) #pylint: disable=no-member

@@ -1,12 +1,13 @@
+import base64
 import os
 import re
 import sys
-import base64
 from flask import Flask, request
 from slack_sdk import WebClient
 from slack_bolt import App, Say
+
 from slack_bolt.adapter.flask import SlackRequestHandler
-#gazelle:ignore client
+# gazelle:ignore encryptionClient
 import encryptionClient
 app = Flask(__name__)
 slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
@@ -27,32 +28,30 @@ def reply_in_thread(payload: dict):
                                      thread_ts=payload.get('ts'),
                                      text=f"Hi<@{payload['user']}>")
 @bolt_app.command("/encrypt")
-def help_command(say, payload: dict, ack):
+def encrypt_command(say, payload: dict, ack):
     ack()
+    print(payload)
     slack_text=payload.get('text')
-    print(slack_text)
+    sys.stdout.flush()                      # <--- added line to flush output
 
     key, guid = client.encrypt_text(slack_text)
     #TODO: put encoding to base64 in a separate function
     #slteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
-    print(type(key))
     # message_bytes = key.encode('ascii')
     base64_bytes = base64.urlsafe_b64encode(key)
     base64_key = base64_bytes.decode('ascii')
     sitehost = os.environ['PASSWORDEXCHANGE_HOST']
-    url = sitehost + "decrypt/" + guid + "/" + base64_key
     text = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": url
+                    "text": f"<@{payload['user_name']}> here's the encrypted url:" + (sitehost + "decrypt/" + guid + "/" + base64_key)
                 }
             }
         ]
     }
-    sys.stdout.flush()                      # <--- added line to flush output
 
     say(text=text)
 
@@ -64,4 +63,4 @@ def slack_events():
 handler = SlackRequestHandler(bolt_app)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    app.run(host='0.0.0.0', port=3000, debug=False)
