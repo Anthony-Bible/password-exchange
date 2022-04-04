@@ -1,0 +1,74 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto_grpc//python:defs.bzl", "python_grpc_library")
+
+go_library(
+    name = "encryptionpb",
+    embed = [":encryptionpb_go_proto"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/encryptionpb",
+    visibility = ["//visibility:public"],
+)
+
+# python_proto_library(
+#     name = "encryption_py_pb2",
+#     protos = [":encryptionpb_proto"],
+#     visibility = ["//visibility:public"],
+# )
+
+python_grpc_library(
+    name = "encryption_py_pb2_grpc",
+    output_mode = "NO_PREFIX",
+    protos = [":encryptionpb_proto"],
+    visibility = ["//visibility:public"],
+
+    # deps = [":encryption_py_pb2"],
+)
+
+go_library(
+    name = "databasepb",
+    embed = [":databasepb_go_proto"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/databasepb",
+    visibility = ["//visibility:public"],
+)
+
+# python_proto_library(
+#     name = "database_py_pb2",
+#     protos = [":databasepb_proto"],
+#     visibility = ["//visibility:public"],
+# )
+
+python_grpc_library(
+    name = "database_py_pb2_grpc",
+    output_mode = "NO_PREFIX",
+    protos = [":databasepb_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "databasepb_proto",
+    srcs = ["database.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "encryptionpb_proto",
+    srcs = ["encryption.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "databasepb_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/Anthony-Bible/password-exchange/protos/databasepb",
+    proto = ":databasepb_proto",
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library(
+    name = "encryptionpb_go_proto",
+    compilers = ["@io_bazel_rules_go//proto:go_grpc"],
+    importpath = "github.com/Anthony-Bible/password-exchange/protos/encryptionpb",
+    proto = ":encryptionpb_proto",
+    visibility = ["//visibility:public"],
+)

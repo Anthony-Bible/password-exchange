@@ -1,4 +1,6 @@
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+
+
 http_archive(
     name = "io_bazel_rules_go",
     sha256 = "d6b2513456fe2229811da7eb67a444be7785f5323c6708b38d851d2b51e54d83",
@@ -15,11 +17,131 @@ http_archive(
         "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.24.0/bazel-gazelle-v0.24.0.tar.gz",
     ],
 )
+http_archive(
+    name = "build_stack_rules_proto",
+    sha256 = "1190c296a9f931343f70e58e5f6f9ee2331709be4e17001bb570e41237a6c497",
+    strip_prefix = "rules_proto-7c95feba87ae269d09690fcebb18c77d8b8bcf6a",
+    urls = ["https://github.com/stackb/rules_proto/archive/7c95feba87ae269d09690fcebb18c77d8b8bcf6a.tar.gz"],
+)
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "c6966ec828da198c5d9adbaa94c05e3a1c7f21bd012a0b29ba8ddbccb2c93b0d",
+    urls = [
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.1.1/bazel-skylib-1.1.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.1.1/bazel-skylib-1.1.1.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "rules_proto_grpc",
+    sha256 = "507e38c8d95c7efa4f3b1c0595a8e8f139c885cb41a76cab7e20e4e67ae87731",
+    strip_prefix = "rules_proto_grpc-4.1.1",
+    urls = ["https://github.com/rules-proto-grpc/rules_proto_grpc/archive/4.1.1.tar.gz"],
+)
 
 
-
+# Fetch official Python rules for Bazel
+#INSTALL PYTHON RULES
+http_archive(
+    name = "rules_python",
+    sha256 = "9fcf91dbcc31fde6d1edb15f117246d912c33c36f44cf681976bd886538deba6",
+    strip_prefix = "rules_python-0.8.0",
+    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.0.tar.gz",
+)
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@rules_python//gazelle:deps.bzl", _py_gazelle_deps = "gazelle_deps")
+load("@rules_proto_grpc//:repositories.bzl", "rules_proto_grpc_toolchains")
+load("@build_stack_rules_proto//:go_deps.bzl", "gazelle_protobuf_extension_go_deps")
+load("@build_stack_rules_proto//deps:protobuf_core_deps.bzl", "protobuf_core_deps")
+
+gazelle_protobuf_extension_go_deps()
+protobuf_core_deps()
+
+#
+#
+#_py_configure = """
+#if [[ "$OSTYPE" == "darwin"* ]]; then
+#    ./configure --prefix=$(pwd)/bazel_install --with-openssl=$(brew --prefix openssl)
+#else
+#    ./configure --prefix=$(pwd)/bazel_install
+#fi
+#"""
+#
+#http_archive(
+#    name = "python_interpreter",
+#    urls = ["https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tar.xz"],
+#    sha256 = "dfab5ec723c218082fe3d5d7ae17ecbdebffa9a1aea4d64aa3a2ecdd2e795864",
+#    strip_prefix = "Python-3.8.3",
+#    patch_cmds = [
+#        "mkdir $(pwd)/bazel_install",
+#        _py_configure,
+#        "make",
+#        "make install",
+#        "ln -s bazel_install/bin/python3 python_bin",
+#    ],
+#    build_file_content = """
+#exports_files(["python_bin"])
+#filegroup(
+#    name = "files",
+#    srcs = glob(["bazel_install/**"], exclude = ["**/* *"]),
+#    visibility = ["//visibility:public"],
+#)
+#""",
+#)
+#
+#
+load("@rules_python//python:repositories.bzl", "python_register_toolchains")
+python_register_toolchains(
+    name = "python38",
+    # Available versions are listed in @rules_python//python:versions.bzl.
+    python_version = "3.8.10",
+)
+
+load("@python38//:defs.bzl", "interpreter")
+
+
+
+load("@rules_proto_grpc//python:repositories.bzl", rules_proto_grpc_python_repos = "python_repos")
+
+
+_py_gazelle_deps()
+load("@rules_python//python:pip.bzl", "pip_install")
+
+
+# Create a central external repo, @my_deps, that contains Bazel targets for all the
+# third-party packages specified in the requirements.txt file.
+pip_install(
+   name = "pip",
+   #python_interpreter_target = "@python_interpreter//:python_bin",
+   python_interpreter_target = interpreter,
+   requirements = "//slackbot:requirements.txt",
+)
+
+register_execution_platforms(
+    "//toolchains:local_config_platform_but_dont_run_in_container",
+    "@io_bazel_rules_docker//platforms:local_container_platform",
+)
+
+register_toolchains(
+    "//toolchains:my_py_toolchain",
+    "//toolchains:container_py_toolchain",
+    "@build_stack_rules_proto//toolchain:standard",
+    )
+rules_proto_grpc_toolchains()
+rules_proto_grpc_python_repos()
+
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+rules_proto_dependencies()
+
+rules_proto_toolchains()
+rules_proto_grpc_python_repos()
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
 
 http_archive(
     name = "com_google_protobuf",
@@ -1065,12 +1187,6 @@ go_repository(
 )
 
 go_repository(
-    name = "org_golang_google_grpc_reflection",
-    sum = "h1:AGJ0Ih4mHjSeibYkFGh1dD9KJ/eOtZ93I6hoHhukQ5Q=",
-    importpath = "google.golang.org/grpc/reflection",
-    version = "v1.44.0",
-)
-go_repository(
     name = "org_golang_google_protobuf",
     importpath = "google.golang.org/protobuf",
     sum = "h1:SnqbnDw1V7RiZcXPx5MEeqPv2s79L9i7BJUlG/+RurQ=",
@@ -1231,11 +1347,6 @@ load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
 
 container_deps()
 
-load(
-    "@io_bazel_rules_docker//repositories:repositories.bzl",
-    container_repositories = "repositories",
-)
-
 container_repositories()
 
 load("@io_bazel_rules_docker//container:pull.bzl", "container_pull")
@@ -1246,6 +1357,11 @@ load(
 )
 
 _go_image_repos()
+load(
+    "@io_bazel_rules_docker//python:image.bzl",
+    _py_image_repos = "repositories",
+)
+_py_image_repos()
 
 container_pull(
     name = "alpine_linux_amd64",
@@ -1253,6 +1369,13 @@ container_pull(
     repository = "library/alpine",
     tag = "3.15",
     digest="sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3"
+)
+container_pull(
+    name = "python3_linux_amd64",
+    registry = "index.docker.io",
+    repository = "library/python",
+    tag = "3.8.12-slim-buster",
+    digest="sha256:a5a7a63d6493977b0f13b1cb3a3764dba713a49baf6b87d3a53d547c41f90b2c"
 )
 #kubectl download
 http_archive(
@@ -1262,7 +1385,6 @@ http_archive(
     sha256 = "51f0977294699cd547e139ceff2396c32588575588678d2054da167691a227ef",
 )
 load("@io_bazel_rules_k8s//toolchains/kubectl:kubectl_configure.bzl", "kubectl_configure")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
 http_file(
     name="k8s_binary",
@@ -1275,12 +1397,11 @@ kubectl_configure(name="k8s_config", kubectl_path="@k8s_binary//file")
 
 #k8s rules loading
 
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories")
+load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
 
 k8s_repositories()
 
 load("@io_bazel_rules_k8s//k8s:k8s_go_deps.bzl", k8s_go_deps = "deps")
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults")
 
 k8s_go_deps()
 k8s_defaults(

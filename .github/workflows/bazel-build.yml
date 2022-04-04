@@ -24,7 +24,11 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
+
       - uses: actions/checkout@v3
+      #install neccessary tools under $GITHUB_WORKSPACE
+      - name: Install tools
+        run: sudo apt update && sudo apt install -y libmariadb-dev
 
       # build
       - name: get bazel version

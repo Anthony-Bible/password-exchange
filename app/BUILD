@@ -1,7 +1,6 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
 # gazelle:prefix github.com/Anthony-Bible/password-exchange/app
@@ -32,8 +31,8 @@ go_library(
         "//app/commons",
         "//app/email",
         "//app/message",
-        "//app/protos:databasepb",
-        "//app/protos:encryptionpb",
+        "//protos:databasepb_go_proto",
+        "//protos:encryptionpb_go_proto",
         "@com_github_gin_gonic_gin//:gin",
         "@com_github_rs_xid//:xid",
         "@com_github_rs_zerolog//log",
