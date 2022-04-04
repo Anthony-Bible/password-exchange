@@ -1375,7 +1375,7 @@ container_pull(
     registry = "index.docker.io",
     repository = "library/python",
     tag = "3.8.12-slim-buster",
-    digest="sha256:a5a7a63d6493977b0f13b1cb3a3764dba713a49baf6b87d3a53d547c41f90b2c"
+    digest="sha256:26ab58f6b8936fe59303b0ca0e915d5f9e071ef8b9bf7b3d716b4068f11443dc"
 )
 #kubectl download
 http_archive(
