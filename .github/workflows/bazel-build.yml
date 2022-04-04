@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v2
       #install neccessary tools under $GITHUB_WORKSPACE
       - name: Install tools
-      - run: sudo apt update && sudo apt install -y libmariadb-dev
+        run: sudo apt update && sudo apt install -y libmariadb-dev
       # build
       - name: get bazel version
         run: bazel version
