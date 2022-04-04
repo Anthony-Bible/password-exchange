@@ -7,7 +7,6 @@ import grpc
 #gazelle:resolve py encryption_pb2 //protos:encryption_pb2
 #gazelle:resolve py database_pb2_grpc //protos:encryption_pb2_grpc
 #gazelle:resolve py protos //protos:encryption_pb2_grpc
-
 from protos import encryption_pb2
 from protos import encryption_pb2_grpc
 #gazelle:ignore database

@@ -4,6 +4,8 @@ load("@io_bazel_rules_docker//python3:image.bzl", "py3_image")
 load("@pip//:requirements.bzl", "all_whl_requirements")
 load("@rules_python//gazelle/manifest:defs.bzl", "gazelle_python_manifest")
 load("@rules_python//gazelle/modules_mapping:def.bzl", "modules_mapping")
+load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
+load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
 
 # This rule fetches the metadata for python packages we depend on. That data is
 # required for the gazelle_python_manifest rule to update our manifest file.
@@ -71,25 +73,27 @@ gazelle_python_manifest(
 py_library(
     name = "slackbot",
     srcs = [
-        "program.py",
-        "encryptionClient.py",
         "database.py",
+        "encryptionClient.py",
+        "program.py",
     ],
-    srcs_version = "PY3",
     imports = [".."],
+    srcs_version = "PY3",
     visibility = ["//:__subpackages__"],
     deps = [
-        # "//protos:database_py_pb2",
-        "//protos:databasepb_grpc_py_library",
-        # "//protos:encryption_py_pb2",
         "//protos:encryptionpb_grpc_py_library",
+        "//protos:databasepb_grpc_py_library",
         "@pip//pypi__flask",
         "@pip//pypi__grpcio",
         "@pip//pypi__protobuf",
         "@pip//pypi__slack_bolt",
         "@pip//pypi__slack_sdk",
+        "@pip//pypi__sqlalchemy",
+        "@pip//pypi__mysqlclient",
+        "@pip//pypi__mariadb",
     ],
 )
+
 container_image(
     name = "python38_base_image",
     base = "@python3_linux_amd64//image",
@@ -100,12 +104,29 @@ container_image(
         "/usr/bin/python3": "/usr/local/bin/python3",
     },
 )
+# See https://github.com/bazelbuild/rules_docker/blob/master/testing/examples/run_instruction_apt_pkgs/BUILD
+download_pkgs(
+    name="mysql_pkg",
+    image_tar =":python38_base_image.tar",
+    packages = [
+        "default-libmysqlclient-dev",
+    ],
+)
+install_pkgs(
+    name="mysql_pkg_image",
+    image_tar = ":python38_base_image.tar",
+    installables_tar=":mysql_pkg.tar",
+    installation_cleanup_commands = "rm -rf /var/lib/apt/lists/*",
+    output_image_name = "mysql_pkg_image",
+
+)
+
 py3_image(
     name = "slackbot_bin",
     srcs = ["program.py"],
-    srcs_version = "PY3",
+    base = ":mysql_pkg_image",
     main = "program.py",
-    base = ":python38_base_image",
-    deps = [":slackbot"],
+    srcs_version = "PY3",
     visibility = ["//visibility:public"],
+    deps = [":slackbot"],
 )

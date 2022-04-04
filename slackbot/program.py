@@ -1,3 +1,9 @@
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+
 import base64
 import os
 import re
@@ -5,13 +11,63 @@ import sys
 from flask import Flask, request
 from slack_sdk import WebClient
 from slack_bolt import App, Say
-
 from slack_bolt.adapter.flask import SlackRequestHandler
+#USE SQLAlchemy for oauth store
+from slack_bolt.oauth.oauth_settings import OAuthSettings
+from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallationStore
+from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
+
+import sqlalchemy
+from sqlalchemy.engine import Engine
+import MySQLdb
 # gazelle:ignore encryptionClient
 import encryptionClient
-app = Flask(__name__)
+
+logger = logging.getLogger(__name__)
+
 slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
-bolt_app = App(token=os.environ.get("SLACK_BOT_TOKEN"), signing_secret=os.environ.get("SLACK_SIGNING_SECRET"))
+
+oauthpassword = os.environ.get("OAUTHDB_PASSWORD")
+oauthUser = os.environ.get("OAUTHDB_USER")
+oauthdb = os.environ.get("OAUTHDB_NAME")
+dbhost = os.environ.get("PASSWORDEXCHANGE_DBHOST")
+client_id = os.environ.get("SLACK_CLIENT_ID")
+client_secret = os.environ.get("SLACK_CLIENT_SECRET")
+database_url = "mysql+mysqldb://" + oauthUser +":" + oauthpassword +"@" + dbhost +"/" + oauthdb
+
+engine: Engine = sqlalchemy.create_engine(database_url)
+
+#create oauth and installation store
+installation_store = SQLAlchemyInstallationStore(
+    client_id=client_id,
+    engine=engine,
+    logger=logger,
+)
+oauth_state_store = SQLAlchemyOAuthStateStore(
+    expiration_seconds=120,
+    engine=engine,
+    logger=logger,
+)
+
+try:
+    installation_store.metadata.create_all(engine)
+    oauth_state_store.metadata.create_all(engine)
+except Exception as e:
+    print("Something went wrong creating intial dbs" + e)
+
+bolt_app = App(
+    logger=logger,
+    signing_secret=os.environ.get("SLACK_SIGNING_SECRET"),
+    installation_store=installation_store,
+    oauth_settings=OAuthSettings(
+        client_id=client_id,
+        client_secret=client_secret,
+        state_store=oauth_state_store,
+        scopes=["chat:write", "commands", "groups:history", "im:history", "mpim:history", "channels:history"]
+    ),
+)
+app = Flask(__name__)
+handler = SlackRequestHandler(bolt_app)
 
 @bolt_app.message("hello slacky")
 def greetings(payload: dict, say: Say):
@@ -57,7 +113,14 @@ def slack_events():
     """ Declaring the route where slack will post a request """
     return handler.handle(request)
 
-handler = SlackRequestHandler(bolt_app)
+@app.route("/slack/install", methods=["GET"])
+def install():
+    return handler.handle(request)
+
+@app.route("/slack/oauth_redirect", methods=["GET"])
+def oauth_redirect():
+    return handler.handle(request)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=False)

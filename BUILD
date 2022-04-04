@@ -1,5 +1,6 @@
 load("@rules_python//gazelle:def.bzl", "GAZELLE_PYTHON_RUNTIME_DEPS")
 load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
+
 ## Go ##
 # gazelle:proto_plugin protoc-gen-go implementation golang:protobuf:protoc-gen-go
 # gazelle:proto_rule proto_go_library implementation stackb:rules_proto:proto_go_library
@@ -28,6 +29,7 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 ##Python pip ##
 #gazelle:resolve py encryption_py_pb2 //protos:encryption_py_pb2
 #gazelle:resolve py encryption_py_pb2_grpc //protos:encryption_py_pb2_grpc
+#gazelle:resolve py protos //protos:encryption_pb2_grpc
 #gazelle:resolve py database_py_pb2 //protos:database_py_pb2
 #gazelle:resolve py database_py_pb2_grpc //protos:database_py_pb2_grpc
 # gazelle:proto package
@@ -36,7 +38,7 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 gazelle_binary(
     name = "gazelle_debug",
     languages = [
-	"@rules_python//gazelle",
+        "@rules_python//gazelle",
         "@bazel_gazelle//language/go",
         "@bazel_gazelle//language/proto",
         # must be after the proto extension (order matters)

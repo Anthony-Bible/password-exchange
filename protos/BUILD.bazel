@@ -75,18 +75,18 @@ proto_compile(
     name = "databasepb_go_compile",
     output_mappings = ["database.pb.go=github.com/Anthony-Bible/password-exchange/protos/databasepb/database.pb.go"],
     outputs = ["database.pb.go"],
-    visibility = ["//visibility:public"],
     plugins = ["@build_stack_rules_proto//plugin/golang/protobuf:protoc-gen-go"],
     proto = "databasepb_proto",
+    visibility = ["//visibility:public"],
 )
 
 proto_compile(
     name = "encryptionpb_go_compile",
     output_mappings = ["encryption.pb.go=github.com/Anthony-Bible/password-exchange/protos/encryptionpb/encryption.pb.go"],
     outputs = ["encryption.pb.go"],
-    visibility = ["//visibility:public"],
     plugins = ["@build_stack_rules_proto//plugin/golang/protobuf:protoc-gen-go"],
     proto = "encryptionpb_proto",
+    visibility = ["//visibility:public"],
 )
 
 go_proto_library(
