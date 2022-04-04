@@ -27,7 +27,7 @@ py_runtime(
 py_runtime(
     name = "python3_runtime",
     files = ["@python38//:files"],
-    interpreter = "@python38//:python",
+    interpreter = "@python38//:python3",
     python_version = "PY3",
     visibility = ["//visibility:public"],
 )
