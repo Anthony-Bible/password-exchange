@@ -63,14 +63,14 @@ bolt_app = App(
         client_id=client_id,
         client_secret=client_secret,
         state_store=oauth_state_store,
-        scopes=["chat:write", "commands", "groups:history", "im:history", "mpim:history", "channels:history"]
+        scopes=["chat:write", "commands", "groups:history", "im:history", "mpim:history", "channels:history", "groups:read"]
     ),
 )
 app = Flask(__name__)
 handler = SlackRequestHandler(bolt_app)
 
 @bolt_app.message("hello slacky")
-def greetings(payload: dict, say: Say):
+def greetings(message, say: Say):
     """ This will check all the message and pass only those which has 'hello slacky' in it """
     user = payload.get("user")
     say(f"Hi <@{user}>")
@@ -83,6 +83,7 @@ def reply_in_thread(payload: dict):
     response = slackclient.chat_postMessage(channel=payload.get('channel'),
                                      thread_ts=payload.get('ts'),
                                      text=f"Hi<@{payload['user']}>")
+    
 @bolt_app.command("/encrypt")
 def encrypt_command(say, payload: dict, ack):
     ack()
