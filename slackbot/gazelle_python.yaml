@@ -41,7 +41,6 @@ manifest:
     click._compat: click
     click._termui_impl: click
     click._textwrap: click
-    click._unicodefun: click
     click._winconsole: click
     click.core: click
     click.decorators: click
@@ -95,6 +94,7 @@ manifest:
     google.protobuf.internal.__init__: protobuf
     google.protobuf.internal._api_implementation: protobuf
     google.protobuf.internal.api_implementation: protobuf
+    google.protobuf.internal.builder: protobuf
     google.protobuf.internal.containers: protobuf
     google.protobuf.internal.decoder: protobuf
     google.protobuf.internal.encoder: protobuf
@@ -1255,7 +1255,6 @@ manifest:
     werkzeug.debug.repr: Werkzeug
     werkzeug.debug.tbtools: Werkzeug
     werkzeug.exceptions: Werkzeug
-    werkzeug.filesystem: Werkzeug
     werkzeug.formparser: Werkzeug
     werkzeug.http: Werkzeug
     werkzeug.local: Werkzeug
@@ -1280,24 +1279,14 @@ manifest:
     werkzeug.testapp: Werkzeug
     werkzeug.urls: Werkzeug
     werkzeug.user_agent: Werkzeug
-    werkzeug.useragents: Werkzeug
     werkzeug.utils: Werkzeug
     werkzeug.wrappers: Werkzeug
     werkzeug.wrappers.__init__: Werkzeug
-    werkzeug.wrappers.accept: Werkzeug
-    werkzeug.wrappers.auth: Werkzeug
-    werkzeug.wrappers.base_request: Werkzeug
-    werkzeug.wrappers.base_response: Werkzeug
-    werkzeug.wrappers.common_descriptors: Werkzeug
-    werkzeug.wrappers.cors: Werkzeug
-    werkzeug.wrappers.etag: Werkzeug
-    werkzeug.wrappers.json: Werkzeug
     werkzeug.wrappers.request: Werkzeug
     werkzeug.wrappers.response: Werkzeug
-    werkzeug.wrappers.user_agent: Werkzeug
     werkzeug.wsgi: Werkzeug
     zipp: zipp
   pip_repository:
     name: pip
     incremental: false
-integrity: 8257737b218bb27009dbff622329fea1e3ff3e14af632486c9eaa93b1daa1145
+integrity: 199ec11b8aa63f0f6b1d0ac8e6fbd65f4c42ac9db13327db1f049c2119acb8e3
