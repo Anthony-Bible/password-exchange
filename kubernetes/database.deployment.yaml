@@ -28,13 +28,6 @@ spec:
             name: test-secret
         image: ghcr.io/anthony-bible/passwordexchange-database
         name: setup
-        volumeMounts:
-        - mountPath: /code
-          name: html
-        - mountPath: /nginx
-          name: nginx-config
-        - mountPath: /php
-          name: php-config
       imagePullSecrets:
       - name: regcred
 
