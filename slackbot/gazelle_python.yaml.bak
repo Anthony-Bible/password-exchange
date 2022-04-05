@@ -8,34 +8,6 @@ manifest:
     _distutils_hack: setuptools
     _distutils_hack.__init__: setuptools
     _distutils_hack.override: setuptools
-    MySQLdb: mysqlclient
-    MySQLdb.__init__: mysqlclient
-    MySQLdb._exceptions: mysqlclient
-    MySQLdb._mysql: mysqlclient
-    MySQLdb.connections: mysqlclient
-    MySQLdb.constants: mysqlclient
-    MySQLdb.constants.__init__: mysqlclient
-    MySQLdb.constants.CLIENT: mysqlclient
-    MySQLdb.constants.CR: mysqlclient
-    MySQLdb.constants.ER: mysqlclient
-    MySQLdb.constants.FIELD_TYPE: mysqlclient
-    MySQLdb.constants.FLAG: mysqlclient
-    MySQLdb.converters: mysqlclient
-    MySQLdb.cursors: mysqlclient
-    MySQLdb.release: mysqlclient
-    MySQLdb.times: mysqlclient
-    bs4: beautifulsoup4
-    bs4.__init__: beautifulsoup4
-    bs4.builder: beautifulsoup4
-    bs4.builder.__init__: beautifulsoup4
-    bs4.builder._html5lib: beautifulsoup4
-    bs4.builder._htmlparser: beautifulsoup4
-    bs4.builder._lxml: beautifulsoup4
-    bs4.dammit: beautifulsoup4
-    bs4.diagnose: beautifulsoup4
-    bs4.element: beautifulsoup4
-    bs4.formatter: beautifulsoup4
-    bs4.testing: beautifulsoup4
     click: click
     click.__init__: click
     click._compat: click
@@ -128,28 +100,6 @@ manifest:
     google.protobuf.util.json_format_pb2: protobuf
     google.protobuf.util.json_format_proto3_pb2: protobuf
     google.protobuf.wrappers_pb2: protobuf
-    googlesearch: google
-    googlesearch.__init__: google
-    greenlet: greenlet
-    greenlet.__init__: greenlet
-    greenlet._greenlet: greenlet
-    greenlet.tests: greenlet
-    greenlet.tests.__init__: greenlet
-    greenlet.tests._test_extension: greenlet
-    greenlet.tests._test_extension_cpp: greenlet
-    greenlet.tests.test_contextvars: greenlet
-    greenlet.tests.test_cpp: greenlet
-    greenlet.tests.test_extension_interface: greenlet
-    greenlet.tests.test_gc: greenlet
-    greenlet.tests.test_generator: greenlet
-    greenlet.tests.test_generator_nested: greenlet
-    greenlet.tests.test_greenlet: greenlet
-    greenlet.tests.test_leaks: greenlet
-    greenlet.tests.test_stack_saved: greenlet
-    greenlet.tests.test_throw: greenlet
-    greenlet.tests.test_tracing: greenlet
-    greenlet.tests.test_version: greenlet
-    greenlet.tests.test_weakref: greenlet
     grpc: grpcio
     grpc.__init__: grpcio
     grpc._auth: grpcio
@@ -223,54 +173,6 @@ manifest:
     grpc_tools._protoc_compiler: grpcio_tools
     grpc_tools.command: grpcio_tools
     grpc_tools.protoc: grpcio_tools
-    gunicorn: gunicorn
-    gunicorn.__init__: gunicorn
-    gunicorn.__main__: gunicorn
-    gunicorn.app: gunicorn
-    gunicorn.app.__init__: gunicorn
-    gunicorn.app.base: gunicorn
-    gunicorn.app.pasterapp: gunicorn
-    gunicorn.app.wsgiapp: gunicorn
-    gunicorn.arbiter: gunicorn
-    gunicorn.config: gunicorn
-    gunicorn.debug: gunicorn
-    gunicorn.errors: gunicorn
-    gunicorn.glogging: gunicorn
-    gunicorn.http: gunicorn
-    gunicorn.http.__init__: gunicorn
-    gunicorn.http.body: gunicorn
-    gunicorn.http.errors: gunicorn
-    gunicorn.http.message: gunicorn
-    gunicorn.http.parser: gunicorn
-    gunicorn.http.unreader: gunicorn
-    gunicorn.http.wsgi: gunicorn
-    gunicorn.instrument: gunicorn
-    gunicorn.instrument.__init__: gunicorn
-    gunicorn.instrument.statsd: gunicorn
-    gunicorn.pidfile: gunicorn
-    gunicorn.reloader: gunicorn
-    gunicorn.sock: gunicorn
-    gunicorn.systemd: gunicorn
-    gunicorn.util: gunicorn
-    gunicorn.workers: gunicorn
-    gunicorn.workers.__init__: gunicorn
-    gunicorn.workers.base: gunicorn
-    gunicorn.workers.base_async: gunicorn
-    gunicorn.workers.geventlet: gunicorn
-    gunicorn.workers.ggevent: gunicorn
-    gunicorn.workers.gthread: gunicorn
-    gunicorn.workers.gtornado: gunicorn
-    gunicorn.workers.sync: gunicorn
-    gunicorn.workers.workertmp: gunicorn
-    importlib_metadata: importlib_metadata
-    importlib_metadata.__init__: importlib_metadata
-    importlib_metadata._adapters: importlib_metadata
-    importlib_metadata._collections: importlib_metadata
-    importlib_metadata._compat: importlib_metadata
-    importlib_metadata._functools: importlib_metadata
-    importlib_metadata._itertools: importlib_metadata
-    importlib_metadata._meta: importlib_metadata
-    importlib_metadata._text: importlib_metadata
     itsdangerous: itsdangerous
     itsdangerous.__init__: itsdangerous
     itsdangerous._json: itsdangerous
@@ -306,15 +208,6 @@ manifest:
     jinja2.tests: Jinja2
     jinja2.utils: Jinja2
     jinja2.visitor: Jinja2
-    mariadb: mariadb
-    mariadb.__init__: mariadb
-    mariadb._mariadb: mariadb
-    mariadb.constants: mariadb
-    mariadb.constants.__init__: mariadb
-    mariadb.constants.CLIENT: mariadb
-    mariadb.constants.CURSOR: mariadb
-    mariadb.constants.FIELD_TYPE: mariadb
-    mariadb.constants.INDICATOR: mariadb
     markupsafe: MarkupSafe
     markupsafe.__init__: MarkupSafe
     markupsafe._native: MarkupSafe
@@ -360,26 +253,12 @@ manifest:
     pkg_resources._vendor.zipp: setuptools
     pkg_resources.extern: setuptools
     pkg_resources.extern.__init__: setuptools
-    psycopg2: psycopg2
-    psycopg2.__init__: psycopg2
-    psycopg2._ipaddress: psycopg2
-    psycopg2._json: psycopg2
-    psycopg2._psycopg: psycopg2
-    psycopg2._range: psycopg2
-    psycopg2.errorcodes: psycopg2
-    psycopg2.errors: psycopg2
-    psycopg2.extensions: psycopg2
-    psycopg2.extras: psycopg2
-    psycopg2.pool: psycopg2
-    psycopg2.sql: psycopg2
-    psycopg2.tz: psycopg2
     setuptools: setuptools
     setuptools.__init__: setuptools
     setuptools._deprecation_warning: setuptools
     setuptools._distutils: setuptools
     setuptools._distutils.__init__: setuptools
     setuptools._distutils._collections: setuptools
-    setuptools._distutils._macos_compat: setuptools
     setuptools._distutils._msvccompiler: setuptools
     setuptools._distutils.archive_util: setuptools
     setuptools._distutils.bcppcompiler: setuptools
@@ -471,9 +350,6 @@ manifest:
     setuptools._vendor.more_itertools.__init__: setuptools
     setuptools._vendor.more_itertools.more: setuptools
     setuptools._vendor.more_itertools.recipes: setuptools
-    setuptools._vendor.nspektr: setuptools
-    setuptools._vendor.nspektr.__init__: setuptools
-    setuptools._vendor.nspektr._compat: setuptools
     setuptools._vendor.ordered_set: setuptools
     setuptools._vendor.packaging: setuptools
     setuptools._vendor.packaging.__about__: setuptools
@@ -488,11 +364,6 @@ manifest:
     setuptools._vendor.packaging.utils: setuptools
     setuptools._vendor.packaging.version: setuptools
     setuptools._vendor.pyparsing: setuptools
-    setuptools._vendor.tomli: setuptools
-    setuptools._vendor.tomli.__init__: setuptools
-    setuptools._vendor.tomli._parser: setuptools
-    setuptools._vendor.tomli._re: setuptools
-    setuptools._vendor.tomli._types: setuptools
     setuptools._vendor.typing_extensions: setuptools
     setuptools._vendor.zipp: setuptools
     setuptools.archive_util: setuptools
@@ -523,21 +394,8 @@ manifest:
     setuptools.command.upload: setuptools
     setuptools.command.upload_docs: setuptools
     setuptools.config: setuptools
-    setuptools.config.__init__: setuptools
-    setuptools.config._apply_pyprojecttoml: setuptools
-    setuptools.config._validate_pyproject: setuptools
-    setuptools.config._validate_pyproject.__init__: setuptools
-    setuptools.config._validate_pyproject.error_reporting: setuptools
-    setuptools.config._validate_pyproject.extra_validations: setuptools
-    setuptools.config._validate_pyproject.fastjsonschema_exceptions: setuptools
-    setuptools.config._validate_pyproject.fastjsonschema_validations: setuptools
-    setuptools.config._validate_pyproject.formats: setuptools
-    setuptools.config.expand: setuptools
-    setuptools.config.pyprojecttoml: setuptools
-    setuptools.config.setupcfg: setuptools
     setuptools.dep_util: setuptools
     setuptools.depends: setuptools
-    setuptools.discovery: setuptools
     setuptools.dist: setuptools
     setuptools.errors: setuptools
     setuptools.extension: setuptools
@@ -624,7 +482,6 @@ manifest:
     slack_bolt.adapter.django.handler: slack_bolt
     slack_bolt.adapter.falcon: slack_bolt
     slack_bolt.adapter.falcon.__init__: slack_bolt
-    slack_bolt.adapter.falcon.async_resource: slack_bolt
     slack_bolt.adapter.falcon.resource: slack_bolt
     slack_bolt.adapter.fastapi: slack_bolt
     slack_bolt.adapter.fastapi.__init__: slack_bolt
@@ -969,281 +826,6 @@ manifest:
     slack_sdk.webhook.client: slack_sdk
     slack_sdk.webhook.internal_utils: slack_sdk
     slack_sdk.webhook.webhook_response: slack_sdk
-    soupsieve: soupsieve
-    soupsieve.__init__: soupsieve
-    soupsieve.__meta__: soupsieve
-    soupsieve.css_match: soupsieve
-    soupsieve.css_parser: soupsieve
-    soupsieve.css_types: soupsieve
-    soupsieve.pretty: soupsieve
-    soupsieve.util: soupsieve
-    sqlalchemy: SQLAlchemy
-    sqlalchemy.__init__: SQLAlchemy
-    sqlalchemy.cimmutabledict: SQLAlchemy
-    sqlalchemy.connectors: SQLAlchemy
-    sqlalchemy.connectors.__init__: SQLAlchemy
-    sqlalchemy.connectors.mxodbc: SQLAlchemy
-    sqlalchemy.connectors.pyodbc: SQLAlchemy
-    sqlalchemy.cprocessors: SQLAlchemy
-    sqlalchemy.cresultproxy: SQLAlchemy
-    sqlalchemy.databases: SQLAlchemy
-    sqlalchemy.databases.__init__: SQLAlchemy
-    sqlalchemy.dialects: SQLAlchemy
-    sqlalchemy.dialects.__init__: SQLAlchemy
-    sqlalchemy.dialects.firebird: SQLAlchemy
-    sqlalchemy.dialects.firebird.__init__: SQLAlchemy
-    sqlalchemy.dialects.firebird.base: SQLAlchemy
-    sqlalchemy.dialects.firebird.fdb: SQLAlchemy
-    sqlalchemy.dialects.firebird.kinterbasdb: SQLAlchemy
-    sqlalchemy.dialects.mssql: SQLAlchemy
-    sqlalchemy.dialects.mssql.__init__: SQLAlchemy
-    sqlalchemy.dialects.mssql.base: SQLAlchemy
-    sqlalchemy.dialects.mssql.information_schema: SQLAlchemy
-    sqlalchemy.dialects.mssql.json: SQLAlchemy
-    sqlalchemy.dialects.mssql.mxodbc: SQLAlchemy
-    sqlalchemy.dialects.mssql.provision: SQLAlchemy
-    sqlalchemy.dialects.mssql.pymssql: SQLAlchemy
-    sqlalchemy.dialects.mssql.pyodbc: SQLAlchemy
-    sqlalchemy.dialects.mysql: SQLAlchemy
-    sqlalchemy.dialects.mysql.__init__: SQLAlchemy
-    sqlalchemy.dialects.mysql.aiomysql: SQLAlchemy
-    sqlalchemy.dialects.mysql.asyncmy: SQLAlchemy
-    sqlalchemy.dialects.mysql.base: SQLAlchemy
-    sqlalchemy.dialects.mysql.cymysql: SQLAlchemy
-    sqlalchemy.dialects.mysql.dml: SQLAlchemy
-    sqlalchemy.dialects.mysql.enumerated: SQLAlchemy
-    sqlalchemy.dialects.mysql.expression: SQLAlchemy
-    sqlalchemy.dialects.mysql.json: SQLAlchemy
-    sqlalchemy.dialects.mysql.mariadb: SQLAlchemy
-    sqlalchemy.dialects.mysql.mariadbconnector: SQLAlchemy
-    sqlalchemy.dialects.mysql.mysqlconnector: SQLAlchemy
-    sqlalchemy.dialects.mysql.mysqldb: SQLAlchemy
-    sqlalchemy.dialects.mysql.oursql: SQLAlchemy
-    sqlalchemy.dialects.mysql.provision: SQLAlchemy
-    sqlalchemy.dialects.mysql.pymysql: SQLAlchemy
-    sqlalchemy.dialects.mysql.pyodbc: SQLAlchemy
-    sqlalchemy.dialects.mysql.reflection: SQLAlchemy
-    sqlalchemy.dialects.mysql.reserved_words: SQLAlchemy
-    sqlalchemy.dialects.mysql.types: SQLAlchemy
-    sqlalchemy.dialects.oracle: SQLAlchemy
-    sqlalchemy.dialects.oracle.__init__: SQLAlchemy
-    sqlalchemy.dialects.oracle.base: SQLAlchemy
-    sqlalchemy.dialects.oracle.cx_oracle: SQLAlchemy
-    sqlalchemy.dialects.oracle.provision: SQLAlchemy
-    sqlalchemy.dialects.postgresql: SQLAlchemy
-    sqlalchemy.dialects.postgresql.__init__: SQLAlchemy
-    sqlalchemy.dialects.postgresql.array: SQLAlchemy
-    sqlalchemy.dialects.postgresql.asyncpg: SQLAlchemy
-    sqlalchemy.dialects.postgresql.base: SQLAlchemy
-    sqlalchemy.dialects.postgresql.dml: SQLAlchemy
-    sqlalchemy.dialects.postgresql.ext: SQLAlchemy
-    sqlalchemy.dialects.postgresql.hstore: SQLAlchemy
-    sqlalchemy.dialects.postgresql.json: SQLAlchemy
-    sqlalchemy.dialects.postgresql.pg8000: SQLAlchemy
-    sqlalchemy.dialects.postgresql.provision: SQLAlchemy
-    sqlalchemy.dialects.postgresql.psycopg2: SQLAlchemy
-    sqlalchemy.dialects.postgresql.psycopg2cffi: SQLAlchemy
-    sqlalchemy.dialects.postgresql.pygresql: SQLAlchemy
-    sqlalchemy.dialects.postgresql.pypostgresql: SQLAlchemy
-    sqlalchemy.dialects.postgresql.ranges: SQLAlchemy
-    sqlalchemy.dialects.sqlite: SQLAlchemy
-    sqlalchemy.dialects.sqlite.__init__: SQLAlchemy
-    sqlalchemy.dialects.sqlite.aiosqlite: SQLAlchemy
-    sqlalchemy.dialects.sqlite.base: SQLAlchemy
-    sqlalchemy.dialects.sqlite.dml: SQLAlchemy
-    sqlalchemy.dialects.sqlite.json: SQLAlchemy
-    sqlalchemy.dialects.sqlite.provision: SQLAlchemy
-    sqlalchemy.dialects.sqlite.pysqlcipher: SQLAlchemy
-    sqlalchemy.dialects.sqlite.pysqlite: SQLAlchemy
-    sqlalchemy.dialects.sybase: SQLAlchemy
-    sqlalchemy.dialects.sybase.__init__: SQLAlchemy
-    sqlalchemy.dialects.sybase.base: SQLAlchemy
-    sqlalchemy.dialects.sybase.mxodbc: SQLAlchemy
-    sqlalchemy.dialects.sybase.pyodbc: SQLAlchemy
-    sqlalchemy.dialects.sybase.pysybase: SQLAlchemy
-    sqlalchemy.engine: SQLAlchemy
-    sqlalchemy.engine.__init__: SQLAlchemy
-    sqlalchemy.engine.base: SQLAlchemy
-    sqlalchemy.engine.characteristics: SQLAlchemy
-    sqlalchemy.engine.create: SQLAlchemy
-    sqlalchemy.engine.cursor: SQLAlchemy
-    sqlalchemy.engine.default: SQLAlchemy
-    sqlalchemy.engine.events: SQLAlchemy
-    sqlalchemy.engine.interfaces: SQLAlchemy
-    sqlalchemy.engine.mock: SQLAlchemy
-    sqlalchemy.engine.reflection: SQLAlchemy
-    sqlalchemy.engine.result: SQLAlchemy
-    sqlalchemy.engine.row: SQLAlchemy
-    sqlalchemy.engine.strategies: SQLAlchemy
-    sqlalchemy.engine.url: SQLAlchemy
-    sqlalchemy.engine.util: SQLAlchemy
-    sqlalchemy.event: SQLAlchemy
-    sqlalchemy.event.__init__: SQLAlchemy
-    sqlalchemy.event.api: SQLAlchemy
-    sqlalchemy.event.attr: SQLAlchemy
-    sqlalchemy.event.base: SQLAlchemy
-    sqlalchemy.event.legacy: SQLAlchemy
-    sqlalchemy.event.registry: SQLAlchemy
-    sqlalchemy.events: SQLAlchemy
-    sqlalchemy.exc: SQLAlchemy
-    sqlalchemy.ext: SQLAlchemy
-    sqlalchemy.ext.__init__: SQLAlchemy
-    sqlalchemy.ext.associationproxy: SQLAlchemy
-    sqlalchemy.ext.asyncio: SQLAlchemy
-    sqlalchemy.ext.asyncio.__init__: SQLAlchemy
-    sqlalchemy.ext.asyncio.base: SQLAlchemy
-    sqlalchemy.ext.asyncio.engine: SQLAlchemy
-    sqlalchemy.ext.asyncio.events: SQLAlchemy
-    sqlalchemy.ext.asyncio.exc: SQLAlchemy
-    sqlalchemy.ext.asyncio.result: SQLAlchemy
-    sqlalchemy.ext.asyncio.scoping: SQLAlchemy
-    sqlalchemy.ext.asyncio.session: SQLAlchemy
-    sqlalchemy.ext.automap: SQLAlchemy
-    sqlalchemy.ext.baked: SQLAlchemy
-    sqlalchemy.ext.compiler: SQLAlchemy
-    sqlalchemy.ext.declarative: SQLAlchemy
-    sqlalchemy.ext.declarative.__init__: SQLAlchemy
-    sqlalchemy.ext.declarative.extensions: SQLAlchemy
-    sqlalchemy.ext.horizontal_shard: SQLAlchemy
-    sqlalchemy.ext.hybrid: SQLAlchemy
-    sqlalchemy.ext.indexable: SQLAlchemy
-    sqlalchemy.ext.instrumentation: SQLAlchemy
-    sqlalchemy.ext.mutable: SQLAlchemy
-    sqlalchemy.ext.mypy: SQLAlchemy
-    sqlalchemy.ext.mypy.__init__: SQLAlchemy
-    sqlalchemy.ext.mypy.apply: SQLAlchemy
-    sqlalchemy.ext.mypy.decl_class: SQLAlchemy
-    sqlalchemy.ext.mypy.infer: SQLAlchemy
-    sqlalchemy.ext.mypy.names: SQLAlchemy
-    sqlalchemy.ext.mypy.plugin: SQLAlchemy
-    sqlalchemy.ext.mypy.util: SQLAlchemy
-    sqlalchemy.ext.orderinglist: SQLAlchemy
-    sqlalchemy.ext.serializer: SQLAlchemy
-    sqlalchemy.future: SQLAlchemy
-    sqlalchemy.future.__init__: SQLAlchemy
-    sqlalchemy.future.engine: SQLAlchemy
-    sqlalchemy.future.orm: SQLAlchemy
-    sqlalchemy.future.orm.__init__: SQLAlchemy
-    sqlalchemy.inspection: SQLAlchemy
-    sqlalchemy.log: SQLAlchemy
-    sqlalchemy.orm: SQLAlchemy
-    sqlalchemy.orm.__init__: SQLAlchemy
-    sqlalchemy.orm.attributes: SQLAlchemy
-    sqlalchemy.orm.base: SQLAlchemy
-    sqlalchemy.orm.clsregistry: SQLAlchemy
-    sqlalchemy.orm.collections: SQLAlchemy
-    sqlalchemy.orm.context: SQLAlchemy
-    sqlalchemy.orm.decl_api: SQLAlchemy
-    sqlalchemy.orm.decl_base: SQLAlchemy
-    sqlalchemy.orm.dependency: SQLAlchemy
-    sqlalchemy.orm.descriptor_props: SQLAlchemy
-    sqlalchemy.orm.dynamic: SQLAlchemy
-    sqlalchemy.orm.evaluator: SQLAlchemy
-    sqlalchemy.orm.events: SQLAlchemy
-    sqlalchemy.orm.exc: SQLAlchemy
-    sqlalchemy.orm.identity: SQLAlchemy
-    sqlalchemy.orm.instrumentation: SQLAlchemy
-    sqlalchemy.orm.interfaces: SQLAlchemy
-    sqlalchemy.orm.loading: SQLAlchemy
-    sqlalchemy.orm.mapper: SQLAlchemy
-    sqlalchemy.orm.path_registry: SQLAlchemy
-    sqlalchemy.orm.persistence: SQLAlchemy
-    sqlalchemy.orm.properties: SQLAlchemy
-    sqlalchemy.orm.query: SQLAlchemy
-    sqlalchemy.orm.relationships: SQLAlchemy
-    sqlalchemy.orm.scoping: SQLAlchemy
-    sqlalchemy.orm.session: SQLAlchemy
-    sqlalchemy.orm.state: SQLAlchemy
-    sqlalchemy.orm.strategies: SQLAlchemy
-    sqlalchemy.orm.strategy_options: SQLAlchemy
-    sqlalchemy.orm.sync: SQLAlchemy
-    sqlalchemy.orm.unitofwork: SQLAlchemy
-    sqlalchemy.orm.util: SQLAlchemy
-    sqlalchemy.pool: SQLAlchemy
-    sqlalchemy.pool.__init__: SQLAlchemy
-    sqlalchemy.pool.base: SQLAlchemy
-    sqlalchemy.pool.dbapi_proxy: SQLAlchemy
-    sqlalchemy.pool.events: SQLAlchemy
-    sqlalchemy.pool.impl: SQLAlchemy
-    sqlalchemy.processors: SQLAlchemy
-    sqlalchemy.schema: SQLAlchemy
-    sqlalchemy.sql: SQLAlchemy
-    sqlalchemy.sql.__init__: SQLAlchemy
-    sqlalchemy.sql.annotation: SQLAlchemy
-    sqlalchemy.sql.base: SQLAlchemy
-    sqlalchemy.sql.coercions: SQLAlchemy
-    sqlalchemy.sql.compiler: SQLAlchemy
-    sqlalchemy.sql.crud: SQLAlchemy
-    sqlalchemy.sql.ddl: SQLAlchemy
-    sqlalchemy.sql.default_comparator: SQLAlchemy
-    sqlalchemy.sql.dml: SQLAlchemy
-    sqlalchemy.sql.elements: SQLAlchemy
-    sqlalchemy.sql.events: SQLAlchemy
-    sqlalchemy.sql.expression: SQLAlchemy
-    sqlalchemy.sql.functions: SQLAlchemy
-    sqlalchemy.sql.lambdas: SQLAlchemy
-    sqlalchemy.sql.naming: SQLAlchemy
-    sqlalchemy.sql.operators: SQLAlchemy
-    sqlalchemy.sql.roles: SQLAlchemy
-    sqlalchemy.sql.schema: SQLAlchemy
-    sqlalchemy.sql.selectable: SQLAlchemy
-    sqlalchemy.sql.sqltypes: SQLAlchemy
-    sqlalchemy.sql.traversals: SQLAlchemy
-    sqlalchemy.sql.type_api: SQLAlchemy
-    sqlalchemy.sql.util: SQLAlchemy
-    sqlalchemy.sql.visitors: SQLAlchemy
-    sqlalchemy.testing: SQLAlchemy
-    sqlalchemy.testing.__init__: SQLAlchemy
-    sqlalchemy.testing.assertions: SQLAlchemy
-    sqlalchemy.testing.assertsql: SQLAlchemy
-    sqlalchemy.testing.asyncio: SQLAlchemy
-    sqlalchemy.testing.config: SQLAlchemy
-    sqlalchemy.testing.engines: SQLAlchemy
-    sqlalchemy.testing.entities: SQLAlchemy
-    sqlalchemy.testing.exclusions: SQLAlchemy
-    sqlalchemy.testing.fixtures: SQLAlchemy
-    sqlalchemy.testing.mock: SQLAlchemy
-    sqlalchemy.testing.pickleable: SQLAlchemy
-    sqlalchemy.testing.plugin: SQLAlchemy
-    sqlalchemy.testing.plugin.__init__: SQLAlchemy
-    sqlalchemy.testing.plugin.bootstrap: SQLAlchemy
-    sqlalchemy.testing.plugin.plugin_base: SQLAlchemy
-    sqlalchemy.testing.plugin.pytestplugin: SQLAlchemy
-    sqlalchemy.testing.plugin.reinvent_fixtures_py2k: SQLAlchemy
-    sqlalchemy.testing.profiling: SQLAlchemy
-    sqlalchemy.testing.provision: SQLAlchemy
-    sqlalchemy.testing.requirements: SQLAlchemy
-    sqlalchemy.testing.schema: SQLAlchemy
-    sqlalchemy.testing.suite: SQLAlchemy
-    sqlalchemy.testing.suite.__init__: SQLAlchemy
-    sqlalchemy.testing.suite.test_cte: SQLAlchemy
-    sqlalchemy.testing.suite.test_ddl: SQLAlchemy
-    sqlalchemy.testing.suite.test_deprecations: SQLAlchemy
-    sqlalchemy.testing.suite.test_dialect: SQLAlchemy
-    sqlalchemy.testing.suite.test_insert: SQLAlchemy
-    sqlalchemy.testing.suite.test_reflection: SQLAlchemy
-    sqlalchemy.testing.suite.test_results: SQLAlchemy
-    sqlalchemy.testing.suite.test_rowcount: SQLAlchemy
-    sqlalchemy.testing.suite.test_select: SQLAlchemy
-    sqlalchemy.testing.suite.test_sequence: SQLAlchemy
-    sqlalchemy.testing.suite.test_types: SQLAlchemy
-    sqlalchemy.testing.suite.test_unicode_ddl: SQLAlchemy
-    sqlalchemy.testing.suite.test_update_delete: SQLAlchemy
-    sqlalchemy.testing.util: SQLAlchemy
-    sqlalchemy.testing.warnings: SQLAlchemy
-    sqlalchemy.types: SQLAlchemy
-    sqlalchemy.util: SQLAlchemy
-    sqlalchemy.util.__init__: SQLAlchemy
-    sqlalchemy.util._collections: SQLAlchemy
-    sqlalchemy.util._compat_py3k: SQLAlchemy
-    sqlalchemy.util._concurrency_py3k: SQLAlchemy
-    sqlalchemy.util._preloaded: SQLAlchemy
-    sqlalchemy.util.compat: SQLAlchemy
-    sqlalchemy.util.concurrency: SQLAlchemy
-    sqlalchemy.util.deprecations: SQLAlchemy
-    sqlalchemy.util.langhelpers: SQLAlchemy
-    sqlalchemy.util.queue: SQLAlchemy
-    sqlalchemy.util.topological: SQLAlchemy
     werkzeug: Werkzeug
     werkzeug.__init__: Werkzeug
     werkzeug._internal: Werkzeug
@@ -1296,8 +878,7 @@ manifest:
     werkzeug.wrappers.response: Werkzeug
     werkzeug.wrappers.user_agent: Werkzeug
     werkzeug.wsgi: Werkzeug
-    zipp: zipp
   pip_repository:
     name: pip
     incremental: false
-integrity: 8257737b218bb27009dbff622329fea1e3ff3e14af632486c9eaa93b1daa1145
+integrity: 6abeff44170e7f5d72ef815025f029649f2c561534ae7a2525dac452c9b8241b
