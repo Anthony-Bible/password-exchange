@@ -5,9 +5,23 @@ metadata:
 build:
   artifacts:
   - image: ghcr.io/anthony-bible/passwordexchange-slackbot
-    context: .
     bazel:
       target: //slackbot:slackbot_bin.tar
       args:
       - "--use_top_level_targets_for_symlinks"
-      - "--symlink_prefix=.bazel/"
+  - image: ghcr.io/anthony-bible/passwordexchange-database
+    bazel:
+      target: //app/database:database.tar
+      args:
+      - "--use_top_level_targets_for_symlinks"
+  - image: ghcr.io/anthony-bible/passwordexchange-encryption
+    bazel:
+      target: //app/encryption:encryption.tar
+      args:
+      - "--use_top_level_targets_for_symlinks"
+  - image: ghcr.io/anthony-bible/passwordexchange-container-prod
+    bazel:
+      target: //app:app.tar
+      args:
+      - "--use_top_level_targets_for_symlinks"
+
