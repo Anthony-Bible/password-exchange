@@ -4,7 +4,16 @@ Password exchange was built because there was no known way to securely share pas
 ---
 
 ## How it works
-You fill out the form with the neccessary information including yours and their names and emails. Once you click send, we send two emails, one to the recipeint with the information to retrieve their password and one to you to help track when the recipient opens the email and visits the page. 
+### Website
+
+You fill out the form with the neccessary information including both of your names and emails. We just use the email to send the link to the  recipeint, in the near future we will make the emails optional. 
+
+### slackbot
+ To install our slackbot go to (https://api.password.exchange/slack/install). If you have setup your own version of this app,  you can go to https://yoursite.com/slack/install. 
+
+ Once installed to your organization, you can use the `/encrypt` command which will send the text to the bot and the bot will send a link to access the unencrypted text. 
+
+ **NOTE:** Slackbot relies on the website since the encryption and database service are deployed with it. 
 
 ---
 
@@ -21,6 +30,10 @@ You fill out the form with the neccessary information including yours and their 
 TODO:
   1. Allow user to generate password 
   2. Is Client Side encryption feasable?
+     1. yes
+     2. We can use [this](https://web.archive.org/web/20220205052255/https://bitwarden.com/help/send-encryption/) as inspiration
+        1. Basically we send the data already encrypted to the server to store
+        2. This basically prohibits Slack and bot integrations from using Client side encryption
 
 Future (hopeful) Intergrations:
 1. Bitwarden
@@ -29,20 +42,20 @@ Future (hopeful) Intergrations:
 4. Lastpass
 5. Email (pgp)
   a. User can send pgp encrypted email, we retrieve, decrypt and then send like the regular process
-6. slack(?)
 
 ---
 
-### Installation
-#### BUILDING
+
+### BUILDING from source
+#### Kubernetes
 1. Run `bazel build //...`
-2. To deploy kubernetes manifests `bazel run //kubernetes:password.create`
+2. To deploy kubernetes manifests `bazel run //kubernetes:deployments.create`
+3. To Reapply a kubernetes manifest (after a code change) `bazel run //kubernetes:deployments.apply`
 ##### Docker
-1. Clone this repo locally
-2. run docker compose
-```bash
- docker-compose up -d
-```
+1. 
+
+
+
 ##### Kubernetes
 1. Edit the deployment.yaml for any needed changes
 2. Apply the deployment.yaml

@@ -1,8 +1,13 @@
 apiVersion: skaffold/v2beta28
 kind: Config
+metadata:
+  name: build_k8s
 build:
   artifacts:
   - image: ghcr.io/anthony-bible/passwordexchange-slackbot
+    context: .
     bazel:
       target: //slackbot:slackbot_bin.tar
-
+      args:
+      - "--use_top_level_targets_for_symlinks"
+      - "--symlink_prefix=.bazel/"
