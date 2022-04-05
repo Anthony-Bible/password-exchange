@@ -21,10 +21,9 @@ You fill out the form with the neccessary information including both of your nam
 1. [planned] Send message to both users. 
 2. [planned] Remind users after a day of not opening
 3. [planned] Get notifications of the following
-   a. email opened, page visited, Page viewed
+   1. email opened, page visited, Page viewed
 3. [planned] Expire after 7 days or 1 hour after viewing
-4. 
-   a. In the future this will be configurable
+   1. In the future this will be configurable
 
 
 TODO:
@@ -33,7 +32,7 @@ TODO:
      1. yes
      2. We can use [this](https://web.archive.org/web/20220205052255/https://bitwarden.com/help/send-encryption/) as inspiration
         1. Basically we send the data already encrypted to the server to store
-        2. This basically prohibits Slack and bot integrations from using Client side encryption
+        2. This prohibits Slack and bot integrations from using Client side encryption
 
 Future (hopeful) Intergrations:
 1. Bitwarden
@@ -41,7 +40,7 @@ Future (hopeful) Intergrations:
 3. Salesforce
 4. Lastpass
 5. Email (pgp)
-  a. User can send pgp encrypted email, we retrieve, decrypt and then send like the regular process
+   1. User can send pgp encrypted email, we retrieve, decrypt and then send like the regular process
 
 ---
 
