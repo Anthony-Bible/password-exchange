@@ -50,6 +50,7 @@ Future (hopeful) Intergrations:
 1. Run `bazel build //...`
 2. To deploy kubernetes manifests `bazel run //kubernetes:deployments.create`
 3. To Reapply a kubernetes manifest (after a code change) `bazel run //kubernetes:deployments.apply`
+ maybe skaffold?
 ##### Docker
 1. 
 
