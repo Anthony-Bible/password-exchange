@@ -10,7 +10,7 @@ require (
 	github.com/rs/xid v1.3.0
         google.golang.org/protobuf v1.27.0
 	github.com/rs/zerolog v1.25.0
-	github.com/spf13/viper v1.8.1
+	github.com/spf13/viper v1.11.0
 	github.com/ugorji/go v1.2.6 // indirect
 	golang.org/x/net v0.0.0-20210908191846-a5e095526f91 // indirect
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
