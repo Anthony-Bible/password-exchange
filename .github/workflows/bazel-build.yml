@@ -37,7 +37,11 @@ jobs:
 
       # build
       - name: get bazel version
-        run: bazel version
+        run: |
+          bazel version
+          python --version
+          python3.8 -m venv .venv
+          source .venv/bin/activate 
       # - name: Build the code
       #   run: bazel build //... 
       - name: skaffold Build
