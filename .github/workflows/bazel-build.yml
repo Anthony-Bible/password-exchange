@@ -47,6 +47,7 @@ jobs:
       - name: skaffold Build
         run: |
           echo "Building with skaffold"
+          python --version
           skaffold build --file-output=./images.json
       - name: skaffold rendering
         run: | 
