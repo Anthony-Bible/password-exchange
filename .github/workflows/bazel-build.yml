@@ -58,6 +58,6 @@ jobs:
       - name: skaffold rendering
         run: | 
           echo "rendering k8s manifests"
-          skaffold render --output=/build/password-exchange.yaml
+          skaffold render --output=/build/password-exchange.yaml --offline=true
 
 
