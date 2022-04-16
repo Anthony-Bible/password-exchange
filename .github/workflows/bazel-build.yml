@@ -46,6 +46,7 @@ jobs:
       #   run: bazel build //... 
       - name: skaffold Build
         run: |
+          source .venv/bin/activate 
           echo "Building with skaffold"
           python --version
           skaffold build --file-output=./images.json
