@@ -57,8 +57,8 @@ jobs:
           skaffold build --file-output=./images.json
       - name: skaffold rendering
         run: | 
-          mkdir /build
+          mkdir $HOME/build
           echo "rendering k8s manifests"
-          skaffold render --output=/build/password-exchange.yaml --offline=true
+          skaffold render --output=$HOME/build/password-exchange.yaml --offline=true
 
 
