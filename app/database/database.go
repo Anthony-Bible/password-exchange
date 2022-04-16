@@ -84,6 +84,7 @@ func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.
 	db := Connect()
 
 	_, err := db.Exec("INSERT INTO messages( message, uniqueid) VALUES(?,?)", request.GetContent(), request.GetUuid())
+	defer db.Close()
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with Inserting into database")
 	}

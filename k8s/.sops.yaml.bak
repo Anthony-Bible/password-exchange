@@ -1,6 +1,0 @@
----
-sops:
-  kms:
-  - aws_profile: "sopsuser"
-    arn: "arn:aws:kms:us-west-2:842805395457:key/e5e35884-80f1-4e88-801a-6210686a54a3"
-    

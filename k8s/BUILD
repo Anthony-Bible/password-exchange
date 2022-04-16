@@ -3,7 +3,7 @@ load("@io_bazel_rules_k8s//k8s:objects.bzl", "k8s_objects")
 
 k8s_object(
     name = "password",
-    cluster = "cluster.anthony.bible",
+    cluster = "cluster.local",
 
     # An optional collection of docker_build images to publish
     # when this target is bazel run.  The digest of the published
@@ -18,7 +18,7 @@ k8s_object(
 
 k8s_object(
     name = "encryption",
-    cluster = "cluster.anthony.bible",
+    cluster = "cluster.local",
 
     # An optional collection of docker_build images to publish
     # when this target is bazel run.  The digest of the published
@@ -33,7 +33,7 @@ k8s_object(
 
 k8s_object(
     name = "database",
-    cluster = "cluster.anthony.bible",
+    cluster = "cluster.local",
 
     # An optional collection of docker_build images to publish
     # when this target is bazel run.  The digest of the published
@@ -48,7 +48,7 @@ k8s_object(
 
 k8s_object(
     name = "slackbot",
-    cluster = "cluster.anthony.bible",
+    cluster = "cluster.local",
 
     # An optional collection of docker_build images to publish
     # when this target is bazel run.  The digest of the published

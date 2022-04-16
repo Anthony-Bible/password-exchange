@@ -83,8 +83,8 @@
             <div class="alert alert-secondary" role="alert">
 
               <div class="col-lg-12">
-                  <input type="checkbox" name="needEmail" id="needEmail" onchange="hideField(this)" class="form-conrol">
-                  <label for="needEmail">Check this box if you want to handle distrubtion (no email)</label>
+                  <input type="checkbox" name="skipEmail" id="skipEmail" onchange="hideField(this)" >
+                  <label for="skipEmail">Check this box if you want to handle distrubtion (no email)</label>
                </div>
             </div>
         </div>
@@ -102,15 +102,15 @@
             </div>
             <div></div>
 
-            <script src="https://js.hcaptcha.com/1/api.js?hl=en" async defer></script>
 
             <div id="success"></div>
-                        <div class="row">
-                            <div  class="form-group col-xs-12">
-                                <button id="contactFormSubmit"  data-callback="onSubmit" type="submit" data-sitekey="60dfe638-9468-4248-a919-8a0db43986fe" class="btn btn-success h-captcha btn-lg">Send</button>
-                            <div id="wasitasuccess"> </div>
-                            </div>
+                        <div class="row">                            
+                            <div class=" form-group col-xs-12">
+                                <input type="submit" class="btn btn-success btn-send" value="Send message">
+                                <div id="wasitasuccess"> </div>
 
+                            </div>
+                          </div>
                         </div>
         <div class="row">
             <div class="col-md-12">
@@ -131,7 +131,8 @@
     var inputDiv = document.querySelectorAll('input[type=email]');
     if ($(currentObject).is(":checked")) {
         $(inputDiv).hide();
-        $(inputDiv).value ="";
+        $(inputDiv).prop('required', false);
+        $(inputDiv).val("");
     }
     else {
         $(inputDiv).show().focus();

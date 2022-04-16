@@ -6,7 +6,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
+	// "net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"encoding/json"
-	"io/ioutil"
+	// "io/ioutil"
 
 	"github.com/Anthony-Bible/password-exchange/app/email"
 	"github.com/Anthony-Bible/password-exchange/app/message"
@@ -107,8 +107,6 @@ func main() {
 	router.POST("/", s.send)
 	router.GET("/confirmation", confirmation)
 	router.GET("/decrypt/:uuid/*key", s.displaydecrypted)
-	router.POST("/api/:app/*action", s.doAction)
-	router.POST("/api/:app", s.doAction)
 
 	router.NoRoute(failedtoFind)
 	log.Info().Msg("Listening...")
@@ -176,7 +174,11 @@ func (s *EncryptionClient) doAction(c *gin.Context) {
 func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
-	// Step 3: Redirect to confirmation page
+	// // Step 3: Redirect to confirmation page
+	// c.MultipartForm()
+	// for key, value := range c.Request.PostForm {
+	// 	log.Info().Msgf("%v = %v \n", key, value)
+	// }
 	ctx := context.Background()
 	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -210,24 +212,24 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 
-	if msg.Validate() == false {
-		log.Debug().Msgf("errors: %s", msg.Errors)
-		htmlHeaders := htmlHeaders{
-			Title:  "Password Exchange",
-			Errors: msg.Errors,
-		}
-		render(c, "home.html", 500, htmlHeaders)
-		return
-	}
-
 	// msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
 
-	if checkBot(msg.Captcha) {
-		// TODO Figure out how to use a fucntion from another package on a struct on another package
+	// TODO Figure out how to use a fucntion from another package on a struct on another package
+	if len(c.PostForm("skipEmail")) <= 0 {
+		fmt.Println(len(c.PostForm("skipEmail")))
+		if msg.Validate() == false {
+			log.Debug().Msgf("errors: %s", msg.Errors)
+			htmlHeaders := htmlHeaders{
+				Title:  "Password Exchange",
+				Errors: msg.Errors,
+			}
+			render(c, "home.html", 500, htmlHeaders)
+			return
+		}
 		if err := email.Deliver(msg); err != nil {
 			marshaledMesage, _ := json.Marshal(msg)
 			log.Error().Err(err).Msg(string(marshaledMesage))
@@ -265,46 +267,46 @@ func render(c *gin.Context, filename string, status int, data interface{}) {
 
 }
 
-type test_struct struct {
-	Success      bool   `json:"success"`
-	Challenge_ts string `json:"challenge_ts"`
-	Hostname     string `json:"hostname"`
-}
+// type test_struct struct {
+// 	Success      bool   `json:"success"`
+// 	Challenge_ts string `json:"challenge_ts"`
+// 	Hostname     string `json:"hostname"`
+// }
 
-func checkBot(hcaptchaResponse string) (returnstatus bool) {
-	secret, err := commons.GetViperVariable("hcaptcha_secret")
-	if err != nil {
-		log.Error().Err(err).Msg("Problem with env variable")
-	}
-	sitekey, err := commons.GetViperVariable("hcaptcha_sitekey")
-	if err != nil {
-		log.Error().Err(err).Msg("Problem with env variable")
-	}
-	u := make(url.Values)
-	u.Set("secret", secret)
-	u.Set("response", hcaptchaResponse)
-	u.Set("sitekey", sitekey)
-	response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
+// func checkBot(hcaptchaResponse string) (returnstatus bool) {
+// 	secret, err := commons.GetViperVariable("hcaptcha_secret")
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Problem with env variable")
+// 	}
+// 	sitekey, err := commons.GetViperVariable("hcaptcha_sitekey")
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Problem with env variable")
+// 	}
+// 	u := make(url.Values)
+// 	u.Set("secret", secret)
+// 	u.Set("response", hcaptchaResponse)
+// 	u.Set("sitekey", sitekey)
+// 	response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
 
-	if err != nil {
-		log.Error().
-			Str("error", err.Error()).
-			Msg("Something went wrong with hcaptcha")
-		return false
-	}
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Error().Err(err).Msg("Problem with env variable")
+// 	if err != nil {
+// 		log.Error().
+// 			Str("error", err.Error()).
+// 			Msg("Something went wrong with hcaptcha")
+// 		return false
+// 	}
+// 	defer response.Body.Close()
+// 	body, err := ioutil.ReadAll(response.Body)
+// 	if err != nil {
+// 		log.Error().Err(err).Msg("Problem with env variable")
 
-	}
-	var t test_struct
-	err = json.Unmarshal(body, &t)
-	if err != nil {
+// 	}
+// 	var t test_struct
+// 	err = json.Unmarshal(body, &t)
+// 	if err != nil {
 
-		log.Error().
-			Msg("Can't Unmarshal json")
-		return false
-	}
-	return t.Success
-}
+// 		log.Error().
+// 			Msg("Can't Unmarshal json")
+// 		return false
+// 	}
+// 	return t.Success
+// }

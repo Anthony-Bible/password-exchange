@@ -20,7 +20,7 @@ jobs:
           key: ${{ runner.os }}-${{ env.cache-name }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-development
-
+     
 
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
@@ -29,10 +29,24 @@ jobs:
       #install neccessary tools under $GITHUB_WORKSPACE
       - name: Install tools
         run: sudo apt update && sudo apt install -y libmariadb-dev
+      - name: Install Skaffold
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.38.0/skaffold-linux-amd64 && \
+          sudo install skaffold /usr/local/bin/
+          skaffold version
 
       # build
       - name: get bazel version
         run: bazel version
-      - name: Build the code
-        run: bazel build //... 
+      # - name: Build the code
+      #   run: bazel build //... 
+      - name: skaffold Build
+        run: |
+          echo "Building with skaffold"
+          skaffold build ... --file-output-./images.json
+      - name: skaffold rendering
+        run: | 
+          echo "rendering k8s manifests"
+          skaffold render --file-output=/build/password-exchange.yaml
+
 
