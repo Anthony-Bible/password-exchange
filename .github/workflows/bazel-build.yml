@@ -24,7 +24,12 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
-
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
       - uses: actions/checkout@v3
       #install neccessary tools under $GITHUB_WORKSPACE
       - name: Install tools
