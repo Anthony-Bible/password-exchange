@@ -6,7 +6,9 @@ Password exchange was built because there was no known way to securely share pas
 ## How it works
 ### Website
 
-You fill out the form with the neccessary information including both of your names and emails. We just use the email to send the link to the  recipeint, in the near future we will make the emails optional. 
+You fill out the form with the neccessary information including both of your names and emails (optional). We use email to send the link to the content, but there is an option to disable emails. For your name(s), this is used to personalize and let the recipient know who sent them the link. There is no verification on names so you can use whatever to remain anonymous. 
+
+**NOTE:** All messages expire after 7 days. This means you won't be able to view your message after 7 days and will have to resend it. 
 
 ### slackbot
  To install our slackbot go to (https://api.password.exchange/slack/install). If you have setup your own version of this app,  you can go to https://yoursite.com/slack/install. 
@@ -21,9 +23,11 @@ You fill out the form with the neccessary information including both of your nam
 1. [planned] Send message to both users. 
 2. [planned] Remind users after a day of not opening
 3. [planned] Get notifications of the following
-   1. email opened, page visited, Page viewed
-3. [planned] Expire after 7 days or 1 hour after viewing
-   1. In the future this will be configurable
+   1. email opened, page visited
+4. Expire after 7 days
+
+   1.  [planned] 1 hour after viewing
+   1.  [planned] In the future this will be configurable
 
 
 TODO:
@@ -46,19 +50,26 @@ Future (hopeful) Intergrations:
 
 
 ### BUILDING from source
-#### Kubernetes
+#### Kubernetes (bazel)
 1. Run `bazel build //...`
 2. To deploy kubernetes manifests `bazel run //kubernetes:deployments.create`
 3. To Reapply a kubernetes manifest (after a code change) `bazel run //kubernetes:deployments.apply`
  maybe skaffold?
-##### Docker
-1. 
+##### Kubernetes (Skaffold)
+**NOTE** This requires skaffold 1.38+
+1. Run `skaffold run`
+
+or
+
+1. Run `skaffold build`
+2. Run `skaffold render > manifests.yaml`
+3. Run `kubectl apply -f manifests.yaml`
 
 
 
-##### Kubernetes
-1. Edit the deployment.yaml for any needed changes
-2. Apply the deployment.yaml
-```bash 
-kubectl apply -f kubernetes/
-```
+---
+Running
+
+1. edit `kubernetes/secrets.yaml` with your information
+   
+   1. [view here] (../../wiki/Environment-Variables)
