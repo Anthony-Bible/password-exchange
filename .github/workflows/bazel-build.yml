@@ -57,14 +57,14 @@ jobs:
           skaffold build --file-output=./images.json
       - name: skaffold rendering
         run: | 
-          mkdir $HOME/build
+          mkdir build
           echo "rendering k8s manifests"
-          skaffold render --output="$HOME"/build/password-exchange.yaml --offline=true
+          skaffold render --output=./build/password-exchange.yaml --offline=true
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            "$HOME"/build/password-exchange.yaml
+            ./build/password-exchange.yaml
 
