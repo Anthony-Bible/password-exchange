@@ -72,4 +72,4 @@ Running
 
 1. edit `kubernetes/secrets.yaml` with your information
    
-   1. [view here] (../../wiki/Environment-Variables)
+   1. [view here](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables)
