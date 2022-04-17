@@ -4,9 +4,9 @@ Password exchange was built because there was no known way to securely share pas
 ---
 
 ## How it works
-### Website
+### [Website](https://password.exchange)
 
-You fill out the form with the neccessary information including both of your names and emails (optional). We use email to send the link to the content, but there is an option to disable emails. For your name(s), this is used to personalize and let the recipient know who sent them the link. There is no verification on names so you can use whatever to remain anonymous. 
+You fill out [the form](https://password.exchange) with the neccessary information including both of your names and emails (optional). We use email to send the link to the content, but there is an option to disable emails. For your name(s), this is used to personalize and let the recipient know who sent them the link. There is no verification on names so you can use whatever to remain anonymous. 
 
 **NOTE:** All messages expire after 7 days. This means you won't be able to view your message after 7 days and will have to resend it. 
 
