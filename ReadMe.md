@@ -55,7 +55,7 @@ Future (hopeful) Intergrations:
 2. To deploy kubernetes manifests `bazel run //kubernetes:deployments.create`
 3. To Reapply a kubernetes manifest (after a code change) `bazel run //kubernetes:deployments.apply`
  maybe skaffold?
-##### Kubernetes (Skaffold)
+#### Kubernetes (Skaffold)
 **NOTE** This requires skaffold 1.38+
 1. Run `skaffold run`
 
@@ -72,4 +72,6 @@ Running
 
 1. edit `kubernetes/secrets.yaml` with your information
    
-   1. [view here](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables)
+   1. [view here for avaible options](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables)
+2. Download the latest manifest in releases
+3. Do a `kubectl apply -f password-exchange.yaml`
