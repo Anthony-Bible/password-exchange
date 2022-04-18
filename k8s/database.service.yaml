@@ -3,7 +3,6 @@ kind: Service
 metadata:
   name: database-service 
   annotations:
-    # external-dns.alpha.kubernetes.io/hostname: anthony.bible
   namespace: default
 spec:
   selector:

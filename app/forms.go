@@ -101,8 +101,8 @@ func main() {
 
 	fmt.Println(s)
 	router := gin.Default()
-	router.LoadHTMLGlob("/templates/*")
-	router.Static("/assets", "./assets")
+	router.LoadHTMLGlob("/templates/*.html")
+	router.Static("/assets", "/templates/assets")
 	router.GET("/", home)
 	router.POST("/", s.send)
 	router.GET("/confirmation", confirmation)

@@ -79,22 +79,5 @@ spec:
               secretKeyRef:
                 key: SLACK_CLIENT_SECRET
                 name: test-secret        
-        name: setup
-        volumeMounts:
-        - mountPath: /code
-          name: html
-        - mountPath: /nginx
-          name: nginx-config
-        - mountPath: /php
-          name: php-config
-      imagePullSecrets:
-      - name: regcred
-      volumes:
-      - emptyDir: {}
-        name: php-socket
-      - emptyDir: {}
-        name: html
-      - emptyDir: {}
-        name: nginx-config
-      - emptyDir: {}
-        name: php-config
+        name: slackbot
+

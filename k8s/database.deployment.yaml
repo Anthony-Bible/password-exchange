@@ -13,7 +13,6 @@ spec:
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
         linkerd.io/inject: enabled
         # Have to disable outbound ports since it's outside of cluster: https://linkerd.io/2.11/reference/proxy-configuration/
         config.linkerd.io/skip-outbound-ports: "3306"
@@ -27,7 +26,5 @@ spec:
         - secretRef:
             name: test-secret
         image: ghcr.io/anthony-bible/passwordexchange-database
-        name: setup
-      imagePullSecrets:
-      - name: regcred
+        name: database
 
