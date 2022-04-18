@@ -35,7 +35,22 @@ manifest:
     bs4.diagnose: beautifulsoup4
     bs4.element: beautifulsoup4
     bs4.formatter: beautifulsoup4
-    bs4.testing: beautifulsoup4
+    bs4.tests: beautifulsoup4
+    bs4.tests.__init__: beautifulsoup4
+    bs4.tests.test_builder: beautifulsoup4
+    bs4.tests.test_builder_registry: beautifulsoup4
+    bs4.tests.test_dammit: beautifulsoup4
+    bs4.tests.test_docs: beautifulsoup4
+    bs4.tests.test_element: beautifulsoup4
+    bs4.tests.test_formatter: beautifulsoup4
+    bs4.tests.test_html5lib: beautifulsoup4
+    bs4.tests.test_htmlparser: beautifulsoup4
+    bs4.tests.test_lxml: beautifulsoup4
+    bs4.tests.test_navigablestring: beautifulsoup4
+    bs4.tests.test_pageelement: beautifulsoup4
+    bs4.tests.test_soup: beautifulsoup4
+    bs4.tests.test_tag: beautifulsoup4
+    bs4.tests.test_tree: beautifulsoup4
     click: click
     click.__init__: click
     click._compat: click
@@ -427,6 +442,7 @@ manifest:
     setuptools._distutils.msvccompiler: setuptools
     setuptools._distutils.py35compat: setuptools
     setuptools._distutils.py38compat: setuptools
+    setuptools._distutils.py39compat: setuptools
     setuptools._distutils.spawn: setuptools
     setuptools._distutils.sysconfig: setuptools
     setuptools._distutils.text_file: setuptools
@@ -1289,4 +1305,4 @@ manifest:
   pip_repository:
     name: pip
     incremental: false
-integrity: 199ec11b8aa63f0f6b1d0ac8e6fbd65f4c42ac9db13327db1f049c2119acb8e3
+integrity: a8c42098e228e05658ab8cda0e7313fdec97379a3713fdfc30c627abf33cf3fc
