@@ -17,7 +17,8 @@ spec:
       labels:
         app: encryption
         name: encryption
-        phase: prod
+        phase: "%{PHASE}"
+        version: "%{VERSION}" 
     spec:
       containers:
       - envFrom:

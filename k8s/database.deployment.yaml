@@ -19,7 +19,8 @@ spec:
       labels:
         app: database
         name: database
-        phase: prod
+        phase: "%{PHASE}"
+        version: "%{VERSION}" 
     spec:
       containers:
       - envFrom:

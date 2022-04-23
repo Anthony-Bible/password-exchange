@@ -1,13 +1,16 @@
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: hello
 spec:
-  schedule: "0 0 * * *"
+  schedule: "0 0  * * *"
   jobTemplate:
     spec:
       template:
         metadata:
+          annotations:
+            traffic.sidecar.istio.io/excludeOutboundIPRanges: 0.0.0.0/0
+            sidecar.istio.io/inject: “false”
           labels:
             cronjob: "deleteMessages"
         spec:
