@@ -219,23 +219,25 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	if len(c.PostForm("skipEmail")) <= 0 {
-		fmt.Println(len(c.PostForm("skipEmail")))
-		if msg.Validate() == false {
-			log.Debug().Msgf("errors: %s", msg.Errors)
-			htmlHeaders := htmlHeaders{
-				Title:  "Password Exchange",
-				Errors: msg.Errors,
+	if strings.ToLower(c.PostForm("color")) == "blue" {
+		if len(c.PostForm("skipEmail")) <= 0 {
+			fmt.Println(len(c.PostForm("skipEmail")))
+			if msg.Validate() == false {
+				log.Debug().Msgf("errors: %s", msg.Errors)
+				htmlHeaders := htmlHeaders{
+					Title:  "Password Exchange",
+					Errors: msg.Errors,
+				}
+				render(c, "home.html", 500, htmlHeaders)
+				return
 			}
-			render(c, "home.html", 500, htmlHeaders)
-			return
-		}
-		if err := email.Deliver(msg); err != nil {
-			marshaledMesage, _ := json.Marshal(msg)
-			log.Error().Err(err).Msg(string(marshaledMesage))
-			c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
+			if err := email.Deliver(msg); err != nil {
+				marshaledMesage, _ := json.Marshal(msg)
+				log.Error().Err(err).Msg(string(marshaledMesage))
+				c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
 
-			return
+				return
+			}
 		}
 	}
 	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))

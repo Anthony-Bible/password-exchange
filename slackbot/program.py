@@ -35,7 +35,7 @@ client_id = os.environ.get("SLACK_CLIENT_ID")
 client_secret = os.environ.get("SLACK_CLIENT_SECRET")
 database_url = "mysql+mysqldb://" + oauthUser +":" + oauthpassword +"@" + dbhost +"/" + oauthdb
 
-engine: Engine = sqlalchemy.create_engine(database_url)
+engine: Engine = sqlalchemy.create_engine(database_url, pool_pre_ping=True)
 
 #create oauth and installation store
 installation_store = SQLAlchemyInstallationStore(
@@ -69,11 +69,13 @@ bolt_app = App(
 app = Flask(__name__)
 handler = SlackRequestHandler(bolt_app)
 
+@bolt_app.message(re.compile("password:*"))
 @bolt_app.message("hello slacky")
 def greetings(message, say: Say):
     """ This will check all the message and pass only those which has 'hello slacky' in it """
-    user = payload.get("user")
-    say(f"Hi <@{user}>")
+    user = message.get("user")
+    print(user)
+    say(f"Hi <@{user}>, you should use the `/password` command for sharing passwords    ")
 
 client = encryptionClient.EncryptionServiceClient()
 
@@ -84,6 +86,7 @@ def reply_in_thread(payload: dict):
                                      thread_ts=payload.get('ts'),
                                      text=f"Hi<@{payload['user']}>")
     
+@bolt_app.command("/password")
 @bolt_app.command("/encrypt")
 def encrypt_command(say, payload: dict, ack):
     ack()
@@ -101,7 +104,7 @@ def encrypt_command(say, payload: dict, ack):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<@{payload['user_name']}> here's the encrypted url:" + (sitehost + "decrypt/" + guid + "/" + base64_key)
+                    "text": f"<@{payload['user_name']}> here's the encrypted url: " + (sitehost + "decrypt/" + guid + "/" + base64_key)
                 }
             }
         ]

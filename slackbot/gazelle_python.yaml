@@ -375,19 +375,6 @@ manifest:
     pkg_resources._vendor.zipp: setuptools
     pkg_resources.extern: setuptools
     pkg_resources.extern.__init__: setuptools
-    psycopg2: psycopg2
-    psycopg2.__init__: psycopg2
-    psycopg2._ipaddress: psycopg2
-    psycopg2._json: psycopg2
-    psycopg2._psycopg: psycopg2
-    psycopg2._range: psycopg2
-    psycopg2.errorcodes: psycopg2
-    psycopg2.errors: psycopg2
-    psycopg2.extensions: psycopg2
-    psycopg2.extras: psycopg2
-    psycopg2.pool: psycopg2
-    psycopg2.sql: psycopg2
-    psycopg2.tz: psycopg2
     setuptools: setuptools
     setuptools.__init__: setuptools
     setuptools._deprecation_warning: setuptools
@@ -1305,4 +1292,4 @@ manifest:
   pip_repository:
     name: pip
     incremental: false
-integrity: a8c42098e228e05658ab8cda0e7313fdec97379a3713fdfc30c627abf33cf3fc
+integrity: cf410fe712b179824919392e1ae54a92c2d361961ed0c07754dc29e00df689f6

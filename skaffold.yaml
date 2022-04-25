@@ -9,6 +9,8 @@ build:
       target: //slackbot:slackbot_bin.tar
       args:
       - "--use_top_level_targets_for_symlinks"
+      - "--stamp"
+      - "--workspace_status_command=./tools/bazel_stamp_vars.sh"
   - image: ghcr.io/anthony-bible/passwordexchange-database
     bazel:
       target: //app/database:database.tar

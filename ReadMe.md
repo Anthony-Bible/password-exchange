@@ -50,20 +50,14 @@ Future (hopeful) Intergrations:
 
 
 ### BUILDING from source
+***NOTE:***  *The build isn't completley hermetic yet, While I'm working on making it hermetic these packages need to be installed on the host: `zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang`*
+
 #### Kubernetes (bazel)
+
 1. Run `bazel build //...`
-2. To deploy kubernetes manifests `bazel run //kubernetes:deployments.create`
-3. To Reapply a kubernetes manifest (after a code change) `bazel run //kubernetes:deployments.apply`
- maybe skaffold?
-#### Kubernetes (Skaffold)
-**NOTE** This requires skaffold 1.38+
-1. Run `skaffold run`
-
-or
-
-1. Run `skaffold build`
-2. Run `skaffold render > manifests.yaml`
-3. Run `kubectl apply -f manifests.yaml`
+2. If you want to just generate the yaml, run: `bazel run //k8s:deployment-and-services`
+3. To deploy kubernetes manifests `bazel run //k8s:deployments-services.create`
+4. To Reapply a kubernetes manifest (after a code change) `bazel run //k8s:deployments-and-services.apply`
 
 
 

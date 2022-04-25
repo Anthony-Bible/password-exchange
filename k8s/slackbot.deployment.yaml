@@ -24,6 +24,8 @@ spec:
     spec:
       containers:
       - image: ghcr.io/anthony-bible/passwordexchange-slackbot
+        ports:
+        - containerPort: 3000
         env:
           - name: SLACK_BOT_TOKEN
             valueFrom:
