@@ -64,8 +64,12 @@ Future (hopeful) Intergrations:
 ---
 ### Running
 *Currently we only support kubernetes. If you don't have a kubernetes cluster, you have two options. If you use docker-desktop you can [enable a local kubernetes](https://docs.docker.com/desktop/kubernetes/), otherwise look into setting up [minikube](https://minikube.sigs.k8s.io/docs/start/) which allows you to set up kubernetes on your local machine.*
-1. edit `kubernetes/secrets.yaml` with your information
+1. Download the Mysql file from the root of the project
+   A. Update passsword in create user statements
+   B. Import the mysgql schema `mysql -u user -p < passwordexchange.sql`
+2. edit `kubernetes/secrets.yaml` with your information
    
    1. [view here for avaible options](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables)
-2. Download the latest manifest in releases
-3. Do a `kubectl apply -f password-exchange.yaml`
+3. Download the latest manifest in releases
+4. Do a `kubectl apply -f password-exchange.yaml`
+   1. You can find this in the latest release. 
