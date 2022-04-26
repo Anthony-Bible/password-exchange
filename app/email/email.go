@@ -69,8 +69,8 @@ func Deliver(msg *message.MessagePost) error {
 	}
 
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	body := []byte("To: " + strings.Join(to, "") + "\r\n" +
-		"Subject: Encrypted Messsage from Password exchange \r\n" +
+	body := []byte("From: Password Exchange <server@password.exchange>\r\n" + "To: " + strings.Join(to, "") + "\r\n" +
+		fmt.Sprintf("Subject: Encrypted Messsage from Password exchange from %s \r\n", msg.FirstName) +
 		mimeHeaders)
 	buf := bytes.NewBuffer(body)
 	err = t.Execute(buf, struct {
