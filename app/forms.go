@@ -107,6 +107,7 @@ func main() {
 	router.POST("/", s.send)
 	router.GET("/confirmation", confirmation)
 	router.GET("/decrypt/:uuid/*key", s.displaydecrypted)
+	router.GET("/about", about)
 
 	router.NoRoute(failedtoFind)
 	log.Info().Msg("Listening...")
@@ -119,6 +120,9 @@ func main() {
 
 func home(c *gin.Context) {
 	render(c, "home.html", 0, nil)
+}
+func about(c *gin.Context) {
+	render(c, "about.html", 0, nil)
 }
 func failedtoFind(c *gin.Context) {
 	render(c, "404.html", 404, nil)
