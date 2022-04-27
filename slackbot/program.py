@@ -88,7 +88,7 @@ def reply_in_thread(payload: dict):
     
 @bolt_app.command("/password")
 @bolt_app.command("/encrypt")
-def encrypt_command(say, payload: dict, ack):
+def encrypt_command(payload: dict, ack, respond):
     ack()
     slack_text=payload.get('text')
     key, guid = client.encrypt_text(slack_text)
@@ -110,7 +110,7 @@ def encrypt_command(say, payload: dict, ack):
         ]
     }
 
-    say(text=text)
+    respond(response_type="ephemeral",text=text)
 
 @app.route("/slack/events", methods=["POST"])
 def slack_events():

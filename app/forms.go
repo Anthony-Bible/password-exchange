@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TODO add a size limit for messages
 type htmlHeaders struct {
 	Title            string
 	Url              string
