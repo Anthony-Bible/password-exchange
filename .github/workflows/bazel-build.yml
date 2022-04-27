@@ -32,7 +32,8 @@ jobs:
       - name: Install tools
         run: sudo apt update && sudo apt install -y libmariadb-dev &&  sudo apt purge -y python2.7*
 
-
+      - name: generate bazelrc
+        run: /bin/bash -c 'echo "run --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
       # build
       - name: get bazel version
         run: |
@@ -47,8 +48,8 @@ jobs:
         run: | 
           mkdir build
           echo "rendering k8s manifests"
-          bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh > ./build/password-exchange.yaml 
-
+          bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/password-exchange.yaml 
+          
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

@@ -9,3 +9,4 @@ bazel-password.exchange
 plz-out
 .plzconfig.local
 slackbot/.venv/*
+.bazelrc
