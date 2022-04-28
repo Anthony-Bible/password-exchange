@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.41.18
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/rs/xid v1.3.0
+	github.com/rs/xid v1.4.0
         google.golang.org/protobuf v1.27.0
 	github.com/rs/zerolog v1.25.0
 	github.com/spf13/viper v1.8.1
