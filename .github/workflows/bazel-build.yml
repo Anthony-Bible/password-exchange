@@ -35,8 +35,8 @@ jobs:
       - name: generate bazelrc
         run: |
           /bin/bash -c 'echo "run --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
-          /bin/bash -c 'echo "build --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
-
+          /bin/bash -c 'echo "build --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://${BAZEL_USER}:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
+          cat .bazelrc
       # build
       - name: get bazel version
         run: |
