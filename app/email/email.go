@@ -77,7 +77,7 @@ func Deliver(msg *message.MessagePost) error {
 		Body    string
 		Message string
 	}{
-		Body:    fmt.Sprintf("Hi %s, \n %s used our service at https://password.exchange to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
+		Body:    fmt.Sprintf("Hi %s, \n %s used our service at <a href=\"https://password.exchange\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
 		Message: msg.Content,
 	})
 
