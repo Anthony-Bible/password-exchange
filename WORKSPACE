@@ -1,6 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
 
-
 http_archive(
     name = "io_bazel_rules_go",
     sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
@@ -9,6 +8,7 @@ http_archive(
         "https://github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
     ],
 )
+
 http_archive(
     name = "bazel_gazelle",
     sha256 = "5982e5463f171da99e3bdaeff8c0f48283a7a5f396ec5282910b9e8a49c0dd7e",
@@ -17,6 +17,7 @@ http_archive(
         "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.25.0/bazel-gazelle-v0.25.0.tar.gz",
     ],
 )
+
 http_archive(
     name = "build_stack_rules_proto",
     sha256 = "733bdc9267a90404d48668853025bb6c660d7a23e38f819335b03865fe2bee89",
@@ -40,16 +41,17 @@ http_archive(
     urls = ["https://github.com/rules-proto-grpc/rules_proto_grpc/archive/4.1.1.tar.gz"],
 )
 
-
 # Fetch official Python rules for Bazel
 #INSTALL PYTHON RULES
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
 http_archive(
     name = "rules_python",
     sha256 = "cdf6b84084aad8f10bf20b46b77cb48d83c319ebe6458a18e9d2cebf57807cdd",
     strip_prefix = "rules_python-0.8.1",
     url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.1.tar.gz",
 )
+
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 load("@rules_python//gazelle:deps.bzl", _py_gazelle_deps = "gazelle_deps")
@@ -57,7 +59,15 @@ load("@rules_proto_grpc//:repositories.bzl", "rules_proto_grpc_toolchains")
 load("@build_stack_rules_proto//:go_deps.bzl", "gazelle_protobuf_extension_go_deps")
 load("@build_stack_rules_proto//deps:protobuf_core_deps.bzl", "protobuf_core_deps")
 
+go_repository(
+    name = "com_github_aws_aws_sdk_go",
+    importpath = "github.com/aws/aws-sdk-go",
+    sum = "h1:sI6AZInzlZlfGlGG/xIGbCQ38uDyD9W29F8gR9CBDX0=",
+    version = "v1.41.18",
+)
+
 gazelle_protobuf_extension_go_deps()
+
 protobuf_core_deps()
 
 #
@@ -94,6 +104,7 @@ protobuf_core_deps()
 #
 #
 load("@rules_python//python:repositories.bzl", "python_register_toolchains")
+
 python_register_toolchains(
     name = "python38",
     # Available versions are listed in @rules_python//python:versions.bzl.
@@ -101,23 +112,19 @@ python_register_toolchains(
 )
 
 load("@python38//:defs.bzl", "interpreter")
-
-
-
 load("@rules_proto_grpc//python:repositories.bzl", rules_proto_grpc_python_repos = "python_repos")
 
-
 _py_gazelle_deps()
-load("@rules_python//python:pip.bzl", "pip_install")
 
+load("@rules_python//python:pip.bzl", "pip_install")
 
 # Create a central external repo, @my_deps, that contains Bazel targets for all the
 # third-party packages specified in the requirements.txt file.
 pip_install(
-   name = "pip",
-   #python_interpreter_target = "@python_interpreter//:python_bin",
-   python_interpreter_target = interpreter,
-   requirements = "//slackbot:requirements.txt",
+    name = "pip",
+    #python_interpreter_target = "@python_interpreter//:python_bin",
+    python_interpreter_target = interpreter,
+    requirements = "//slackbot:requirements.txt",
 )
 
 register_execution_platforms(
@@ -129,17 +136,20 @@ register_toolchains(
     "//toolchains:my_py_toolchain",
     "//toolchains:container_py_toolchain",
     "@build_stack_rules_proto//toolchain:standard",
-    )
-rules_proto_grpc_toolchains()
-rules_proto_grpc_python_repos()
+)
 
+rules_proto_grpc_toolchains()
+
+rules_proto_grpc_python_repos()
 
 load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
 
 rules_proto_dependencies()
 
 rules_proto_toolchains()
+
 rules_proto_grpc_python_repos()
+
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
 grpc_deps()
@@ -329,8 +339,8 @@ go_repository(
 go_repository(
     name = "com_github_fsnotify_fsnotify",
     importpath = "github.com/fsnotify/fsnotify",
-    sum = "h1:mZcQUHVQUQWoPXXtuf9yuEXKudkV2sx1E06UadKWpgI=",
-    version = "v1.5.1",
+    sum = "h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWoS4=",
+    version = "v1.4.9",
 )
 
 go_repository(
@@ -378,22 +388,22 @@ go_repository(
 go_repository(
     name = "com_github_go_playground_locales",
     importpath = "github.com/go-playground/locales",
-    sum = "h1:u50s323jtVGugKlcYeyzC0etD1HifMjqmJqb8WugfUU=",
-    version = "v0.14.0",
+    sum = "h1:HyWk6mgj5qFqCT5fjGBuRArbVDfE4hi8+e8ceBS/t7Q=",
+    version = "v0.13.0",
 )
 
 go_repository(
     name = "com_github_go_playground_universal_translator",
     importpath = "github.com/go-playground/universal-translator",
-    sum = "h1:82dyy6p4OuJq4/CByFNOn/jYrnRPArHwAcmLoJZxyho=",
-    version = "v0.18.0",
+    sum = "h1:icxd5fm+REJzpZx7ZfpaD876Lmtgy7VtROAbHHXk8no=",
+    version = "v0.17.0",
 )
 
 go_repository(
     name = "com_github_go_playground_validator_v10",
     importpath = "github.com/go-playground/validator/v10",
-    sum = "h1:NgTtmN58D0m8+UuxtYmGztBJB7VnPgjj221I1QHci2A=",
-    version = "v10.9.0",
+    sum = "h1:pH2c5ADXtd66mxoE0Zm9SUhxE20r7aM3F26W0hOn+GE=",
+    version = "v10.4.1",
 )
 
 go_repository(
@@ -521,6 +531,7 @@ go_repository(
     sum = "h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=",
     version = "v1.16.0",
 )
+
 go_repository(
     name = "com_github_hashicorp_consul_api",
     importpath = "github.com/hashicorp/consul/api",
@@ -699,8 +710,8 @@ go_repository(
 go_repository(
     name = "com_github_kr_pretty",
     importpath = "github.com/kr/pretty",
-    sum = "h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=",
-    version = "v0.3.0",
+    sum = "h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=",
+    version = "v0.1.0",
 )
 
 go_repository(
@@ -713,15 +724,15 @@ go_repository(
 go_repository(
     name = "com_github_kr_text",
     importpath = "github.com/kr/text",
-    sum = "h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=",
-    version = "v0.2.0",
+    sum = "h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=",
+    version = "v0.1.0",
 )
 
 go_repository(
     name = "com_github_leodido_go_urn",
     importpath = "github.com/leodido/go-urn",
-    sum = "h1:BqpAaACuzVSgi/VLzGZIobT2z4v53pjosyNd9Yv6n/w=",
-    version = "v1.2.1",
+    sum = "h1:hpXL4XnriNwQ/ABnpepYM/1vCLWNDfUNts8dX3xTG6Y=",
+    version = "v1.2.0",
 )
 
 go_repository(
@@ -741,8 +752,8 @@ go_repository(
 go_repository(
     name = "com_github_mattn_go_isatty",
     importpath = "github.com/mattn/go-isatty",
-    sum = "h1:qdl+GuBjcsKKDco5BsxPJlId98mSWNKqYA+Co0SC1yA=",
-    version = "v0.0.13",
+    sum = "h1:wuysRhFDzyxgEmMf5xjvJ2M9dZoWAXNNr5LSBS7uHXY=",
+    version = "v0.0.12",
 )
 
 go_repository(
@@ -797,8 +808,8 @@ go_repository(
 go_repository(
     name = "com_github_modern_go_concurrent",
     importpath = "github.com/modern-go/concurrent",
-    sum = "h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=",
-    version = "v0.0.0-20180306012644-bacd9c7ef1dd",
+    sum = "h1:ZqeYNhU3OHLH3mGKHDcjJRFFRrJa6eAM5H+CtDdOsPc=",
+    version = "v0.0.0-20180228061459-e0a39a4cb421",
 )
 
 go_repository(
@@ -881,8 +892,8 @@ go_repository(
 go_repository(
     name = "com_github_rogpeppe_go_internal",
     importpath = "github.com/rogpeppe/go-internal",
-    sum = "h1:FCbCCtXNOY3UtUuHUYaghJg4y7Fd14rXifAYUAtL9R8=",
-    version = "v1.8.0",
+    sum = "h1:RR9dF3JtopPvtkroDZuVD7qquD0bnHlKSqaQhgwt8yk=",
+    version = "v1.3.0",
 )
 
 go_repository(
@@ -951,8 +962,8 @@ go_repository(
 go_repository(
     name = "com_github_spf13_cast",
     importpath = "github.com/spf13/cast",
-    sum = "h1:s0hze+J0196ZfEMTs80N7UlFt0BDuQ7Q+JDnHiMWKdA=",
-    version = "v1.4.1",
+    sum = "h1:nFm6S0SMdyzrzcmThSipiEubIDy8WEXKNZ0UOgiRpng=",
+    version = "v1.3.1",
 )
 
 go_repository(
@@ -1070,8 +1081,8 @@ go_repository(
 go_repository(
     name = "in_gopkg_check_v1",
     importpath = "gopkg.in/check.v1",
-    sum = "h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=",
-    version = "v1.0.0-20201130134442-10cb98267c6c",
+    sum = "h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=",
+    version = "v1.0.0-20180628173108-788fd7840127",
 )
 
 go_repository(
@@ -1181,10 +1192,10 @@ go_repository(
 
 go_repository(
     name = "org_golang_google_grpc",
+    build_file_proto_mode = "disable",
     importpath = "google.golang.org/grpc",
-    sum = "h1:AGJ0Ih4mHjSeibYkFGh1dD9KJ/eOtZ93I6hoHhukQ5Q=",
-    version = "v1.40.0",
-    build_file_proto_mode = "disable"
+    sum = "h1:weqSxi/TMs1SqFRMHCtBgXRs8k3X39QIDEZ0pRcttUg=",
+    version = "v1.44.0",
 )
 
 go_repository(
@@ -1197,8 +1208,8 @@ go_repository(
 go_repository(
     name = "org_golang_x_crypto",
     importpath = "golang.org/x/crypto",
-    sum = "h1:/UOmuWzQfxxo9UtlXMwuQU8CMgg1eZXqTRwkSQJWKOI=",
-    version = "v0.0.0-20210711020723-a769d52b0f97",
+    sum = "h1:psW17arqaxU48Z5kZ0CQnkZWQJsqcURM6tKiBApRjXI=",
+    version = "v0.0.0-20200622213623-75b288015ac9",
 )
 
 go_repository(
@@ -1337,6 +1348,7 @@ http_archive(
     strip_prefix = "rules_docker-0.24.0",
     urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.24.0/rules_docker-v0.24.0.tar.gz"],
 )
+
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",
@@ -1351,62 +1363,71 @@ container_deps()
 container_repositories()
 
 load("@io_bazel_rules_docker//container:pull.bzl", "container_pull")
-
 load(
     "@io_bazel_rules_docker//go:image.bzl",
     _go_image_repos = "repositories",
 )
 
 _go_image_repos()
+
 load(
     "@io_bazel_rules_docker//python:image.bzl",
     _py_image_repos = "repositories",
 )
+
 _py_image_repos()
 
 container_pull(
     name = "alpine_linux_amd64",
+    digest = "sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3",
     registry = "index.docker.io",
     repository = "library/alpine",
     tag = "3.15",
-    digest="sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3"
 )
+
 container_pull(
     name = "python3_linux_amd64",
+    digest = "sha256:a5a7a63d6493977b0f13b1cb3a3764dba713a49baf6b87d3a53d547c41f90b2c",
     registry = "index.docker.io",
     repository = "library/python",
     tag = "3.8.12-slim-buster",
-    digest="sha256:a5a7a63d6493977b0f13b1cb3a3764dba713a49baf6b87d3a53d547c41f90b2c"
 )
+
 #kubectl download
 http_archive(
     name = "io_bazel_rules_k8s",
+    sha256 = "51f0977294699cd547e139ceff2396c32588575588678d2054da167691a227ef",
     strip_prefix = "rules_k8s-0.6",
     urls = ["https://github.com/bazelbuild/rules_k8s/archive/v0.6.tar.gz"],
-    sha256 = "51f0977294699cd547e139ceff2396c32588575588678d2054da167691a227ef",
 )
+
 load("@io_bazel_rules_k8s//toolchains/kubectl:kubectl_configure.bzl", "kubectl_configure")
 
 http_file(
-    name="k8s_binary",
+    name = "k8s_binary",
     downloaded_file_path = "kubectl",
-    sha256="9f74f2fa7ee32ad07e17211725992248470310ca1988214518806b39b1dad9f0",
-    executable=True,
-    urls=["https://dl.k8s.io/release/v1.21.0/bin/linux/amd64/kubectl"],
+    executable = True,
+    sha256 = "9f74f2fa7ee32ad07e17211725992248470310ca1988214518806b39b1dad9f0",
+    urls = ["https://dl.k8s.io/release/v1.21.0/bin/linux/amd64/kubectl"],
 )
-kubectl_configure(name="k8s_config", kubectl_path="@k8s_binary//file")
+
+kubectl_configure(
+    name = "k8s_config",
+    kubectl_path = "@k8s_binary//file",
+)
 
 #k8s rules loading
 
-load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_repositories", "k8s_defaults")
+load("@io_bazel_rules_k8s//k8s:k8s.bzl", "k8s_defaults", "k8s_repositories")
 
 k8s_repositories()
 
 load("@io_bazel_rules_k8s//k8s:k8s_go_deps.bzl", k8s_go_deps = "deps")
 
 k8s_go_deps()
+
 k8s_defaults(
-  name = "k8s_deploy",
-  kind = "deployment",
-  cluster="cluster.anthony.bible",
+    name = "k8s_deploy",
+    cluster = "cluster.anthony.bible",
+    kind = "deployment",
 )
