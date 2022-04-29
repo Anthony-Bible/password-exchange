@@ -1,8 +1,3 @@
-##TODO##
-Fix email teemplates
-- About section
-- From (name)
-
 
 # Password.exchange
 Password exchange was built because there was no known way to securely share passwords. No need to have someone pick up the phone or set up "complicated" gpg. While password exchange focuses on passwords it in theory can be used for any text. 
@@ -21,8 +16,7 @@ You fill out [the form](https://password.exchange) with the neccessary informati
 
  Once installed to your organization, you can use the `/encrypt` command which will send the text to the bot and the bot will send a link to access the unencrypted text. 
 
- **NOTE:** Slackbot relies on the website since the encryption and database service are deployed with it. 
-
+ **NOTE:** Slackbot relies on the database and encryption services and deployments. You can remove the website deployment/service from the yaml if you only intend to deploy the slackbot.
 ---
 
 ### Features
