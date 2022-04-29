@@ -6,6 +6,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"net/http"
+
 	// "net/url"
 	"strings"
 
@@ -100,7 +101,6 @@ func main() {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
 	}
 
-	fmt.Println(s)
 	router := gin.Default()
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
@@ -226,7 +226,6 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
 	if strings.ToLower(c.PostForm("color")) == "blue" {
 		if len(c.PostForm("skipEmail")) <= 0 {
-			fmt.Println(len(c.PostForm("skipEmail")))
 			if msg.Validate() == false {
 				log.Debug().Msgf("errors: %s", msg.Errors)
 				htmlHeaders := htmlHeaders{

@@ -1,4 +1,9 @@
-
-<h1>Confirmation</h1>
-<p>Your message has been sent!</p>
-<a href="{{.Url}}"> {{.Url}}</a>
+{{ template "header.html" }}
+<div class="container">
+    <h1>Confirmation</h1>
+    <p>Your message has been sent!</p>
+    
+    <a class="dont-break-out" href="{{.Url}}"> {{.Url}}</a>
+</div>
+</body>
+</html>
