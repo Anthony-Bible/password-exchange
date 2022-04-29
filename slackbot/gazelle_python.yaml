@@ -1292,4 +1292,4 @@ manifest:
   pip_repository:
     name: pip
     incremental: false
-integrity: cf410fe712b179824919392e1ae54a92c2d361961ed0c07754dc29e00df689f6
+integrity: 940fb16d4239e7d64702291db134d60395f214ec0987ac830bd883758c7c39ea
