@@ -27,11 +27,7 @@ spec:
         ports:
         - containerPort: 3000
         env:
-          - name: SLACK_BOT_TOKEN
-            valueFrom:
-              secretKeyRef:
-                key: SLACK_BOT_TOKEN
-                name: test-secret
+
           - name: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
             valueFrom:
               secretKeyRef:

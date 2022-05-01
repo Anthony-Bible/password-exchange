@@ -25,7 +25,7 @@ import encryptionClient
 
 logger = logging.getLogger(__name__)
 
-slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
+# slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 oauthpassword = os.environ.get("OAUTHDB_PASSWORD")
 oauthUser = os.environ.get("OAUTHDB_USER")
@@ -53,7 +53,7 @@ try:
     installation_store.metadata.create_all(engine)
     oauth_state_store.metadata.create_all(engine)
 except Exception as e:
-    print("Something went wrong creating intial dbs" + e)
+    logger.error("Something went wrong creating intial dbs" + e)
 
 bolt_app = App(
     logger=logger,
@@ -63,7 +63,7 @@ bolt_app = App(
         client_id=client_id,
         client_secret=client_secret,
         state_store=oauth_state_store,
-        scopes=["chat:write", "commands", "groups:history", "im:history", "mpim:history", "channels:history", "groups:read"]
+        scopes=["chat:write", "commands", "groups:history", "groups:write", "im:history", "mpim:history", "channels:history", "groups:read","message.groups" ]
     ),
 )
 app = Flask(__name__)
@@ -83,11 +83,13 @@ handler = SlackRequestHandler(bolt_app)
 
 client = encryptionClient.EncryptionServiceClient()
 @bolt_app.message(re.compile("password:(?!\s+$)(?!\s*&lt;[rs].+&gt;)(?!\s*```).+"))
-def reply_in_thread(ack, payload, body, logger, say, context):
+def reply_in_thread(client, ack, payload, body, logger, say, context):
     """ This will reply in thread instead of creating a new thread """
     ack()
+
     user = payload.get("user")
-    response = slackclient.chat_postMessage(channel=payload.get('channel'),
+    channel = payload.get("channel")
+    response = client.chat_postMessage( channel=channel,
                                      thread_ts=payload.get('ts'),
                                      text=f"Hi <@{user}>, you should use the `/password` command for sharing passwords.")
     
@@ -136,7 +138,6 @@ def encrypt_command(payload: dict, ack, respond):
 @bolt_app.action("share_to_channel")
 def post_to_channel(ack, payload, logger, respond):
     ack()
-    logger.info(payload)
     respond(response_type="in_channel", delete_original="true", text=f"{payload['value']}" )
     
 @bolt_app.event("app_home_opened")
