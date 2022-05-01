@@ -40,6 +40,7 @@ jobs:
           pwd
           git config --local user.email "cd@password.exchange"
           git config --local user.name "github-actions[bot]"
+          git add .
           git commit -m "Add changes" -a
 
       - name: Release
