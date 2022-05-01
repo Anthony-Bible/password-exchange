@@ -35,7 +35,11 @@ jobs:
           mkdir build
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
           echo "rendering k8s manifests"
-          bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/prod/password-exchange.yaml 
+          if [[ "${GITHUB_REF_TYPE}" =~ "tag" ]]; then
+            bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/prod/password-exchange.yaml 
+          else
+            bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/dev/password-exchange.yaml 
+          fi
           cd ./build
           pwd
           git config --local user.email "cd@password.exchange"
