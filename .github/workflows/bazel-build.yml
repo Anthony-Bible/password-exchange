@@ -31,7 +31,6 @@ jobs:
       - name: Build the code
         run: bazel build //... 
       - name: Render manifests
-        if: startsWith(github.ref, 'refs/tags/')
         run: | 
           mkdir build
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
