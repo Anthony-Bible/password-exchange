@@ -52,6 +52,6 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          repository: "https://github.com/Anthony-Bible/password-exchange-deploy"
+          repository: "https://github.com/Anthony-Bible/password-exchange-deploy.git"
           directory: ./build
 
