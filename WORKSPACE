@@ -59,12 +59,6 @@ load("@rules_proto_grpc//:repositories.bzl", "rules_proto_grpc_toolchains")
 load("@build_stack_rules_proto//:go_deps.bzl", "gazelle_protobuf_extension_go_deps")
 load("@build_stack_rules_proto//deps:protobuf_core_deps.bzl", "protobuf_core_deps")
 
-go_repository(
-    name = "com_github_aws_aws_sdk_go",
-    importpath = "github.com/aws/aws-sdk-go",
-    sum = "h1:sI6AZInzlZlfGlGG/xIGbCQ38uDyD9W29F8gR9CBDX0=",
-    version = "v1.41.18",
-)
 
 go_repository(
     name = "com_github_cespare_xxhash_v2",
