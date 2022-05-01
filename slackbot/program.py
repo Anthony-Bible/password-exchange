@@ -62,6 +62,7 @@ bolt_app = App(
     oauth_settings=OAuthSettings(
         client_id=client_id,
         client_secret=client_secret,
+        install_page_rendering_enabled=false,
         state_store=oauth_state_store,
         scopes=["chat:write", "commands", "groups:history", "groups:write", "im:history", "mpim:history", "channels:history", "groups:read","message.groups" ]
     ),
@@ -169,7 +170,7 @@ def update_home_tab(client, event, logger):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "• Use `/password`  or `/encrypt` to share passwords \n • Slackbot will remind users if it detects a password shared unencrypted\n • Use `password: <redacted>` to show passwords that were removed\n"
+				"text": "• Use `/password`  or `/encrypt` to share passwords \n • Slackbot will remind users if it detects a password shared unencrypted\n • Use `password: <redacted>` to show passwords that were removed \n"
 			}
 		}
 	]
