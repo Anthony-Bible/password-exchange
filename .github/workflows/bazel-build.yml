@@ -39,7 +39,7 @@ jobs:
             bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/prod/password-exchange.yaml 
 
           else
-            bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/dev/password-exchange.yaml 
+            bazel run //k8s:dev-deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/dev/password-exchange.yaml 
           fi
           cd ./build
           pwd
