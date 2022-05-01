@@ -169,7 +169,7 @@ def update_home_tab(client, event, logger):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": "• Use `/password`  or `/encrypt` to share passwords \n • Slackbot will remind users if it detects a password shared unencrypted\n"
+				"text": "• Use `/password`  or `/encrypt` to share passwords \n • Slackbot will remind users if it detects a password shared unencrypted\n • Use `password: <redacted>` to show passwords that were removed\n"
 			}
 		}
 	]
