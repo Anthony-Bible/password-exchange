@@ -69,22 +69,27 @@ bolt_app = App(
 app = Flask(__name__)
 handler = SlackRequestHandler(bolt_app)
 
-@bolt_app.message(re.compile("password:*"))
-@bolt_app.message("hello slacky")
-def greetings(message, say: Say):
-    """ This will check all the message and pass only those which has 'hello slacky' in it """
-    user = message.get("user")
-    print(user)
-    say(f"Hi <@{user}>, you should use the `/password` command for sharing passwords    ")
+# Match all messages that "password:" but not ones with just whitespace
+# @bolt_app.message(re.compile("password:(?!\s+$)(?!\s*<[sr].+>).+|PASSWORD:(?!\s+$)(?!\s*<[sr].+>).+"))
+# @bolt_app.message("hello slacky")
+# def greetings(ack, payload, body, logger, say):
+#     """ This will check all the message and pass only those which has 'hello slacky' in it """
+#     ack()
+#     user = payload.get("user")
+#     print("this is the payload")
+#     logger.info(payload)
+#     logger.info(body)
+#     say(f"Hi <@{user}>, you should use the `/password` command for sharing passwords")
 
 client = encryptionClient.EncryptionServiceClient()
-
-@bolt_app.message(re.compile("(hi|hello|hey) slacky"))
-def reply_in_thread(payload: dict):
+@bolt_app.message(re.compile("password:(?!\s+$)(?!\s*&lt;[rs].+&gt;)(?!\s*```).+",re.DEBUG))
+def reply_in_thread(ack, payload, body, logger, say, context):
     """ This will reply in thread instead of creating a new thread """
+    ack()
+    user = payload.get("user")
     response = slackclient.chat_postMessage(channel=payload.get('channel'),
                                      thread_ts=payload.get('ts'),
-                                     text=f"Hi<@{payload['user']}>")
+                                     text=f"Hi <@{user}>, you should use the `/password` command for sharing passwords.")
     
 @bolt_app.command("/password")
 @bolt_app.command("/encrypt")
@@ -98,20 +103,41 @@ def encrypt_command(payload: dict, ack, respond):
     base64_bytes = base64.urlsafe_b64encode(key)
     base64_key = base64_bytes.decode('ascii')
     sitehost = os.environ['PASSWORDEXCHANGE_HOST']
+    decrypt_url =   (sitehost + "decrypt/" + guid + "/" + base64_key)
     text = {
         "blocks": [
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"<@{payload['user_name']}> here's the encrypted url: " + (sitehost + "decrypt/" + guid + "/" + base64_key)
+                    "text": f"<@{payload['user_name']}> here's the encrypted url: " + decrypt_url,
                 }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "share_to_channel",
+                        "accessibility_label": "Do you want to share this to the channel?",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Share to channel"
+                        },
+                        "style": "danger",
+                        "value": decrypt_url
+                    }
+                ]
             }
         ]
     }
 
-    respond(response_type="ephemeral",text=text)
-
+    respond(text=text)
+@bolt_app.action("share_to_channel")
+def post_to_channel(ack, payload, logger, respond):
+    ack()
+    logger.info(payload)
+    respond(response_type="in_channel", delete_original="true", text=f"{payload['value']}" )
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
     """ Declaring the route where slack will post a request """
