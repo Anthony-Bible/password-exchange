@@ -52,6 +52,7 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
+          github_token: ${{ secrets.git_push_token }}
           repository: "Anthony-Bible/password-exchange-deploy"
           directory: ./build
 
