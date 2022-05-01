@@ -64,7 +64,7 @@ bolt_app = App(
         client_secret=client_secret,
         install_page_rendering_enabled=False,
         state_store=oauth_state_store,
-        scopes=["chat:write", "commands", "groups:history", "groups:write", "im:history", "mpim:history", "channels:history", "groups:read", "message.groups" ]
+        scopes=["chat:write", "commands", "groups:history", "groups:write", "im:history", "mpim:history", "channels:history", "groups:read"]
     ),
 )
 app = Flask(__name__)
