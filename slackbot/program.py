@@ -82,7 +82,7 @@ handler = SlackRequestHandler(bolt_app)
 #     say(f"Hi <@{user}>, you should use the `/password` command for sharing passwords")
 
 client = encryptionClient.EncryptionServiceClient()
-@bolt_app.message(re.compile("password:(?!\s+$)(?!\s*&lt;[rs].+&gt;)(?!\s*```).+",re.DEBUG))
+@bolt_app.message(re.compile("password:(?!\s+$)(?!\s*&lt;[rs].+&gt;)(?!\s*```).+"))
 def reply_in_thread(ack, payload, body, logger, say, context):
     """ This will reply in thread instead of creating a new thread """
     ack()
@@ -138,6 +138,44 @@ def post_to_channel(ack, payload, logger, respond):
     ack()
     logger.info(payload)
     respond(response_type="in_channel", delete_original="true", text=f"{payload['value']}" )
+    
+@bolt_app.event("app_home_opened")
+def update_home_tab(client, event, logger):
+    try:
+        # Call views.publish with the built-in client
+        client.views_publish(
+            # Use the user ID associated with the event
+            user_id=event["user"],
+            # Home tabs must be enabled in your app configuration
+            view={
+                "type": "home",
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": f"Hi  <@{event['user']}>, :wave:"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "Great to see you here! Password exchange lets you share passwords and sensitive information securely in slack"
+			}
+		},
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "• Use `/password`  or `/encrypt` to share passwords \n • Slackbot will remind users if it detects a password shared unencrypted\n"
+			}
+		}
+	]
+}
+        )
+    except Exception as e:
+        logger.error(f"Error publishing home tab: {e}")
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
     """ Declaring the route where slack will post a request """
