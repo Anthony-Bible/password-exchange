@@ -62,7 +62,7 @@ bolt_app = App(
     oauth_settings=OAuthSettings(
         client_id=client_id,
         client_secret=client_secret,
-        install_page_rendering_enabled=false,
+        install_page_rendering_enabled=False,
         state_store=oauth_state_store,
         scopes=["chat:write", "commands", "groups:history", "groups:write", "im:history", "mpim:history", "channels:history", "groups:read","message.groups" ]
     ),
