@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: encryption
-  name: encryption-deployment
+  name: encryption-%{PHASE}-deployment
   namespace: default
 spec:
   replicas: 2

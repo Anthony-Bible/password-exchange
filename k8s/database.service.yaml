@@ -6,7 +6,8 @@ metadata:
   namespace: default
 spec:
   selector:
-    app: database 
+    app: database
+    phase: PROD
   ports:
     - name: grpc 
       port: 50051 

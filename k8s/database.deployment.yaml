@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: database
-  name: database-deployment
+  name: database-%{PHASE}-deployment
   namespace: default
 spec:
   replicas: 2

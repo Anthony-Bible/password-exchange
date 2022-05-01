@@ -8,6 +8,7 @@ metadata:
 spec:
   selector:
     app: encryption 
+    phase: PROD
   ports:
     - name: grpc 
       port: 50051 
