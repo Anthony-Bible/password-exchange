@@ -34,13 +34,24 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: | 
           mkdir build
+          git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
           echo "rendering k8s manifests"
           bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/password-exchange.yaml 
-          
+          cd ./build
+          pwd
+          git config --local user.email "cd@password.exchange"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "Add changes" -a
+
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             ./build/password-exchange.yaml
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          repository: "https://github.com/Anthony-Bible/password-exchange-deploy"
+          directory: ./build
 
