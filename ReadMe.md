@@ -1,6 +1,7 @@
 
+
 # Password.exchange
-Password exchange was built because there was no known way to securely share passwords. No need to have someone pick up the phone or set up "complicated" gpg. While password exchange focuses on passwords it in theory can be used for any text. 
+Password exchange was built because there was no known way to securely share passwords. No need to have someone pick up the phone or set up "complicated" gpg. While password exchange was originally created for passwords it can be used for any text. 
 
 **BE sure to visit our wiki for detailed information**
 
