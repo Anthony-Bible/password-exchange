@@ -180,6 +180,8 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
+
+	// FOR DEBUGGING HTTP POST:
 	// c.MultipartForm()
 	// for key, value := range c.Request.PostForm {
 	// 	log.Info().Msgf("%v = %v \n", key, value)
@@ -217,7 +219,6 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 
-	// msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
@@ -272,47 +273,3 @@ func render(c *gin.Context, filename string, status int, data interface{}) {
 	)
 
 }
-
-// type test_struct struct {
-// 	Success      bool   `json:"success"`
-// 	Challenge_ts string `json:"challenge_ts"`
-// 	Hostname     string `json:"hostname"`
-// }
-
-// func checkBot(hcaptchaResponse string) (returnstatus bool) {
-// 	secret, err := commons.GetViperVariable("hcaptcha_secret")
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("Problem with env variable")
-// 	}
-// 	sitekey, err := commons.GetViperVariable("hcaptcha_sitekey")
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("Problem with env variable")
-// 	}
-// 	u := make(url.Values)
-// 	u.Set("secret", secret)
-// 	u.Set("response", hcaptchaResponse)
-// 	u.Set("sitekey", sitekey)
-// 	response, err := http.PostForm("https://hcaptcha.com/siteverify", u)
-
-// 	if err != nil {
-// 		log.Error().
-// 			Str("error", err.Error()).
-// 			Msg("Something went wrong with hcaptcha")
-// 		return false
-// 	}
-// 	defer response.Body.Close()
-// 	body, err := ioutil.ReadAll(response.Body)
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("Problem with env variable")
-
-// 	}
-// 	var t test_struct
-// 	err = json.Unmarshal(body, &t)
-// 	if err != nil {
-
-// 		log.Error().
-// 			Msg("Can't Unmarshal json")
-// 		return false
-// 	}
-// 	return t.Success
-// }
