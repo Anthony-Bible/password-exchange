@@ -93,7 +93,12 @@ def reply_in_thread(client, ack, payload, body, logger, say, context):
     response = client.chat_postMessage( channel=channel,
                                      thread_ts=payload.get('ts'),
                                      text=f"Hi <@{user}>, you should use the `/password` command for sharing passwords.")
-    
+@bolt_app.message(re.compile("help", re.IGNORECASE))    
+def respond(message, respond):
+    """Responds with help message
+    """
+    ack()
+    respond(response_type="ephemeral", text="• Use `/encrypt` or `/password` to share sensitive information\n • If you want to share redacted passwords use `password: <redacted>` or `password: <snipped>` ")
 @bolt_app.command("/password")
 @bolt_app.command("/encrypt")
 def encrypt_command(payload: dict, ack, respond):
@@ -135,7 +140,7 @@ def encrypt_command(payload: dict, ack, respond):
         ]
     }
 
-    respond(text=text)
+    respond(text=text, response_type="ephemeral")
 @bolt_app.action("share_to_channel")
 def post_to_channel(ack, payload, logger, respond):
     ack()
