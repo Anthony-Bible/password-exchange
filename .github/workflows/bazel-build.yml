@@ -31,9 +31,6 @@ jobs:
       - name: Build the code
         run: bazel build //... 
       - name: Render manifests
-        if: |
-          github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
-
         run: | 
           mkdir build
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
@@ -58,6 +55,8 @@ jobs:
             ./build/password-exchange.yaml
       - name: Push changes
         uses: ad-m/github-push-action@master
+        if: |
+          github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
         with:
           github_token: ${{ secrets.git_push_token }}
           repository: "Anthony-Bible/password-exchange-deploy"
