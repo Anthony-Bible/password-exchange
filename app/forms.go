@@ -75,19 +75,6 @@ func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, er
 	return ctx, nil
 }
 
-// func newDbServerContext(endpoint1 string, enpdpoint2) (*EncryptionClient, error) {
-// 	dbuserConn, err := grpc.Dial(endpoint1, grpc.WithInsecure())
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	dbclient := db.NewDbServiceClient(dbuserConn)
-// 	ctx := &EncryptionClient{
-// 		DbClient: dbclient,
-// 		dbconn:   dbuserConn,
-// 	}
-// 	return ctx, nil
-// }
-
 func main() {
 	encryptionServiceName, err := commons.GetViperVariable("encryptionservice")
 	dbServiceName, err := commons.GetViperVariable("databaseservice")
@@ -176,6 +163,29 @@ func (s *EncryptionClient) doAction(c *gin.Context) {
 	}
 
 }
+
+func sendEmail(c *gin.Context, msg *message.MessagePost) {
+	if strings.ToLower(c.PostForm("color")) == "blue" {
+		if len(c.PostForm("skipEmail")) <= 0 {
+			if msg.Validate() == false {
+				log.Debug().Msgf("errors: %s", msg.Errors)
+				htmlHeaders := htmlHeaders{
+					Title:  "Password Exchange",
+					Errors: msg.Errors,
+				}
+				render(c, "home.html", 500, htmlHeaders)
+				return
+			}
+			if err := email.Deliver(msg); err != nil {
+				marshaledMesage, _ := json.Marshal(msg)
+				log.Error().Err(err).Msg(string(marshaledMesage))
+				c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
+
+				return
+			}
+		}
+	}
+}
 func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
@@ -225,26 +235,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	if strings.ToLower(c.PostForm("color")) == "blue" {
-		if len(c.PostForm("skipEmail")) <= 0 {
-			if msg.Validate() == false {
-				log.Debug().Msgf("errors: %s", msg.Errors)
-				htmlHeaders := htmlHeaders{
-					Title:  "Password Exchange",
-					Errors: msg.Errors,
-				}
-				render(c, "home.html", 500, htmlHeaders)
-				return
-			}
-			if err := email.Deliver(msg); err != nil {
-				marshaledMesage, _ := json.Marshal(msg)
-				log.Error().Err(err).Msg(string(marshaledMesage))
-				c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
-
-				return
-			}
-		}
-	}
+	sendEmail(c, msg)
 	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 
 }
