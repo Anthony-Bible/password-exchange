@@ -53,7 +53,7 @@ Future (hopeful) Intergrations:
 
 
 ### BUILDING from source
-***NOTE:***  *The build isn't completley hermetic yet, While I'm working on making it hermetic these packages need to be installed on the host: `zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang`*
+***NOTE:***  *The build isn't completley hermetic yet, While I'm working on making it hermetic these packages need to be installed on the host, or you can use [VsCode's devcontainer](https://code.visualstudio.com/docs/remote/containers) that is included: `zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang`*
 
 #### Kubernetes (bazel)
 
