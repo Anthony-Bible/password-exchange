@@ -76,8 +76,9 @@ func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, er
 }
 
 func main() {
-	encryptionServiceName, err := commons.GetViperVariable("encryptionservice")
-	dbServiceName, err := commons.GetViperVariable("databaseservice")
+	environment, err := commons.GetViperVariable("running_environment")
+	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
+	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
 	//TODO put port in environment variable
 	encryptionServiceName += ":50051"
 	if err != nil {

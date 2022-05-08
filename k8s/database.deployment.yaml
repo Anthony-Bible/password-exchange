@@ -27,5 +27,8 @@ spec:
         - secretRef:
             name: test-secret
         image: ghcr.io/anthony-bible/passwordexchange-database
+        env:
+        - name: "PASSWORDEXCHANGE_RUNNING_ENVIRONMENT"
+          value: "%{PHASE}"
         name: database
 
