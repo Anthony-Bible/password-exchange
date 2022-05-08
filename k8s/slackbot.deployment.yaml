@@ -36,7 +36,7 @@ spec:
           - name: PASSWORDEXCHANGE_DATABASESERVICE
             valueFrom:
               secretKeyRef:
-                key: PASSWORDEXCHANGE_DATABASES_PROD_ERVICE
+                key: PASSWORDEXCHANGE_DATABASE_PROD_SERVICE
                 name: test-secret
           - name: PASSWORDEXCHANGE_HOST
             valueFrom:
