@@ -160,13 +160,13 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 func sendEmail(c *gin.Context, msg *message.MessagePost) {
 	if strings.ToLower(c.PostForm("color")) == "blue" {
 		if len(c.PostForm("skipEmail")) <= 0 {
-			shouldReturn := verifyEmail(msg, c)
-			if shouldReturn {
-				return
+			isokay := verifyEmail(msg, c)
+			if isokay {
+				log.Error().Msg("email is malformed")
 			}
 			shouldReturn1 := deliverEmail(msg, c)
 			if shouldReturn1 {
-				return
+				log.Error().Msg("Something went wrong with email Delivery")
 			}
 		}
 	}
