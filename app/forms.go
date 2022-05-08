@@ -80,10 +80,11 @@ func main() {
 	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
 	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
 	log.Info().Msg(dbServiceName)
-	fmt.Println(dbServiceName)
 
 	//TODO put port in environment variable
 	encryptionServiceName += ":50051"
+	log.Info().Msg(encryptionServiceName)
+
 	if err != nil {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
