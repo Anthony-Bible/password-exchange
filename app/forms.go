@@ -156,36 +156,46 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 
 	render(c, "decryption.html", 0, extraHeaders)
 }
-func (s *EncryptionClient) doAction(c *gin.Context) {
-	c.MultipartForm()
-	for key, value := range c.Request.PostForm {
-		log.Info().Msgf("%v = %v \n", key, value)
-	}
-
-}
 
 func sendEmail(c *gin.Context, msg *message.MessagePost) {
 	if strings.ToLower(c.PostForm("color")) == "blue" {
 		if len(c.PostForm("skipEmail")) <= 0 {
-			if msg.Validate() == false {
-				log.Debug().Msgf("errors: %s", msg.Errors)
-				htmlHeaders := htmlHeaders{
-					Title:  "Password Exchange",
-					Errors: msg.Errors,
-				}
-				render(c, "home.html", 500, htmlHeaders)
+			shouldReturn := verifyEmail(msg, c)
+			if shouldReturn {
 				return
 			}
-			if err := email.Deliver(msg); err != nil {
-				marshaledMesage, _ := json.Marshal(msg)
-				log.Error().Err(err).Msg(string(marshaledMesage))
-				c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
-
+			shouldReturn1 := deliverEmail(msg, c)
+			if shouldReturn1 {
 				return
 			}
 		}
 	}
 }
+
+func deliverEmail(msg *message.MessagePost, c *gin.Context) bool {
+	if err := email.Deliver(msg); err != nil {
+		marshaledMesage, _ := json.Marshal(msg)
+		log.Error().Err(err).Msg(string(marshaledMesage))
+		c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
+
+		return true
+	}
+	return false
+}
+
+func verifyEmail(msg *message.MessagePost, c *gin.Context) bool {
+	if msg.Validate() == false {
+		log.Debug().Msgf("errors: %s", msg.Errors)
+		htmlHeaders := htmlHeaders{
+			Title:  "Password Exchange",
+			Errors: msg.Errors,
+		}
+		render(c, "home.html", 500, htmlHeaders)
+		return true
+	}
+	return false
+}
+
 func (s *EncryptionClient) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
