@@ -240,7 +240,20 @@ func (s *EncryptionClient) send(c *gin.Context) {
 
 	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
-	// msgEncrypted.Uniqueid = guid.String()
+	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
+
+	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with insert")
+	}
+
+	// TODO Figure out how to use a fucntion from another package on a struct on another package
+	sendEmail(c, msg)
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
+
+}
+
+func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) *message.MessagePost {
 	msg := &message.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
@@ -253,16 +266,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		Captcha: c.PostForm("h-captcha-response"),
 	}
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
-
-	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
-	if err != nil {
-		log.Error().Err(err).Msg("Something went wrong with insert")
-	}
-
-	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	sendEmail(c, msg)
-	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
-
+	return msg
 }
 
 func confirmation(c *gin.Context) {
