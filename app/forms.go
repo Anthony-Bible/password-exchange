@@ -76,18 +76,8 @@ func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, er
 }
 
 func main() {
-	environment, err := commons.GetViperVariable("running_environment")
-	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
-	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
-	log.Info().Msg(dbServiceName)
-
 	//TODO put port in environment variable
-	encryptionServiceName += ":50051"
-	log.Info().Msg(encryptionServiceName)
-
-	if err != nil {
-		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
-	}
+	encryptionServiceName, dbServiceName := getServiceNames()
 	s, err := newServerContext(encryptionServiceName, dbServiceName)
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
@@ -109,6 +99,21 @@ func main() {
 	// PORT environment variable was defined.
 	router.Run()
 
+}
+
+func getServiceNames() (string, string) {
+	environment, err := commons.GetViperVariable("running_environment")
+	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
+	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
+	log.Info().Msg(dbServiceName)
+
+	encryptionServiceName += ":50051"
+	log.Info().Msg(encryptionServiceName)
+
+	if err != nil {
+		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
+	}
+	return encryptionServiceName, dbServiceName
 }
 
 func home(c *gin.Context) {
