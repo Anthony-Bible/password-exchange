@@ -130,10 +130,7 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 
 	uuid := c.Param("uuid")
 	key := c.Param("key")
-	decodedKey, err := b64.URLEncoding.DecodeString(key[1:])
-	if err != nil {
-		log.Error().Err(err).Msgf("Something went wrong with b64 decoding: %s Key: %s", decodedKey, key)
-	}
+	decodedKey := decodeString(key)
 	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
 	// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 	if err != nil {
@@ -165,6 +162,14 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: string(decryptedContent)}
 
 	render(c, "decryption.html", 0, extraHeaders)
+}
+
+func decodeString(key string) []byte {
+	decodedKey, err := b64.URLEncoding.DecodeString(key[1:])
+	if err != nil {
+		log.Error().Err(err).Msgf("Something went wrong with b64 decoding: %s Key: %s", decodedKey, key)
+	}
+	return decodedKey
 }
 
 func sendEmail(c *gin.Context, msg *message.MessagePost) {
