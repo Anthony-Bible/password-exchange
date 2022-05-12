@@ -145,6 +145,17 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	decodedContent = append(decodedContent, string(selectResult.GetContent()))
 	var arr [32]byte
 	copy(arr[:], decodedKey)
+	content := s.decryptMessage(ctx, decodedContent, decodedKey, selectResult)
+	msg := &message.MessagePost{
+		Content: strings.Join((content.GetPlaintext()), ""),
+	}
+	decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
+	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: string(decryptedContent)}
+
+	render(c, "decryption.html", 0, extraHeaders)
+}
+
+func (s *EncryptionClient) decryptMessage(ctx context.Context, decodedContent []string, decodedKey []byte, selectResult *db.SelectResponse) *pb.DecryptedMessageResponse {
 	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
 		log.Debug().Msg(selectResult.GetContent())
@@ -155,13 +166,7 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 
 		log.Error().Err(err).Msg("Something went wrong with decryption")
 	}
-	msg := &message.MessagePost{
-		Content: strings.Join((content.GetPlaintext()), ""),
-	}
-	decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
-	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: string(decryptedContent)}
-
-	render(c, "decryption.html", 0, extraHeaders)
+	return content
 }
 
 func decodeString(key string) []byte {
