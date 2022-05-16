@@ -119,7 +119,7 @@ func getServiceNames() (string, string) {
 func getEnvironment() string {
 	environment, err := commons.GetViperVariable("running_environment")
 	if err != nil {
-		log.Error().Err(err).msg("couldn't get running_environment")
+		log.Error().Err(err).Msg("couldn't get running_environment")
 	}
 	return environment
 }
