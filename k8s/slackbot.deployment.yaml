@@ -27,7 +27,6 @@ spec:
         ports:
         - containerPort: 3000
         env:
-
           - name: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
             valueFrom:
               secretKeyRef:
@@ -41,7 +40,7 @@ spec:
           - name: PASSWORDEXCHANGE_HOST
             valueFrom:
               secretKeyRef:
-                key: PASSWORDEXCHANGE_HOST
+                key: PASSWORDEXCHANGE_PROD_HOST
                 name: test-secret
           - name: PASSWORDEXCHANGE_DBHOST
             valueFrom:

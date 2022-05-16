@@ -102,7 +102,7 @@ func main() {
 }
 
 func getServiceNames() (string, string) {
-	environment, err := commons.GetViperVariable("running_environment")
+	environment := getEnvironment()
 	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
 	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
 	log.Info().Msg(dbServiceName)
@@ -114,6 +114,14 @@ func getServiceNames() (string, string) {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
 	return encryptionServiceName, dbServiceName
+}
+
+func getEnvironment() string {
+	environment, err := commons.GetViperVariable("running_environment")
+	if err != nil {
+		log.Error().err(err).msg("couldn't get running_environment")
+	}
+	return environment
 }
 
 func home(c *gin.Context) {
@@ -232,7 +240,8 @@ func (s *EncryptionClient) send(c *gin.Context) {
 		log.Error().Err(err).Msg("Problem with generating random string")
 	}
 	guid := xid.New()
-	siteHost, err := commons.GetViperVariable("host")
+	environment := getEnvironment()
+	siteHost, err := commons.GetViperVariable(environment + "_host")
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with env variable")
 	}
