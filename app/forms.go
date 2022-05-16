@@ -253,7 +253,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	sendEmail(c, msg)
+	go sendEmail(c, msg)
 	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 
 }
