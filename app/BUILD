@@ -37,6 +37,7 @@ go_library(
         "@com_github_rs_xid//:xid",
         "@com_github_rs_zerolog//log",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_x_crypto//bcrypt",
     ],
 )
 

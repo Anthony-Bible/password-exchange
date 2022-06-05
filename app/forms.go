@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	// "net/url"
 	"strings"
 
@@ -233,7 +235,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	// // Step 3: Redirect to confirmation page
 
 	// FOR DEBUGGING HTTP POST:
-	printPost(c)
+	// printPost(c)
 	ctx := context.Background()
 	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -255,7 +257,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
 	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
-
+	hashed, _ := bcrypt.GenerateFromPassword([]byte(msg.OtherLastName), 8)
 	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
