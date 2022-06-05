@@ -159,7 +159,6 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	}
 	decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
 	decryptedContentString := string(decryptedContent)
-	decryptedContentString = strings.Replace(decryptedContentString, "\n", "<br>", -1)
 	log.Info().Msgf(decryptedContentString)
 
 	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
