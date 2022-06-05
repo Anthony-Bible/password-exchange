@@ -3,30 +3,45 @@
   <h3>Here is the decrypted message:</h3>
   <p style="white-space: pre-wrap">{{.DecryptedMessage}}</p>
 
-
-  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+  <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">New message</h5>
+          <h5 class="modal-title" id="loginModalLabel">View Decrypted Message</h5>
           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+                  <span aria-hidden="true">&times;</span>
+                </button>
         </div>
+        <form id="loginForm"> <!-- form with an ID so we can identify it, now includes both the textbox and the button within it -->
         <div class="modal-body">
-          <form>
             <div class="form-group">
-              <label for="recipient-name" class="col-form-label">Passphrase/Lastname:</label>
-              <input type="text" class="form-control" id="passphrase">
+              <label for="modalpass" class="col-form-label">Last Name/Passphrase:</label>
+              <input type="password" name="modalpass" class="form-control" id="passphrase">
             </div>
-          </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary">Submit</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Login</button>
         </div>
+        </form>
       </div>
     </div>
   </div>
-</div>
+<script>
+  $(document).ready(function(e) {
+  $('#loginModal').modal('show');
+  $('#loginModal').on('hidden.bs.modal', function(e) {
+    window.location.href = '../index.html'
+  });
+
+  //handle the form's "submit" event
+  $("#loginForm").submit(function(event) {
+    event.preventDefault(); //stop a full postback
+
+    var password = $("#modalpass").val(); //get the entered value from the password box
+    $('form#loginForm').submit();
+  });
+});
+</script>
 </body>
 </html>
