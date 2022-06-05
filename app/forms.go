@@ -230,10 +230,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	// // Step 3: Redirect to confirmation page
 
 	// FOR DEBUGGING HTTP POST:
-	// c.MultipartForm()
-	// for key, value := range c.Request.PostForm {
-	// 	log.Info().Msgf("%v = %v \n", key, value)
-	// }
+	printPost(c)
 	ctx := context.Background()
 	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -265,6 +262,14 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	go sendEmail(c, msg)
 	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 
+}
+
+func printPost(c *gin.Context) {
+	//used for debugging
+	c.MultipartForm()
+	for key, value := range c.Request.PostForm {
+		log.Info().Msgf("%v = %v \n", key, value)
+	}
 }
 
 func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) *message.MessagePost {
