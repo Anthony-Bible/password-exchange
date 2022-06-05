@@ -257,8 +257,8 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
 	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(msg.OtherLastName), 8)
-	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, "")})
+	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
+	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
@@ -268,7 +268,16 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 
 }
-
+func hashPassphrase(passphrase []byte) []byte {
+	hashed, err := bcrypt.GenerateFromPassword(passphrase, 8)
+	if err != nil {
+		log.Error().Err(err).Msg("something went wrong with hashing passphrase")
+	}
+	return hashed
+}
+func checkPassword(hashedPassword []byte, password []byte) bool {
+	return bcrypt.CompareHashAndPassword(hashedPassword, password) == nil
+}
 func printPost(c *gin.Context) {
 	//used for debugging
 	c.MultipartForm()

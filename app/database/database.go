@@ -47,30 +47,11 @@ type server struct {
 	db.UnimplementedDbServiceServer
 }
 
-// func Select(id string	){
-// 	dbconn=Connect()
-// 	id := 1
-
-//     sqlStatement := `SELECT * FROM my_table WHERE id=$1`
-//     row := db.QueryRow(sqlStatement, id)
-//     err := row.Scan(&col)
-//     if err != nil {
-//       if err == sql.ErrNoRows {
-//           fmt.Println("Zero rows found")
-//       } else {
-//           panic(err)
-//       }
-//     }
-// }
-
-//Select Get the information based on the uuid from the url
-// func (*server) DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*pb.DecryptedMessageResponse, error) {
-
 func (*server) Select(ctx context.Context, request *db.SelectRequest) (*db.SelectResponse, error) {
 	dbconnection := Connect()
 	response := db.SelectResponse{}
 	uuid := request.GetUuid()
-	err := dbconnection.QueryRow("select message,uniqueid from messages where uniqueid=?", uuid).Scan(&response.Content, &request.Uuid)
+	err := dbconnection.QueryRow("select message,uniqueid,other_lastname from messages where uniqueid=?", uuid).Scan(&response.Content, &request.Uuid, &response.Passphrase)
 
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with selecting from database")
@@ -83,7 +64,7 @@ func (*server) Select(ctx context.Context, request *db.SelectRequest) (*db.Selec
 func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.Empty, error) {
 	db := Connect()
 
-	_, err := db.Exec("INSERT INTO messages( message, uniqueid) VALUES(?,?)", request.GetContent(), request.GetUuid())
+	_, err := db.Exec("INSERT INTO messages( message, uniqueid, other_lastname) VALUES(?,?,?)", request.GetContent(), request.GetUuid(), request.GetPassphrase())
 	defer db.Close()
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with Inserting into database")
@@ -94,28 +75,12 @@ func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.
 }
 
 func main() {
-	// Email:          []byte(ctx.PostForm("email"))
-	// FirstName:      []byte(ctx.PostForm("firstname"))
-	// OtherFirstName: []byte(ctx.PostForm("other_firstname"))
-	// OtherLastName:  []byte(ctx.PostForm("other_lastname"))
-	// OtherEmail:     []byte(ctx.PostForm("other_email"))
-	// Content:        []byte(ctx.PostForm("content"))
 
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with starting grpc server")
 	}
-	// plainMessage := &pb.PlainMessage{
-	// Email:          []byte(ctx.PostForm("email")),
-	// FirstName:      []byte(ctx.PostForm("firstname")),
-	// OtherFirstName: []byte(ctx.PostForm("other_firstname")),
-	// OtherLastName:  []byte(ctx.PostForm("other_lastname")),
-	// OtherEmail:     []byte(ctx.PostForm("other_email")),
-	// Content:        []byte(ctx.PostForm("content"))
-	// Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
-
-	// }
 
 	s := grpc.NewServer()
 	db.RegisterDbServiceServer(s, &server{})

@@ -11,12 +11,14 @@ message SelectResponse
 {
     string uuid = 1;
     string content = 2;
+    string passphrase = 3;
    
 }
 message InsertRequest
 {
     string uuid = 1;
     string content = 2;
+    string passphrase = 3;
 }
 
 service dbService{
