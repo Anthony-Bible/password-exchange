@@ -30,8 +30,8 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label class="info" for="firstname" data-bs-toggle="tooltip" title="This is used to inform the email recipeint who sent the message, it is not stored or verified." >Firstname *</label>
-                    <input id="firstname" type="text" name="firstname" class="form-control" placeholder="Please enter your name*" required="required" data-error="Firstname is required.">
+                    <label class="info hidewhenchecked" for="firstname" data-bs-toggle="tooltip" title="This is used to inform the email recipeint who sent the message, it is not stored or verified." >Firstname *</label>
+                    <input id="firstname" type="text" class="hidewhenchecked" name="firstname" class="form-control" placeholder="Please enter your name*" required="required" data-error="Firstname is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
@@ -48,15 +48,15 @@
         <div class="row">
             <div class="col-sm-4">
                 <div class="form-group">
-                    <label for="other_firstname">Their Firstname</label>
-                    <input id="other_firstname" type="text" name="other_firstname" class="form-control" placeholder="Please enter their firstname*" required="required" data-error="Valid firstname is required.">
+                    <label for="other_firstname" class="info" data-bs-toggle="tooltip" title="This is used as a passphrase to verify their allowed to access it"   >Their Firstname/Passphrase</label>
+                    <input id="other_firstname" type="text" name="other_firstname" class="form-control"   placeholder="Please enter their firstname*" >
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
             <div class="col-sm-4">
                 <div class="form-group">
-                    <label for="other_lastname">Their lastname</label>
-                    <input id="other_lastname" type="text" name="other_lastname" class="form-control" placeholder="Please enter their lastname*" required="required" data-error="Valid last is required.">
+                    <label for="other_lastname" class="hidewhenchecked">Their lastname</label>
+                    <input id="other_lastname" class="hidewhenchecked" type="text" name="other_lastname" class="form-control" placeholder="Please enter their lastname*" required="required" data-error="Valid last is required.">
                     <div class="help-block with-errors"></div>
                 </div>
             </div>
@@ -78,7 +78,7 @@
         <div class="col-sm-6 my-auto">
             <div class="form-check form-switch">
             <input type="checkbox" name="skipEmail" class="form-check-input" id="skipEmail" onchange="hideField(this)" >
-            <label for="skipEmail" class="form-check-label" >Click this if you want to handle distrubtion (no email)</label>
+            <label for="skipEmail" class="form-check-label" checked >Click this if you want to handle distrubtion (no email)</label>
          </div>
       </div>
         </div>
