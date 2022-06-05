@@ -15,8 +15,8 @@
         <form id="loginForm"> <!-- form with an ID so we can identify it, now includes both the textbox and the button within it -->
         <div class="modal-body">
             <div class="form-group">
-              <label for="modalpass" class="col-form-label">Last Name/Passphrase:</label>
-              <input type="password" name="modalpass" class="form-control" id="passphrase">
+              <label for="modalpass" class="col-form-label">Last Name:</label>
+              <input type="password" name="modalpass" class="form-control" id="modalpass">
             </div>
         </div>
         <div class="modal-footer">
@@ -30,13 +30,11 @@
 <script>
   $(document).ready(function(e) {
   $('#loginModal').modal('show');
-
   //handle the form's "submit" event
   $("#loginForm").submit(function(event) {
     event.preventDefault(); //stop a full postback
 
-    var password = $("#modalpass").val(); //get the entered value from the password box
-    $('form#loginForm').submit();
+   $("#loginForm").submit();
   });
 });
 </script>
