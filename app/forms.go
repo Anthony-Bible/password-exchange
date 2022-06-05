@@ -154,6 +154,7 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	var arr [32]byte
 	copy(arr[:], decodedKey)
 	content := s.decryptMessage(ctx, decodedContent, decodedKey, selectResult)
+	log.Info().Msgf(content)
 	msg := &message.MessagePost{
 		Content: strings.Join((content.GetPlaintext()), ""),
 	}
