@@ -118,7 +118,11 @@
 </div>
 </div>
 <script async>
+    hideFields();
     function hideField(currentObject) {
+      hideFields();
+}
+function hideFields(){
     var hideElements = document.querySelectorAll('.hidewhenchecked')
     if ($(currentObject).is(":checked")) {
         $(hideElements).hide();
