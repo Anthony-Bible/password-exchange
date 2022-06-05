@@ -83,7 +83,7 @@ handler = SlackRequestHandler(bolt_app)
 #     say(f"Hi <@{user}>, you should use the `/password` command for sharing passwords")
 
 client = encryptionClient.EncryptionServiceClient()
-@bolt_app.message(re.compile("password:(?!\s+$)(?!\s*&lt;[rs].+&gt;)(?!\s*```).+", re.IGNORECASE))
+@bolt_app.message(re.compile("(password|apikey)[:=](?!\s+$)(?!\s*&lt;(reda|snip).+&gt;)(?!\s*```).+", re.IGNORECASE))
 def reply_in_thread(client, ack, payload, body, logger, say, context):
     """ This will reply in thread instead of creating a new thread """
     ack()
