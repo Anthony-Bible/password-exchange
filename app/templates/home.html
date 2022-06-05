@@ -118,11 +118,11 @@
 </div>
 </div>
 <script async>
-    hideFields();
+    hideFields($("#skipEmail"));
     function hideField(currentObject) {
-      hideFields();
+      hideFields(currentObject);
 }
-function hideFields(){
+function hideFields(currentObject){
     var hideElements = document.querySelectorAll('.hidewhenchecked')
     if ($(currentObject).is(":checked")) {
         $(hideElements).hide();
