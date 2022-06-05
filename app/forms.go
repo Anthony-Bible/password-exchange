@@ -183,7 +183,7 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 
 		render(c, "decryption.html", 0, extraHeaders)
 	} else {
-		log.Info.Msgf("passphrase isn't correct")
+		log.Info().Msgf("passphrase isn't correct")
 		render(c, "404.html", 404, nil)
 
 		return
