@@ -158,9 +158,11 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 		Content: strings.Join((content.GetPlaintext()), ""),
 	}
 	decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
-	log.Info().Msgf(string(decryptedContent))
+	decryptedContentString := string(decryptedContent)
+	decryptedContentString = strings.Replace(decryptedContentString, "\n", "<br>", -1)
+	log.Info().Msgf(decryptedContentString)
 
-	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: string(decryptedContent)}
+	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
 
 	render(c, "decryption.html", 0, extraHeaders)
 }
