@@ -30,9 +30,6 @@
 <script>
   $(document).ready(function(e) {
   $('#loginModal').modal('show');
-  $('#loginModal').on('hidden.bs.modal', function(e) {
-    window.location.href = '../index.html'
-  });
 
   //handle the form's "submit" event
   $("#loginForm").submit(function(event) {
