@@ -138,9 +138,7 @@ func failedtoFind(c *gin.Context) {
 }
 func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 
-	decryptedContentString := "you need the passphrase!!"
-
-	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
+	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted"}
 
 	render(c, "decryption.html", 0, extraHeaders)
 }
