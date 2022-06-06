@@ -30,7 +30,7 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="form-group">
-                    <label class="info hidewhenchecked" for="firstname" data-bs-toggle="tooltip" title="This is used to inform the email recipeint who sent the message, it is not stored or verified." >Firstname *</label>
+                    <label class="hidewhenchecked" for="firstname"> <a href="#" data-bs-toggle="tooltip" title="This is used to inform the email recipeint who sent the message, it is not stored or verified." >Firstname *</a></label>
                     <input id="firstname" type="text" class="hidewhenchecked form-control" name="firstname" class="form-control" placeholder="Please enter your name*" required="required" data-error="Firstname is required.">
                     <div class="help-block with-errors"></div>
                 </div>
@@ -55,7 +55,7 @@
             </div>
             <div class="col-sm-4">
                 <div class="form-group">
-                    <label for="other_lastname" class="info" data-bs-toggle="tooltip" title="This is used as a passphrase to verify they're allowed to access it"  >Their lastname/Passphrase (Not Required): </label>
+                    <label for="other_lastname"><a href="#" data-bs-toggle="tooltip" title="This is used as a passphrase to verify they're allowed to access it"  >Their lastname/Passphrase (Not Required): </a></label>
                     <input id="other_lastname" class="form-control" type="text" name="other_lastname" placeholder="Please enter their lastname or a passphrase" data-error="Valid last is required.">
                     <div class="help-block with-errors"></div>
                 </div>
@@ -66,13 +66,13 @@
                     <input id="other_email" type="email" name="other_email" class="hidewhenchecked form-control" placeholder="Please enter their Email*" required="required" data-error="Valid Email is required.">
                     <div class="help-block with-errors"></div>
                 </div>
-            </div>
+            </div>form-control
             
             
         </div>  
         <div class="row">
             <div class="col-sm-6">
-                <label for="turingtest"  class="info hidewhenchecked" data-bs-toggle="tooltip" title="This is used to prevent spam emails, not required if self distributing" >Which Color is the sky: blue, green or red? *</label>
+                <label for="turingtest"  class=" hidewhenchecked"> <a href="#" data-bs-toggle="tooltip" title="This is used to prevent spam emails, not required if self distributing">Which Color is the sky: blue, green or red? * </a></label>
                 <input type="text" class="hidewhenchecked form-control" name="color" required="required" pattern="[ ]*(red|blue|orange|green)[ ]*" title="Pick the fluffiest animal"/>
         </div>
         <div class="col-sm-6 my-auto">
@@ -136,6 +136,8 @@ function hideFields(currentObject){
 $(document).ready(function(e) {
 
     hideFields($("#skipEmail"));
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 
 });
 </script>
