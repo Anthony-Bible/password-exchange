@@ -2,6 +2,9 @@
 <div class="container">
   <h3>Here is the decrypted message:</h3>
   <p style="white-space: pre-wrap">{{if not .DecryptedMessage}} Passphrase is required!! </p>
+  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#loginModal">
+    ReEnter Passphrase
+  </button>
 
   <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -38,5 +41,6 @@
 {{else}}
 <p style="white-space: pre-wrap">{{.DecryptedMessage}} </p>
 {{end}}
+</div>
 </body>
 </html>
