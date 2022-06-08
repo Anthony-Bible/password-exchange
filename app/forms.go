@@ -152,8 +152,6 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 	inputtedPassphrase := c.PostForm("passphrase")
 	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
 	hashedPassword := selectResult.GetPassphrase()
-	printPost(c)
-	fmt.Println(hashedPassword)
 	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) {
 
 		// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
