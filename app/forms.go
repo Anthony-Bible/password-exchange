@@ -108,10 +108,10 @@ func getServiceNames() (string, string) {
 	environment := getEnvironment()
 	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
 	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
-	log.Info().Msg(dbServiceName)
+	log.Debug().Msg(dbServiceName)
 
 	encryptionServiceName += ":50051"
-	log.Info().Msg(encryptionServiceName)
+	log.Debug().Msg(encryptionServiceName)
 
 	if err != nil {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
@@ -173,8 +173,6 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 		}
 		decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
 		decryptedContentString := string(decryptedContent)
-		log.Info().Msgf(decryptedContentString)
-
 		extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
 
 		render(c, "decryption.html", 0, extraHeaders)
@@ -188,7 +186,6 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 func (s *EncryptionClient) decryptMessage(ctx context.Context, decodedContent []string, decodedKey []byte, selectResult *db.SelectResponse) *pb.DecryptedMessageResponse {
 	content, err := s.Client.DecryptMessage(ctx, &pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 	if err != nil {
-		log.Debug().Msg(selectResult.GetContent())
 		marshaledSelect, _ := json.Marshal(selectResult)
 		marshaledStruct, _ := json.Marshal(&pb.DecryptedMessageRequest{Ciphertext: decodedContent, Key: decodedKey})
 		log.Debug().Msg(string(marshaledStruct))
