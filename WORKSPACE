@@ -20,9 +20,9 @@ http_archive(
 
 http_archive(
     name = "build_stack_rules_proto",
-    sha256 = "0053e12f3fde207b32a15b96076fb3aa073f72beb0be730c171f63a1ae7e7585",
-    strip_prefix = "rules_proto-970a8ee6759b0dd97ee2b3ec2c0eb46746716619",
-    urls = ["https://github.com/stackb/rules_proto/archive/970a8ee6759b0dd97ee2b3ec2c0eb46746716619.tar.gz"],
+    sha256 = "733bdc9267a90404d48668853025bb6c660d7a23e38f819335b03865fe2bee89",
+    strip_prefix = "rules_proto-36ceb79a987a6de33768c8bdb08d22b516a7e32e",
+    urls = ["https://github.com/stackb/rules_proto/archive/36ceb79a987a6de33768c8bdb08d22b516a7e32e.tar.gz"],
 )
 
 http_archive(
