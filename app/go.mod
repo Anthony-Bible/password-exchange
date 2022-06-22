@@ -13,5 +13,5 @@ require (
 	google.golang.org/grpc v1.46.2
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e   
+	golang.org/x/crypto 05595931fe9d   
 )
