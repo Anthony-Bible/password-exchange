@@ -281,7 +281,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	go sendEmail(c, msg)
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"url": msg.Url
+			"url": msg.Url,
 		})
 	} else {
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
