@@ -279,8 +279,13 @@ func (s *EncryptionClient) send(c *gin.Context) {
 
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
 	go sendEmail(c, msg)
-	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
-
+	if len(c.PostForm("api")) > 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"url": siteHost + fmt.Sprintf("/confirmation?content=%s", msg.Url),
+		})
+	} else {
+		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
+	}
 }
 func hashPassphrase(passphrase []byte) []byte {
 	hashed, err := bcrypt.GenerateFromPassword(passphrase, 8)
