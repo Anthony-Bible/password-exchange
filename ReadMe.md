@@ -21,7 +21,16 @@ You fill out [the form](https://password.exchange) with the neccessary informati
 
  **NOTE:** Slackbot relies on the database and encryption services and deployments. You can remove the website deployment/service from the yaml if you only intend to deploy the slackbot.
 ---
+### Extensions/tools
 
+The current tools are avialble
+
+1. [Slack Bot ](https://api.password.exchange/slack/install)
+2. [Password-Store](https://www.passwordstore.org/) Extension -  https://github.com/Anthony-Bible/password-store-extension
+
+_If you have a tool or extension that interacts with password exchange please make a PR and we'll add it_
+
+---
 ### Features
 1. [planned] Send message to both users. 
 2. [planned] Remind users after a day of not opening
