@@ -288,7 +288,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 }
 func hashPassphrase(passphrase []byte) []byte {
-	hashed, err := bcrypt.GenerateFromPassword(passphrase, 8)
+	hashed, err := bcrypt.GenerateFromPassword(passphrase, 14)
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong with hashing passphrase")
 	}
