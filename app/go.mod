@@ -11,7 +11,7 @@ require (
 	github.com/ugorji/go v1.2.6 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/grpc v1.46.2
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	golang.org/x/crypto 05595931fe9d   
 )
