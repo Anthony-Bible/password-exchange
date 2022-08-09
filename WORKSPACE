@@ -1622,7 +1622,7 @@ _py_image_repos()
 
 container_pull(
     name = "alpine_linux_amd64",
-    digest = "sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3",
+    digest = "sha256:69463fdff1f025c908939e86d4714b4d5518776954ca627cbeff4c74bcea5b22",
     registry = "index.docker.io",
     repository = "library/alpine",
     tag = "3.15",
