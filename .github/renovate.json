@@ -2,8 +2,7 @@
     "kubernetes": {
       "fileMatch": ["kubernetes/.+\\.yaml$"]
     },
-    {
-  "extends": ["config:base", ":dependencyDashboard"]
-}
+  "    extends": ["config:base", ":dependencyDashboard"]
+    
 
   }
