@@ -81,16 +81,14 @@ py_library(
     srcs_version = "PY3",
     visibility = ["//:__subpackages__"],
     deps = [
-        "//protos:encryptionpb_grpc_py_library",
-        "//protos:databasepb_grpc_py_library",
+        "//protos:encryption_pb2_grpc",
         "@pip//pypi__flask",
         "@pip//pypi__grpcio",
+        "@pip//pypi__mysqlclient",
         "@pip//pypi__protobuf",
         "@pip//pypi__slack_bolt",
         "@pip//pypi__slack_sdk",
         "@pip//pypi__sqlalchemy",
-        "@pip//pypi__mysqlclient",
-        "@pip//pypi__mariadb",
     ],
 )
 
@@ -104,21 +102,22 @@ container_image(
         "/usr/bin/python3": "/usr/local/bin/python3",
     },
 )
+
 # See https://github.com/bazelbuild/rules_docker/blob/master/testing/examples/run_instruction_apt_pkgs/BUILD
 download_pkgs(
-    name="mysql_pkg",
-    image_tar =":python38_base_image.tar",
+    name = "mysql_pkg",
+    image_tar = ":python38_base_image.tar",
     packages = [
         "default-libmysqlclient-dev",
     ],
 )
+
 install_pkgs(
-    name="mysql_pkg_image",
+    name = "mysql_pkg_image",
     image_tar = ":python38_base_image.tar",
-    installables_tar=":mysql_pkg.tar",
+    installables_tar = ":mysql_pkg.tar",
     installation_cleanup_commands = "rm -rf /var/lib/apt/lists/*",
     output_image_name = "mysql_pkg_image",
-
 )
 
 py3_image(

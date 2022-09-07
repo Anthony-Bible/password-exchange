@@ -311,6 +311,20 @@ go_repository(
     version = "v1.1.0",
 )
 
+go_repository(
+    name = "com_github_rabbitmq_amqp091_go",
+    importpath = "github.com/rabbitmq/amqp091-go",
+    sum = "h1:T2G+J9W9OY4p64Di23J6yH7tOkMocgnESvYeBjuG9cY=",
+    version = "v1.4.0",
+)
+
+go_repository(
+    name = "org_uber_go_goleak",
+    importpath = "go.uber.org/goleak",
+    sum = "h1:gZAh5/EyT/HQwlpkCy6wTpqfH9H8Lz8zbm3dZh+OyzA=",
+    version = "v1.1.12",
+)
+
 gazelle_protobuf_extension_go_deps()
 
 protobuf_core_deps()
@@ -542,8 +556,8 @@ go_repository(
 go_repository(
     name = "com_github_coreos_go_systemd_v22",
     importpath = "github.com/coreos/go-systemd/v22",
-    sum = "h1:D9/bQk5vlXQFZ6Kwuu6zaiXJ9oTPe68++AzAJc1DzSI=",
-    version = "v22.3.2",
+    sum = "h1:rtAn27wIbmOGUs7RIbVgPEjb31ehTVniDwPGXyMxm5U=",
+    version = "v22.3.3-0.20220203105225-a9a7ef127534",
 )
 
 go_repository(
@@ -1151,8 +1165,8 @@ go_repository(
 go_repository(
     name = "com_github_rs_zerolog",
     importpath = "github.com/rs/zerolog",
-    sum = "h1:/ihwxqH+4z8UxyI70wM1z9yCvkWcfz/a3mj48k/Zngc=",
-    version = "v1.26.1",
+    sum = "h1:1T7qCieN22GVc8S4Q2yuexzBb1EqjbgjSH9RohbMjKs=",
+    version = "v1.27.0",
 )
 
 go_repository(
@@ -1270,8 +1284,8 @@ go_repository(
 go_repository(
     name = "com_github_yuin_goldmark",
     importpath = "github.com/yuin/goldmark",
-    sum = "h1:OtISOGfH6sOWa1/qXqqAiOIAO6Z5J3AEAE18WAq6BiQ=",
-    version = "v1.4.0",
+    sum = "h1:dPmz1Snjq0kmkz159iL7S6WzdahUTHnHB5M56WFVifs=",
+    version = "v1.3.5",
 )
 
 go_repository(
@@ -1446,15 +1460,15 @@ go_repository(
 go_repository(
     name = "org_golang_google_protobuf",
     importpath = "google.golang.org/protobuf",
-    sum = "h1:w43yiav+6bVFTBQFZX0r7ipe9JQ1QsbMgHwbBziscLw=",
-    version = "v1.28.0",
+    sum = "h1:d0NfwRgPtno5B1Wa6L2DAG+KivqkdutMf1UhdNx175w=",
+    version = "v1.28.1",
 )
 
 go_repository(
     name = "org_golang_x_crypto",
     importpath = "golang.org/x/crypto",
-    sum = "h1:T8NU3HyQ8ClP4SEE+KbFlg6n0NhuTsN4MyznaarGsZM=",
-    version = "v0.0.0-20220525230936-793ad666bf5e",
+    sum = "h1:Y/gsMcFOcR+6S6f3YeMKl5g+dZMEWqcz5Czj/GWYbkM=",
+    version = "v0.0.0-20220829220503-c86fa9a7ed90",
 )
 
 go_repository(
@@ -1544,8 +1558,8 @@ go_repository(
 go_repository(
     name = "org_golang_x_tools",
     importpath = "golang.org/x/tools",
-    sum = "h1:6j8CgantCy3yc8JGBqkDLMKWqZ0RDU2g1HVgacojGWQ=",
-    version = "v0.1.7",
+    sum = "h1:ouewzE6p+/VEB31YYnTbEJdi8pFqKp4P4n85vwo3DHA=",
+    version = "v0.1.5",
 )
 
 go_repository(
@@ -1592,6 +1606,7 @@ http_archive(
     sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
     urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
 )
+
 load(
     "@io_bazel_rules_docker//repositories:repositories.bzl",
     container_repositories = "repositories",

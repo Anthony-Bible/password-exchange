@@ -19,10 +19,10 @@ import (
 	"encoding/json"
 	// "io/ioutil"
 
+	"github.com/Anthony-Bible/password-exchange/app/commons"
 	"github.com/Anthony-Bible/password-exchange/app/email"
 	"github.com/Anthony-Bible/password-exchange/app/message"
-
-	"github.com/Anthony-Bible/password-exchange/app/commons"
+	"github.com/Anthony-Bible/password-exchange/app/rabbitmq"
 
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
@@ -203,7 +203,13 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
-
+func sendEmailtoQueue() {
+	rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
+	}
+	client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
+}
 func sendEmail(c *gin.Context, msg *message.MessagePost) {
 	if strings.ToLower(c.PostForm("color")) == "blue" {
 		if len(c.PostForm("skipEmail")) <= 0 {

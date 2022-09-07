@@ -2,11 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "email",
-    srcs = ["email.go"],
+    srcs = [
+        "email.go",
+        "recieve.go",
+        "send.go",
+    ],
     importpath = "github.com/Anthony-Bible/password-exchange/app/email",
     visibility = ["//visibility:public"],
     deps = [
         "//app/message",
+        "@com_github_rabbitmq_amqp091_go//:go_default_library",
         "@com_github_rs_zerolog//log",
         "@com_github_spf13_viper//:viper",
     ],
