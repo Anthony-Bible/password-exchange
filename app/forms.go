@@ -203,27 +203,27 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
-func sendEmailtoQueue() {
-	rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
-	if err != nil {
-		log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
-	}
-	client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
-}
-func sendEmail(c *gin.Context, msg *message.MessagePost) {
+func sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context, done <-chan interface{}) {
 	if strings.ToLower(c.PostForm("color")) == "blue" {
 		if len(c.PostForm("skipEmail")) <= 0 {
+			rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
+			if err != nil {
+				log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
+			}
+			client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
 			isokay := verifyEmail(msg, c)
 			if isokay {
 				log.Error().Msg("email is malformed")
 			}
-			shouldReturn1 := deliverEmail(msg, c)
-			if shouldReturn1 {
-				log.Error().Msg("Something went wrong with email Delivery")
-			}
+			client.Push([]byte(email))
 		}
 	}
 }
+
+//func sendEmail(c *gin.Context, msg *message.MessagePost) {
+//		}
+//	}
+//}
 
 func deliverEmail(msg *message.MessagePost, c *gin.Context) bool {
 	if err := email.Deliver(msg); err != nil {
@@ -249,13 +249,14 @@ func verifyEmail(msg *message.MessagePost, c *gin.Context) bool {
 	return false
 }
 
-func (s *EncryptionClient) send(c *gin.Context) {
+func (s *EncryptionClient) send(c *gin.Context, done <-chan interface{}) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
-
 	// FOR DEBUGGING HTTP POST:
 	// printPost(c)
+	msgStream := make(chan message.MessagePost)
+	go sendEmailtoQueue(msgStream, c, done)
 	ctx := context.Background()
 	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -284,7 +285,7 @@ func (s *EncryptionClient) send(c *gin.Context) {
 	}
 
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	go sendEmail(c, msg)
+	go sendEmailtoQueue()
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"url": msg.Url,
@@ -311,17 +312,19 @@ func printPost(c *gin.Context) {
 	}
 }
 
-func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) *message.MessagePost {
-	msg := &message.MessagePost{
+func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {
+	msg := message.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
 		OtherFirstName: c.PostForm("other_firstname"),
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
-
-		Url:     siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
-		Hidden:  c.PostForm("other_information"),
-		Captcha: c.PostForm("h-captcha-response"),
+		Uniqueid:       "",
+		Content:        "",
+		Errors:         map[string]string{},
+		Url:            siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
+		Hidden:         c.PostForm("other_information"),
+		Captcha:        c.PostForm("h-captcha-response"),
 	}
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 	return msg
