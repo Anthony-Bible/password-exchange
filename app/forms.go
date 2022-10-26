@@ -1,4 +1,3 @@
-// forms.go
 package main
 
 import (
@@ -52,6 +51,10 @@ type EncryptionClient struct {
 	// some other useful objects, like config
 	// or logger (to replace global logging)
 	// (...)
+}
+type Result struct {
+	Email string
+	Error error
 }
 
 // constructor for server context
@@ -203,21 +206,25 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
-func sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context, done <-chan interface{}) {
-	if strings.ToLower(c.PostForm("color")) == "blue" {
-		if len(c.PostForm("skipEmail")) <= 0 {
-			rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
-			if err != nil {
-				log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
+func sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context, done <-chan interface{}) <-chan Result {
+	results := make(chan Result)
+	go func() {
+		defer close(results)
+		if strings.ToLower(c.PostForm("color")) == "blue" {
+			if len(c.PostForm("skipEmail")) <= 0 {
+				rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
+				}
+				client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
+				isokay := verifyEmail(<-ch, c)
+				if isokay {
+					log.Error().Msg("email is malformed")
+				}
+				err := client.Push([]byte(email))
 			}
-			client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
-			isokay := verifyEmail(msg, c)
-			if isokay {
-				log.Error().Msg("email is malformed")
-			}
-			client.Push([]byte(email))
 		}
-	}
+	}()
 }
 
 //func sendEmail(c *gin.Context, msg *message.MessagePost) {
@@ -236,7 +243,7 @@ func deliverEmail(msg *message.MessagePost, c *gin.Context) bool {
 	return false
 }
 
-func verifyEmail(msg *message.MessagePost, c *gin.Context) bool {
+func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
 	if msg.Validate() == false {
 		log.Debug().Msgf("errors: %s", msg.Errors)
 		htmlHeaders := htmlHeaders{
@@ -257,8 +264,7 @@ func (s *EncryptionClient) send(c *gin.Context, done <-chan interface{}) {
 	// printPost(c)
 	msgStream := make(chan message.MessagePost)
 	go sendEmailtoQueue(msgStream, c, done)
-	ctx := context.Background()
-	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
+	encryptionbytes, err := s.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with generating random string")
 	}
@@ -283,9 +289,8 @@ func (s *EncryptionClient) send(c *gin.Context, done <-chan interface{}) {
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
-
+	msgStream <- msg
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	go sendEmailtoQueue()
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"url": msg.Url,
