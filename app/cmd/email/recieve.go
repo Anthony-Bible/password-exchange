@@ -1,8 +1,12 @@
 package email
 
 import (
+	"bytes"
 	"fmt"
+	"net/smtp"
 	"os"
+	"strings"
+	"text/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/config"
 	pb "github.com/Anthony-Bible/password-exchange/app/messagepb"
@@ -31,7 +35,7 @@ func (conf *Config) GetConn(rabbitUrl string) error {
 	conf.Channel = ch
 	return err
 }
-func (conn Config) startConsumer(queueName string, handler func(d amqp.Delivery) bool, concurrency int) {
+func (conn Config) startConsumer(queueName string, handler func(conf Config, d amqp.Delivery) bool, concurrency int) {
 	fmt.Printf("queuename: %s\n", conn.RabQName)
 	q, err := conn.Channel.QueueDeclare(
 		conn.RabQName, // name
@@ -66,7 +70,7 @@ func (conn Config) startConsumer(queueName string, handler func(d amqp.Delivery)
 				// if tha handler returns true then ACK, else NACK
 				// the message back into the rabbit queue for
 				// another round of processing
-				if handler(msg) {
+				if handler(conn, msg) {
 					msg.Ack(false)
 				} else {
 					msg.Nack(false, true)
@@ -92,7 +96,7 @@ func (conf Config) StartProcessing() {
 	<-forever
 
 }
-func handler(d amqp.Delivery) bool {
+func handler(conf Config, d amqp.Delivery) bool {
 	if d.Body == nil {
 		log.Error().Msg("Error, no message body")
 		return false
@@ -101,8 +105,53 @@ func handler(d amqp.Delivery) bool {
 	err := proto.Unmarshal(d.Body, bodyUnmarshal)
 	if err != nil {
 		log.Error().Msg("Error with unmarshaling body")
+		return false
 	}
+	conf.Deliver(bodyUnmarshal)
 	//sendEmail Here
 	return true
 
+}
+
+func (conf Config) Deliver(msg pb.Message) error {
+	//set neccessary info for environment variables
+
+	// Sender data.
+	// Receiver email address.
+	to := msg.OtherEmail
+	// smtp server configuration.
+	fullhost := fmt.Sprintf("%s:%d", conf.EmailHost, conf.EmailPort)
+	// Authentication.
+	auth := smtp.PlainAuth("", conf.EmailUser, conf.EmailPass, conf.EmailHost)
+
+	t, err := template.ParseFiles("/templates/email_template.html")
+	if err != nil {
+		log.Error().Err(err).Msg("template not found")
+
+		return err
+	}
+
+	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	body := []byte("From: Password Exchange <server@password.exchange>\r\n" + "To: " + strings.Join(to, "") + "\r\n" +
+		fmt.Sprintf("Subject: Encrypted Messsage from Password exchange from %s \r\n", msg.FirstName) +
+		mimeHeaders)
+	buf := bytes.NewBuffer(body)
+	err = t.Execute(buf, struct {
+		Body    string
+		Message string
+	}{
+		Body:    fmt.Sprintf("Hi %s, \n %s used our service at <a href=\"https://password.exchange\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
+		Message: msg.Content,
+	})
+
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with rendering email template")
+		return err
+	}
+	// Sending email.
+	if err = smtp.SendMail(fullhost, auth, conf.EmailFrom, to, buf.Bytes()); err != nil {
+		log.Error().Err(err).Msgf("emailhost: %s from: %s to: %s authHost: %s", conf.EmailHost, conf.EmailFrom, to, conf.EmailHost)
+	}
+
+	return err
 }
