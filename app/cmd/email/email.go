@@ -1,94 +1,95 @@
+/*
+Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+
+*/
 package email
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
-	"net/smtp"
+
+	"github.com/Anthony-Bible/password-exchange/app/cmd"
+
+	"reflect"
 	"strings"
-	"text/template"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/Anthony-Bible/password-exchange/app/message"
-	"github.com/rs/zerolog/log"
 )
 
-func GetViperVariable(envname string) (string, error) {
-	viper.SetEnvPrefix("passwordexchange") // will be uppercased automatically
-	viper.AutomaticEnv()                   //will automatically load every env variable with PASSWORDEXCHANGE_
-	if viper.IsSet(envname) {
-		viperReturn := viper.GetString(envname)
-		return viperReturn, nil
-	} else {
-		err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
-		log.Error().Err(err).Msg("")
-		return "not right", err
-
-	}
+// emailCmd represents the email command
+var emailCmd = &cobra.Command{
+	Use:        "email",
+	Aliases:    []string{},
+	SuggestFor: []string{},
+	Short:      "Run the component in charge of sending emails",
+	GroupID:    "",
+	Long: `This component consumes from rabbitmq the emails to send. It uses
+      configurable options to connect via SMTP to send emails:
+    PASSWORDEXCHANGE_EMAILUSER: User to connect as
+    PASSWORDEXCHANGE_EMAILPASS: Password for email user
+    PASSWORDEXCHANGE_EMAILHOST: Email host to use as a relay
+    PASSWORDEXCHANGE_EMAILPORT: Port for email host`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("email called")
+		fmt.Printf("the value of loglevel is %s\n", viper.Get("loglevel"))
+		var cfg Config
+		bindenvs(cfg)
+		viper.Unmarshal(&cfg.PassConfig)
+		fmt.Printf("CFG Is %+v\n", cfg)
+		cfg.StartProcessing()
+	},
 }
 
-// if !ok {
-//  log.Fatalf("Invalid type assertion for %s", envname)
-// }
-// type MyMessage message.MessagePost
-
-func Deliver(msg *message.MessagePost) error {
-	//set neccessary info for environment variables
-
-	// Sender data.
-	password, err := GetViperVariable("emailpass")
-	if err != nil {
-		panic(err)
+// this is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
+func bindenvs(iface interface{}, parts ...string) {
+	ifv := reflect.ValueOf(iface)
+	if ifv.Kind() == reflect.Ptr {
+		ifv = ifv.Elem()
 	}
-	from := "server@password.exchange"
-	AWS_ACCESS_KEY_ID, err := GetViperVariable("emailuser")
-	if err != nil {
-		panic(err)
+	for i := 0; i < ifv.NumField(); i++ {
+		v := ifv.Field(i)
+		t := ifv.Type().Field(i)
+		tv, ok := t.Tag.Lookup("mapstructure")
+		if !ok {
+			continue
+		}
+		if tv == ",squash" {
+			bindenvs(v.Interface(), parts...)
+			continue
+		}
+		switch v.Kind() {
+		case reflect.Struct:
+			bindenvs(v.Interface(), append(parts, tv)...)
+		default:
+			viper.BindEnv(strings.Join(append(parts, tv), "."))
+		}
 	}
-	// Receiver email address.
-	to := msg.OtherEmail
-	// smtp server configuration.
-	authHost, err := GetViperVariable("emailhost")
-	if err != nil {
-		panic(err)
-	}
-	emailPort, err := GetViperVariable("emailport")
-	if err != nil {
-		return err
-	}
-	emailHost := authHost + ":" + emailPort
-	// Authentication.
-	auth := smtp.PlainAuth("", AWS_ACCESS_KEY_ID, password, authHost)
+}
+func init() {
+	cmd.RootCmd.AddCommand(emailCmd)
 
-	t, err := template.ParseFiles("/templates/email_template.html")
-	if err != nil {
-		log.Error().Err(err).Msg("template not found")
+	// Here you will define your flags and configuration settings.
+	emailCmd.Flags().String("emailuser", "", "User to log in with for SMTP authentication")
+	emailCmd.Flags().String("emailpass", "", "pass to log in with for SMTP authentication")
+	emailCmd.Flags().String("emailhost", "", "host to log in with for SMTP authentication")
+	emailCmd.Flags().String("emailport", "", "port to log in with for SMTP authentication")
+	emailCmd.Flags().String("rabuser", "", "User to log in with for rabbitmq authentication")
+	emailCmd.Flags().String("rabhost", "", "host to log in with for rabbitmq authentication")
+	emailCmd.Flags().String("rabpass", "", "password to log in with for rabbitmq authentication")
+	emailCmd.Flags().String("rabport", "", "port to log in with for rabbitmq authentication")
+	// Cobra supports Persistent Flags which will work for this command
+	// and all subcommands, e.g.:
+	// emailCmd.PersistentFlags().String("foo", "", "A help for foo")
 
-		return err
-	}
-
-	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
-	body := []byte("From: Password Exchange <server@password.exchange>\r\n" + "To: " + strings.Join(to, "") + "\r\n" +
-		fmt.Sprintf("Subject: Encrypted Messsage from Password exchange from %s \r\n", msg.FirstName) +
-		mimeHeaders)
-	buf := bytes.NewBuffer(body)
-	err = t.Execute(buf, struct {
-		Body    string
-		Message string
-	}{
-		Body:    fmt.Sprintf("Hi %s, \n %s used our service at <a href=\"https://password.exchange\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to https://password.exchange/about", msg.OtherFirstName, msg.FirstName),
-		Message: msg.Content,
-	})
-
-	if err != nil {
-		log.Error().Err(err).Msg("Something went wrong with rendering email template")
-		return err
-	}
-	// Sending email.
-	if err = smtp.SendMail(emailHost, auth, from, to, buf.Bytes()); err != nil {
-		log.Error().Err(err).Msgf("emailhost: %s from: %s to: %s authHost: %s", emailHost, from, to, authHost)
-	}
-
-	return err
+	viper.BindPFlag("emailuser", emailCmd.Flags().Lookup("emailuser"))
+	viper.BindPFlag("emailpass", emailCmd.Flags().Lookup("emailpass"))
+	viper.BindPFlag("emailport", emailCmd.Flags().Lookup("emailport"))
+	viper.BindPFlag("emailhost", emailCmd.Flags().Lookup("emailhost"))
+	viper.BindPFlag("rabuser", emailCmd.Flags().Lookup("rabuser"))
+	viper.BindPFlag("rabpass", emailCmd.Flags().Lookup("rabpass"))
+	viper.BindPFlag("rabport", emailCmd.Flags().Lookup("rabport"))
+	viper.BindPFlag("rabhost", emailCmd.Flags().Lookup("rabhost"))
+	// Cobra supports local flags which will only run when this command
+	// is called directly, e.g.:
+	// emailCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

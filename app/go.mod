@@ -8,6 +8,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.4.0 // indirect
 	github.com/rs/xid v1.4.0
 	github.com/rs/zerolog v1.27.0
+	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/viper v1.12.0
 	github.com/ugorji/go v1.2.6 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90

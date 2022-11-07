@@ -2,6 +2,7 @@ package email
 
 import (
 	"log"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -14,7 +15,7 @@ func email() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 	q, err := ch.QueueDeclare(
-		"hello", // name
+		"hello", // name TODO: use viper to get this
 		false,   // durable
 		false,   // delete when unused
 		false,   // exclusive
@@ -30,8 +31,20 @@ func email() {
 		false,  // mandatory
 		false,  // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
+			Headers:         map[string]interface{}{},
+			ContentType:     "text/plain",
+			ContentEncoding: "",
+			DeliveryMode:    amqp.Persistent,
+			Priority:        0,
+			CorrelationId:   "",
+			ReplyTo:         "",
+			Expiration:      "",
+			MessageId:       "",
+			Timestamp:       time.Time{},
+			Type:            "",
+			UserId:          "",
+			AppId:           "",
+			Body:            []byte(body),
 		})
 	failOnError(err, "Failed to publish a message")
 	log.Printf(" [x] Sent %s\n", body)
