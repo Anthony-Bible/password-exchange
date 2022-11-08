@@ -1,4 +1,4 @@
-package server
+package web
 
 import (
 	"context"
@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 
 	// "net/url"
 	"strings"
 
+	"github.com/Anthony-Bible/password-exchange/app/config"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
@@ -21,13 +24,19 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/commons"
 	"github.com/Anthony-Bible/password-exchange/app/email"
 	"github.com/Anthony-Bible/password-exchange/app/message"
-	"github.com/Anthony-Bible/password-exchange/app/rabbitmq"
 
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
+
+type Config struct {
+	config.PassConfig `mapstructure:",squash"`
+	Channel           *amqp.Channel
+}
 
 // TODO add a size limit for messages
 type htmlHeaders struct {
@@ -57,6 +66,16 @@ type Result struct {
 	Error error
 }
 
+func (conf *Config) GetConn(rabbitUrl string) error {
+	conn, err := amqp.Dial(rabbitUrl)
+	if err != nil {
+		log.Err(err).Msg("Problem with connecting")
+	}
+	ch, err := conn.Channel()
+	conf.Channel = ch
+	return err
+}
+
 // constructor for server context
 func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, error) {
 	userConn, err := grpc.Dial(endpoint1, grpc.WithInsecure())
@@ -80,9 +99,9 @@ func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, er
 	return ctx, nil
 }
 
-func main() {
+func (conf Config) StartServer() {
 	//TODO put port in environment variable
-	encryptionServiceName, dbServiceName := getServiceNames()
+	encryptionServiceName, dbServiceName := conf.getServiceNames()
 	s, err := newServerContext(encryptionServiceName, dbServiceName)
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
@@ -107,10 +126,9 @@ func main() {
 
 }
 
-func getServiceNames() (string, string) {
-	environment := getEnvironment()
-	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
-	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
+func (conf Config) getServiceNames() (string, string) {
+	encryptionServiceName, err := commons.GetViperVariable("encryption_" + conf.RunningEnvironment + "_service")
+	dbServiceName, err := commons.GetViperVariable("database_" + conf.RunningEnvironment + "_service")
 	log.Debug().Msg(dbServiceName)
 
 	encryptionServiceName += ":50051"
@@ -206,25 +224,65 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
-func sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context, done <-chan interface{}) <-chan Result {
+func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context, done <-chan interface{}) {
 	results := make(chan Result)
 	go func() {
 		defer close(results)
 		if strings.ToLower(c.PostForm("color")) == "blue" {
 			if len(c.PostForm("skipEmail")) <= 0 {
-				rabbitmq_address, err := commons.GetViperVariable("rabbitmq_address")
-				if err != nil {
-					log.Fatal().Err(err).Msg("Rabbitmq address is not defined")
-				}
-				client := rabbitmq.NewRab("email", "email", rabbitmq_address, done)
 				isokay := verifyEmail(<-ch, c)
 				if isokay {
 					log.Error().Msg("email is malformed")
+				} else {
+					conf.publishToQueue(<-ch)
 				}
-				err := client.Push([]byte(email))
 			}
 		}
 	}()
+}
+
+func (conf Config) publishToQueue(msg message.MessagePost) {
+	q, err := conf.Channel.QueueDeclare(
+		"email", //name
+		true,    //durable
+		false,   //delete when unused
+		false,   //exclusive
+		false,   //no-wait
+		nil,     //arguments
+	)
+	if err != nil {
+		log.Fatal().Msgf("Couldn't declare queue: %s\n", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	body := pb.Message{
+		Email:          msg.Email,
+		Firstname:      msg.FirstName,
+		Otherfirstname: msg.OtherFirstName,
+		OtherLastName:  msg.OtherLastName,
+		OtherEmail:     msg.OtherEmail,
+		Uniqueid:       msg.Uniqueid,
+		Content:        msg.Content,
+		Errors:         msg.Errors,
+		Url:            msg.Url,
+		Hidden:         msg.Hidden,
+		Captcha:        msg.Captcha,
+	}
+	data, err := proto.Marshal(body)
+	if err != nil {
+		log.Error().Msg("Error with marshaling body")
+	}
+	err = conf.Channel.PublishWithContext(ctx,
+		"",     //exchange
+		q.Name, //routing key
+		false,  //mandatory
+		false,
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         []byte(data),
+		})
+	log.Debug().Msgf("[x] sent %s", body)
 }
 
 //func sendEmail(c *gin.Context, msg *message.MessagePost) {
