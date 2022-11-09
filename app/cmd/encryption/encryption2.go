@@ -1,4 +1,4 @@
-package main
+package encryption
 
 import (
 	"context"
@@ -10,9 +10,10 @@ import (
 	"io"
 	"net"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/Anthony-Bible/password-exchange/app/config"
+	"github.com/go-kit/kit/transport/amqp"
 	"github.com/rs/xid"
+	"github.com/rs/zerolog/log"
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
@@ -21,6 +22,11 @@ import (
 
 	"google.golang.org/grpc"
 )
+
+type Config struct {
+	config.PassConfig `mapstructure:",squash"`
+	Channel           *amqp.Channel
+}
 
 // GenerateRandomBytes returns securely generated random bytes.
 // It will return an error if the system's secure random
@@ -95,24 +101,6 @@ func (*server) DecryptMessage(ctx context.Context, request *pb.DecryptedMessageR
 	return response, nil
 }
 
-// func main() {
-// 	msgEncrypted := &message.Message{
-// 	Email:   string(MessageEncrypt([]byte(c.PostForm("email")), encryptionbytes)),
-//     FirstName: string(MessageEncrypt([]byte(c.PostForm("firstname")), encryptionbytes)),
-//     OtherFirstName: string(MessageEncrypt([]byte(c.PostForm("other_firstname")), encryptionbytes)),
-//     OtherLastName: string(MessageEncrypt([]byte(c.PostForm("other_lastname")), encryptionbytes)),
-//     OtherEmail: string(MessageEncrypt([]byte(c.PostForm("other_email")), encryptionbytes)),
-//     Content: string(MessageEncrypt([]byte(c.PostForm("content")), encryptionbytes)),
-//     Uniqueid: guid.String(),
-//   }
-//   sess := b.BuildSession()
-//   // queueurl, _ := b.GetQueueURL(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo")
-//   fmt.Println(len(urlEncodedString))
-//   fmt.Println(urlEncodedString)
-
-//   b.SendSNS(sess, "arn:aws:sns:us-west-2:842805395457:my-test.fifo", msgEncrypted)
-// }
-
 func (*server) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageRequest) (*pb.EncryptedMessageResponse, error) {
 	key := []byte(request.GetKey())
 	PlainText := request.GetPlainText()
@@ -149,30 +137,12 @@ func (*server) GenerateRandomString(ctx context.Context, request *pb.Randomreque
 	return &pb.Randomresponse{Encryptionbytes: b[:], EncryptionString: base64.URLEncoding.EncodeToString((b[:]))}, nil
 }
 
-func main() {
-	// Email:          []byte(ctx.PostForm("email"))
-	// FirstName:      []byte(ctx.PostForm("firstname"))
-	// OtherFirstName: []byte(ctx.PostForm("other_firstname"))
-	// OtherLastName:  []byte(ctx.PostForm("other_lastname"))
-	// OtherEmail:     []byte(ctx.PostForm("other_email"))
-	// Content:        []byte(ctx.PostForm("content"))
-
+func (conf Config) startServer() {
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Problem with starting grpc server")
 	}
-	// plainMessage := &pb.PlainMessage{
-	// Email:          []byte(ctx.PostForm("email")),
-	// FirstName:      []byte(ctx.PostForm("firstname")),
-	// OtherFirstName: []byte(ctx.PostForm("other_firstname")),
-	// OtherLastName:  []byte(ctx.PostForm("other_lastname")),
-	// OtherEmail:     []byte(ctx.PostForm("other_email")),
-	// Content:        []byte(ctx.PostForm("content"))
-	// Url: siteHost + "decrypt/" + msgEncrypted.Uniqueid + "/" + string(encryptionstring[:]),
-
-	// }
-
 	s := grpc.NewServer()
 	pb.RegisterMessageServiceServer(s, &server{})
 	reflection.Register(s)

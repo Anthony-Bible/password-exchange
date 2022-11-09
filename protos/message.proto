@@ -1,0 +1,21 @@
+syntax = "proto3";
+package messagepb;
+
+
+option go_package = "github.com/Anthony-Bible/password-exchange/app/protos/messagepb";
+message Message {
+    string email = 1;
+    string firstname = 2;
+    string otherfirstname = 3;
+    string OtherLastName = 4;
+    string OtherEmail = 5;
+    string Uniqueid = 6;
+    string Content = 7;
+    string Errors =8;
+    string Url = 9;
+    string Hidden = 10;
+    string Captcha = 11;
+}
+
+
+

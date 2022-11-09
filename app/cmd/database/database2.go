@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Anthony-Bible/password-exchange/app/config"
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 
-	"github.com/Anthony-Bible/password-exchange/app/commons"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -16,39 +16,23 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func Connect() (db *sql.DB) {
-	dbhost, err := commons.GetViperVariable("dbhost")
-	if err != nil {
-		panic(err)
-	}
-	dbpass, err := commons.GetViperVariable("dbpass")
-	if err != nil {
-		panic(err)
-	}
-	dbuser, err := commons.GetViperVariable("dbuser")
-	if err != nil {
-		panic(err)
-	}
-	dbname, err := commons.GetViperVariable("dbname")
-	if err != nil {
-		panic(err)
-	}
-	// dbport := commons.GetViperVariable("dbport")
-	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", dbuser, dbpass, dbhost, dbname)
+type Config struct {
+	db.UnimplementedDbServiceServer
+	PassConfig config.PassConfig `mapstructure:",squash"`
+}
 
-	db, err = sql.Open("mysql", dbConnectionString)
+func (conf *Config) Connect() (db *sql.DB) {
+	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", conf.PassConfig.DbUser, conf.PassConfig.DbPass, conf.PassConfig.DbHost, conf.PassConfig.DbName)
+
+	db, err := sql.Open("mysql", dbConnectionString)
 	if err != nil {
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
 	}
 	return db
 }
 
-type server struct {
-	db.UnimplementedDbServiceServer
-}
-
-func (*server) Select(ctx context.Context, request *db.SelectRequest) (*db.SelectResponse, error) {
-	dbconnection := Connect()
+func (conf *Config) Select(ctx context.Context, request *db.SelectRequest) (*db.SelectResponse, error) {
+	dbconnection := conf.Connect()
 	response := db.SelectResponse{}
 	uuid := request.GetUuid()
 	err := dbconnection.QueryRow("select message,uniqueid,other_lastname from messages where uniqueid=?", uuid).Scan(&response.Content, &request.Uuid, &response.Passphrase)
@@ -61,8 +45,8 @@ func (*server) Select(ctx context.Context, request *db.SelectRequest) (*db.Selec
 }
 
 //Insert encrypted information into database (this is base64 encoded)
-func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.Empty, error) {
-	db := Connect()
+func (conf *Config) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.Empty, error) {
+	db := conf.Connect()
 
 	_, err := db.Exec("INSERT INTO messages( message, uniqueid, other_lastname) VALUES(?,?,?)", request.GetContent(), request.GetUuid(), request.GetPassphrase())
 	defer db.Close()
@@ -74,7 +58,7 @@ func (*server) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.
 
 }
 
-func main() {
+func (conf Config) startServer() {
 
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
@@ -83,7 +67,10 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	db.RegisterDbServiceServer(s, &server{})
+	srv := Config{
+		PassConfig: conf.PassConfig,
+	}
+	db.RegisterDbServiceServer(s, &srv)
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		log.Fatal().Msgf("failed to serve: %v", err)

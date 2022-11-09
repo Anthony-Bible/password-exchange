@@ -16,3 +16,4 @@ pkg_tar(
     strip_prefix = ".",
     visibility = ["//visibility:public"],
 )
+

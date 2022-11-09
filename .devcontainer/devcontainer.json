@@ -29,18 +29,17 @@
 		"bazelBuild.vscode-bazel",
 		"eamodio.gitlens"
 	],
+	"mounts": ["type=bind,source=${localWorkspaceFolder},target=/workspace"],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "go version",
-
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"features": {
 		"docker-in-docker": "latest",
-		"kubectl-helm-minikube": "1.21",
+		"kubectl-helm-minikube": "1.22",
 		"git": "latest",
 		"python": "3.8",
 		"desktop-lite":  {

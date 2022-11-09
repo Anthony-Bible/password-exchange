@@ -1,0 +1,328 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: database
+  name: database-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      annotations:
+        config.linkerd.io/skip-outbound-ports: "3306"
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: database
+        name: database
+        phase: prod
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: test-secret
+        image: ghcr.io/anthony-bible/passwordexchange-database:encryption_v0.1.7-102-gb12ca08-dirty@sha256:fb456f4c4d00fc512ddac71cf87bc3b088be6c0fbae726444f08943412849d9e
+        name: setup
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  name: database-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: database
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+  namespace: default
+spec:
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            cronjob: deleteMessages
+        spec:
+          containers:
+          - command:
+            - /bin/bash
+            - -c
+            - mysql -h $PASSWORDEXCHANGE_DBHOST -u $DELETEMESSAGES_USER -p$DELETEMESSAGES_PASS  -E
+              -e "delete from messages where created < now() - interval 7 DAY;" $PASSWORDEXCHANGE_DBNAME
+            env:
+            - name: DELETEMESSAGES_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: DELETEMESSAGES_PASS
+                  name: test-secret
+            - name: DELETEMESSAGES_USER
+              valueFrom:
+                secretKeyRef:
+                  key: DELETEMESSAGES_USER
+                  name: test-secret
+            - name: PASSWORDEXCHANGE_DBHOST
+              valueFrom:
+                secretKeyRef:
+                  key: PASSWORDEXCHANGE_DBHOST
+                  name: test-secret
+            - name: PASSWORDEXCHANGE_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  key: PASSWORDEXCHANGE_DBNAME
+                  name: test-secret
+            image: mariadb
+            imagePullPolicy: IfNotPresent
+            name: delete-messages
+          restartPolicy: OnFailure
+  schedule: 0 0 * * *
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: encryption
+  name: encryption-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: encryption
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: encryption
+        name: encryption
+        phase: prod
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: test-secret
+        image: ghcr.io/anthony-bible/passwordexchange-encryption:encryption_v0.1.7-102-gb12ca08-dirty@sha256:d6c98b7bf8ed3e1069a9aa1ddc0dcc3e554aa56fc18e0e9fd402cdfc40105f76
+        name: setup
+        volumeMounts:
+        - mountPath: /code
+          name: html
+        - mountPath: /nginx
+          name: nginx-config
+        - mountPath: /php
+          name: php-config
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - emptyDir: {}
+        name: php-socket
+      - emptyDir: {}
+        name: html
+      - emptyDir: {}
+        name: nginx-config
+      - emptyDir: {}
+        name: php-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  name: encryption-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 50051
+    targetPort: 50051
+  selector:
+    app: encryption
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: passwordexchange
+  name: passwordexchange-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: passwordexchange
+  template:
+    metadata:
+      annotations:
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: passwordexchange
+        name: passwordexchange
+        phase: prod
+    spec:
+      containers:
+      - envFrom:
+        - secretRef:
+            name: test-secret
+        image: ghcr.io/anthony-bible/passwordexchange-container-prod:encryption_v0.1.7-102-gb12ca08-dirty@sha256:aebb1c17d416f3bea3f04be69c7cb545aa4ff460b6dd6b30ad20d7f0fe2b147e
+        name: setup
+        volumeMounts:
+        - mountPath: /code
+          name: html
+        - mountPath: /nginx
+          name: nginx-config
+        - mountPath: /php
+          name: php-config
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - emptyDir: {}
+        name: php-socket
+      - emptyDir: {}
+        name: html
+      - emptyDir: {}
+        name: nginx-config
+      - emptyDir: {}
+        name: php-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  name: passwordexchange-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app: passwordexchange
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: slackbot
+  name: slackbot-deployment
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: slackbot
+  template:
+    metadata:
+      annotations:
+        config.linkerd.io/skip-outbound-ports: "3306"
+        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
+        linkerd.io/inject: enabled
+      labels:
+        app: slackbot
+        name: slackbot
+        phase: prod
+    spec:
+      containers:
+      - env:
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: SLACK_BOT_TOKEN
+              name: test-secret
+        - name: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
+          valueFrom:
+            secretKeyRef:
+              key: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
+              name: test-secret
+        - name: PASSWORDEXCHANGE_DATABASESERVICE
+          valueFrom:
+            secretKeyRef:
+              key: PASSWORDEXCHANGE_DATABASESERVICE
+              name: test-secret
+        - name: PASSWORDEXCHANGE_HOST
+          valueFrom:
+            secretKeyRef:
+              key: PASSWORDEXCHANGE_HOST
+              name: test-secret
+        - name: PASSWORDEXCHANGE_DBHOST
+          valueFrom:
+            secretKeyRef:
+              key: PASSWORDEXCHANGE_DBHOST
+              name: test-secret
+        - name: OAUTHDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: OAUTHDB_PASSWORD
+              name: test-secret
+        - name: OAUTHDB_USER
+          valueFrom:
+            secretKeyRef:
+              key: OAUTHDB_USER
+              name: test-secret
+        - name: OAUTHDB_NAME
+          valueFrom:
+            secretKeyRef:
+              key: OAUTHDB_NAME
+              name: test-secret
+        - name: SLACK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: SLACK_SIGNING_SECRET
+              name: test-secret
+        - name: SLACK_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              key: SLACK_CLIENT_ID
+              name: test-secret
+        - name: SLACK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: SLACK_CLIENT_SECRET
+              name: test-secret
+        image: ghcr.io/anthony-bible/passwordexchange-slackbot:encryption_v0.1.7-102-gb12ca08-dirty@sha256:4b88784f54680b4383413ad61d932c3a73012f6b1141563df72df13825d05315
+        name: setup
+        volumeMounts:
+        - mountPath: /code
+          name: html
+        - mountPath: /nginx
+          name: nginx-config
+        - mountPath: /php
+          name: php-config
+      imagePullSecrets:
+      - name: regcred
+      volumes:
+      - emptyDir: {}
+        name: php-socket
+      - emptyDir: {}
+        name: html
+      - emptyDir: {}
+        name: nginx-config
+      - emptyDir: {}
+        name: php-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: null
+  name: slackbot-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  selector:
+    app: slackbot

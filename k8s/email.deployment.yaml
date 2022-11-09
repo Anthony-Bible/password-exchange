@@ -2,21 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: passwordexchange
-  name: passwordexchange-%{PHASE}-deployment
+    app: email 
+  name: email-%{PHASE}-deployment
   namespace: default
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: passwordexchange
+      app: email 
   template:
     metadata:
       annotations:
         linkerd.io/inject: enabled
       labels:
-        app: passwordexchange
-        name: passwordexchange
+        app: email 
+        name: email 
         phase: "%{PHASE}"
         version: "%{VERSION}" 
     spec:
@@ -25,11 +25,11 @@ spec:
         - secretRef:
             name: test-secret
         image: ghcr.io/anthony-bible/passwordexchange-container-prod
-        args: ["web"]
+        args: ["email"]
         env:
         - name: "PASSWORDEXCHANGE_RUNNINGENVIRONMENT"
           value: "%{PHASE}"
-        name: password-exchange
+        name: email
         ports:
         - containerPort: 8080
 

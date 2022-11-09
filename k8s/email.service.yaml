@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-%{PHASE}-service 
+  annotations:
+    # external-dns.alpha.kubernetes.io/hostname: anthony.bible
+  namespace: default
+spec:
+  selector:
+    app: email
+    phase: %{PHASE}
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+

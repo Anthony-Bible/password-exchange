@@ -1,5 +1,4 @@
-// forms.go
-package main
+package web
 
 import (
 	"context"
@@ -7,11 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 
 	// "net/url"
 	"strings"
 
+	"github.com/Anthony-Bible/password-exchange/app/config"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
@@ -19,16 +21,23 @@ import (
 	"encoding/json"
 	// "io/ioutil"
 
-	"github.com/Anthony-Bible/password-exchange/app/email"
-	"github.com/Anthony-Bible/password-exchange/app/message"
-
 	"github.com/Anthony-Bible/password-exchange/app/commons"
+	"github.com/Anthony-Bible/password-exchange/app/message"
 
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	"github.com/Anthony-Bible/password-exchange/app/messagepb"
+	amqp "github.com/rabbitmq/amqp091-go"
 
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
+
+type Config struct {
+	config.PassConfig `mapstructure:",squash"`
+	Channel           *amqp.Channel
+	EncryptionClient
+}
 
 // TODO add a size limit for messages
 type htmlHeaders struct {
@@ -53,21 +62,35 @@ type EncryptionClient struct {
 	// or logger (to replace global logging)
 	// (...)
 }
+type Result struct {
+	Email string
+	Error error
+}
+
+func (conf *Config) GetConn(rabbitUrl string) error {
+	conn, err := amqp.Dial(rabbitUrl)
+	if err != nil {
+		log.Err(err).Msg("Problem with connecting")
+	}
+	ch, err := conn.Channel()
+	conf.Channel = ch
+	return err
+}
 
 // constructor for server context
-func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, error) {
+func newServerContext(endpoint1 string, endpoint2 string) (EncryptionClient, error) {
 	userConn, err := grpc.Dial(endpoint1, grpc.WithInsecure())
 	if err != nil {
-		return nil, err
+		return EncryptionClient{}, err
 	}
 	userConn2, err := grpc.Dial(endpoint2, grpc.WithInsecure())
 	if err != nil {
-		return nil, err
+		return EncryptionClient{}, err
 	}
 	dbclient := db.NewDbServiceClient(userConn2)
 
 	client := pb.NewMessageServiceClient(userConn)
-	ctx := &EncryptionClient{
+	ctx := EncryptionClient{
 		Client:   client,
 		DbClient: dbclient,
 		conn:     userConn,
@@ -77,10 +100,11 @@ func newServerContext(endpoint1 string, endpoint2 string) (*EncryptionClient, er
 	return ctx, nil
 }
 
-func main() {
+func (conf Config) StartServer() {
 	//TODO put port in environment variable
-	encryptionServiceName, dbServiceName := getServiceNames()
+	encryptionServiceName, dbServiceName := conf.getServiceNames()
 	s, err := newServerContext(encryptionServiceName, dbServiceName)
+	conf.EncryptionClient = s
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
 	}
@@ -89,7 +113,7 @@ func main() {
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
 	router.GET("/", home)
-	router.POST("/", s.send)
+	router.POST("/", conf.send)
 	router.GET("/confirmation", confirmation)
 	router.GET("/decrypt/:uuid/*key", s.displaydecrypted)
 	router.POST("/decrypt/:uuid/*key", s.displaydecryptedWithPassword)
@@ -104,10 +128,9 @@ func main() {
 
 }
 
-func getServiceNames() (string, string) {
-	environment := getEnvironment()
-	encryptionServiceName, err := commons.GetViperVariable("encryption_" + environment + "_service")
-	dbServiceName, err := commons.GetViperVariable("database_" + environment + "_service")
+func (conf Config) getServiceNames() (string, string) {
+	encryptionServiceName, err := commons.GetViperVariable(fmt.Sprintf("Encryption%sService", conf.RunningEnvironment))
+	dbServiceName, err := commons.GetViperVariable(fmt.Sprintf("Database%sService", conf.RunningEnvironment))
 	log.Debug().Msg(dbServiceName)
 
 	encryptionServiceName += ":50051"
@@ -117,14 +140,6 @@ func getServiceNames() (string, string) {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
 	return encryptionServiceName, dbServiceName
-}
-
-func getEnvironment() string {
-	environment, err := commons.GetViperVariable("running_environment")
-	if err != nil {
-		log.Error().Err(err).Msg("couldn't get running_environment")
-	}
-	return environment
 }
 
 func home(c *gin.Context) {
@@ -203,34 +218,86 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
+func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context) {
+	rabUrl := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
+	err := conf.GetConn(rabUrl)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	go func() {
+		if strings.ToLower(c.PostForm("color")) == "blue" {
+			fmt.Printf("%+v", conf)
+			if len(c.PostForm("skipEmail")) <= 0 {
+				msg := <-ch
+				isokay := verifyEmail(msg, c)
+				log.Debug().Msg("verified email")
+				if isokay {
+					log.Error().Msg("email is malformed")
+				} else {
 
-func sendEmail(c *gin.Context, msg *message.MessagePost) {
-	if strings.ToLower(c.PostForm("color")) == "blue" {
-		if len(c.PostForm("skipEmail")) <= 0 {
-			isokay := verifyEmail(msg, c)
-			if isokay {
-				log.Error().Msg("email is malformed")
+					log.Debug().Msg("start 1 push email")
+					conf.publishToQueue(msg)
+					log.Debug().Msg("finished push")
+				}
 			}
-			shouldReturn1 := deliverEmail(msg, c)
-			if shouldReturn1 {
-				log.Error().Msg("Something went wrong with email Delivery")
-			}
+		} else {
+			log.Debug().Msg("no color")
+			log.Debug().Msgf("%+v", <-ch)
 		}
-	}
+	}()
 }
 
-func deliverEmail(msg *message.MessagePost, c *gin.Context) bool {
-	if err := email.Deliver(msg); err != nil {
-		marshaledMesage, _ := json.Marshal(msg)
-		log.Error().Err(err).Msg(string(marshaledMesage))
-		c.String(http.StatusInternalServerError, fmt.Sprintf("something went wrong on email delivery: %s", err))
-
-		return true
+func (conf Config) publishToQueue(msg message.MessagePost) {
+	log.Info().Msg("Starting push")
+	q, err := conf.Channel.QueueDeclare(
+		conf.RabQName, //name
+		true,          //durable
+		false,         //delete when unused
+		false,         //exclusive
+		false,         //no-wait
+		nil,           //arguments
+	)
+	if err != nil {
+		log.Fatal().Msgf("Couldn't declare queue: %s\n", err)
 	}
-	return false
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	body := messagepb.Message{
+		Email:          strings.Join(msg.Email, ""),
+		Firstname:      msg.FirstName,
+		Otherfirstname: msg.OtherFirstName,
+		OtherLastName:  msg.OtherLastName,
+		OtherEmail:     strings.Join(msg.OtherEmail, ""),
+		Uniqueid:       msg.Uniqueid,
+		Content:        msg.Content,
+		Url:            msg.Url,
+		Hidden:         msg.Hidden,
+		Captcha:        msg.Captcha,
+	}
+	data, err := proto.Marshal(&body)
+	if err != nil {
+		log.Error().Msg("Error with marshaling body")
+	}
+	log.Info().Msg("before publish")
+	err = conf.Channel.PublishWithContext(ctx,
+		"",     //exchange
+		q.Name, //routing key
+		false,  //mandatory
+		false,
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         []byte(data),
+		})
+	log.Info().Msgf("\n[x] sent %s\n", body)
 }
 
-func verifyEmail(msg *message.MessagePost, c *gin.Context) bool {
+//func sendEmail(c *gin.Context, msg *message.MessagePost) {
+//		}
+//	}
+//}
+
+func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
 	if msg.Validate() == false {
 		log.Debug().Msgf("errors: %s", msg.Errors)
 		htmlHeaders := htmlHeaders{
@@ -243,42 +310,47 @@ func verifyEmail(msg *message.MessagePost, c *gin.Context) bool {
 	return false
 }
 
-func (s *EncryptionClient) send(c *gin.Context) {
+func (conf Config) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
-
 	// FOR DEBUGGING HTTP POST:
 	// printPost(c)
+	log.Info().Msg("sending")
 	ctx := context.Background()
-	encryptionbytes, err := s.Client.GenerateRandomString(ctx, &pb.Randomrequest{RandomLength: 32})
+	var msgStream chan message.MessagePost
+	msgStream = make(chan message.MessagePost)
+	go conf.sendEmailtoQueue(msgStream, c)
+	encryptionbytes, err := conf.EncryptionClient.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with generating random string")
 	}
+	log.Info().Msg(string(encryptionbytes.GetEncryptionbytes()))
 	guid := xid.New()
-	environment := getEnvironment()
-	siteHost, err := commons.GetViperVariable(environment + "_host")
+	environment := conf.RunningEnvironment
+	siteHost, err := commons.GetViperVariable(environment + "Host")
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with env variable")
 	}
 	//TODO: pass in struct & Handle two return values
-	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime
+	//TODO LATER: Find more effecient way to encrypt rather than contact encrypt everytime,
 	encryptionRequest := &pb.EncryptedMessageRequest{
 		Key: []byte(encryptionbytes.GetEncryptionbytes()),
 	}
 	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
 
-	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
+	encryptedStrings, err := conf.EncryptionClient.Client.EncryptMessage(ctx, encryptionRequest)
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
 	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
 	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
-	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
+	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
-
+	log.Info().Msg("before stream")
+	msgStream <- msg
+	log.Info().Msg("after stream")
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
-	go sendEmail(c, msg)
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"url": msg.Url,
@@ -305,17 +377,19 @@ func printPost(c *gin.Context) {
 	}
 }
 
-func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) *message.MessagePost {
-	msg := &message.MessagePost{
+func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {
+	msg := message.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
 		OtherFirstName: c.PostForm("other_firstname"),
 		OtherLastName:  c.PostForm("other_lastname"),
 		OtherEmail:     []string{c.PostForm("other_email")},
-
-		Url:     siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
-		Hidden:  c.PostForm("other_information"),
-		Captcha: c.PostForm("h-captcha-response"),
+		Uniqueid:       "",
+		Content:        "",
+		Errors:         map[string]string{},
+		Url:            siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
+		Hidden:         c.PostForm("other_information"),
+		Captcha:        c.PostForm("h-captcha-response"),
 	}
 	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
 	return msg

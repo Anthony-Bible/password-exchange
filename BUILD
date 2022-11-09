@@ -1,6 +1,8 @@
 load("@rules_python//gazelle:def.bzl", "GAZELLE_PYTHON_RUNTIME_DEPS")
 load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 
+# gazelle:proto package
+# gazelle:proto_group go_package
 ## Go ##
 # gazelle:proto_plugin protoc-gen-go implementation golang:protobuf:protoc-gen-go
 # gazelle:proto_rule proto_go_library implementation stackb:rules_proto:proto_go_library
@@ -32,9 +34,14 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 #gazelle:resolve py protos //protos:encryption_pb2_grpc
 #gazelle:resolve py database_py_pb2 //protos:database_py_pb2
 #gazelle:resolve py database_py_pb2_grpc //protos:database_py_pb2_grpc
-# gazelle:proto package
-# gazelle:proto_group go_package
-# gazelle:prefix github.com/Anthony-Bible/password-exchange/app
+
+# gazelle:prefix github.com/Anthony-Bible/password-exchange/
+# --- show debugging output ---
+# gazelle:log_level debug
+
+# --- show summary of total time on .Info ---
+# gazelle:progress true
+
 gazelle_binary(
     name = "gazelle_debug",
     languages = [
@@ -43,6 +50,7 @@ gazelle_binary(
         "@bazel_gazelle//language/proto",
         # must be after the proto extension (order matters)
         "@build_stack_rules_proto//language/protobuf",
+        "@build_stack_bazel_gazelle_debug//language/debug",
     ],
 )
 

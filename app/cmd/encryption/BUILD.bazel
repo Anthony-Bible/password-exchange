@@ -1,0 +1,23 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "encryption",
+    srcs = [
+        "encryption.go",
+        "encryption2.go",
+    ],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/cmd/encryption",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//app/cmd",
+        "//app/config",
+        "//protos:encryptionpb_go_proto",
+        "@com_github_go_kit_kit//transport/amqp",
+        "@com_github_rs_xid//:xid",
+        "@com_github_rs_zerolog//log",
+        "@com_github_spf13_cobra//:cobra",
+        "@com_github_spf13_viper//:viper",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//reflection",
+    ],
+)

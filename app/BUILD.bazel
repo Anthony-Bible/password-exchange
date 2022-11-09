@@ -1,0 +1,41 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+go_library(
+    name = "app_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//app/cmd",
+        "//app/cmd/database",
+        "//app/cmd/email",
+        "//app/cmd/encryption",
+        "//app/cmd/web",
+    ],
+)
+container_image(
+    name = "forms_image",
+    base = "@alpine_linux_amd64//image",
+    data_path = "/",
+    files = ["//app/templates:tarred_file"],
+    tars = ["//app/templates:tarred_file"],
+)
+go_image(
+    name = "app",
+    base = ":forms_image",
+    basename = "app",
+    embed = [":app_lib"],
+    visibility = ["//visibility:public"],
+    pure = "on", 
+)
+
+container_push(
+    name = "app_push",
+    format = "Docker",
+    image = ":app",
+    registry = "ghcr.io",
+    repository = "anthony-bible/password-exchange",
+    tag = "dev",
+)

@@ -25,6 +25,7 @@ spec:
         - secretRef:
             name: test-secret
         image: ghcr.io/anthony-bible/passwordexchange-encryption
+        args: ["encryption"]
         env:
         - name: "PASSWORDEXCHANGE_RUNNING_ENVIRONMENT"
           value: "%{PHASE}"
