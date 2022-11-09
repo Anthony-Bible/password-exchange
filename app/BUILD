@@ -24,20 +24,13 @@ gazelle(name = "gazelle")
 #)
 go_library(
     name = "app_lib",
-    srcs = ["forms.go"],
+    srcs = ["main.go"],
     importpath = "github.com/Anthony-Bible/password-exchange/app",
     visibility = ["//visibility:private"],
     deps = [
-        "//app/commons",
-        "//app/email",
-        "//app/message",
-        "//protos:databasepb_go_proto",
-        "//protos:encryptionpb_go_proto",
-        "@com_github_gin_gonic_gin//:gin",
-        "@com_github_rs_xid//:xid",
-        "@com_github_rs_zerolog//log",
-        "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_x_crypto//bcrypt",
+        "//app/cmd",
+        "//app/cmd/email",
+        "//app/cmd/web",
     ],
 )
 

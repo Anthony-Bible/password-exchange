@@ -36,6 +36,7 @@ import (
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
 	Channel           *amqp.Channel
+	EncryptionClient
 }
 
 // TODO add a size limit for messages
@@ -111,7 +112,7 @@ func (conf Config) StartServer() {
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
 	router.GET("/", home)
-	router.POST("/", s.send)
+	router.POST("/", conf.send)
 	router.GET("/confirmation", confirmation)
 	router.GET("/decrypt/:uuid/*key", s.displaydecrypted)
 	router.POST("/decrypt/:uuid/*key", s.displaydecryptedWithPassword)
@@ -138,14 +139,6 @@ func (conf Config) getServiceNames() (string, string) {
 		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
 	return encryptionServiceName, dbServiceName
-}
-
-func getEnvironment() string {
-	environment, err := commons.GetViperVariable("running_environment")
-	if err != nil {
-		log.Error().Err(err).Msg("couldn't get running_environment")
-	}
-	return environment
 }
 
 func home(c *gin.Context) {
@@ -314,20 +307,21 @@ func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
 	return false
 }
 
-func (s *EncryptionClient) send(c *gin.Context, done <-chan interface{}) {
+func (conf Config) send(c *gin.Context, done <-chan interface{}) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
 	// FOR DEBUGGING HTTP POST:
 	// printPost(c)
+	ctx := context.Background()
 	msgStream := make(chan message.MessagePost)
-	go sendEmailtoQueue(msgStream, c, done)
-	encryptionbytes, err := s.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
+	go conf.sendEmailtoQueue(msgStream, c, done)
+	encryptionbytes, err := conf.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with generating random string")
 	}
 	guid := xid.New()
-	environment := getEnvironment()
+	environment := conf.RunningEnvironment
 	siteHost, err := commons.GetViperVariable(environment + "_host")
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with env variable")
@@ -339,11 +333,11 @@ func (s *EncryptionClient) send(c *gin.Context, done <-chan interface{}) {
 	}
 	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
 
-	encryptedStrings, err := s.Client.EncryptMessage(ctx, encryptionRequest)
+	encryptedStrings, err := conf.Client.EncryptMessage(ctx, encryptionRequest)
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
 	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
 	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
-	_, err = s.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
+	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}

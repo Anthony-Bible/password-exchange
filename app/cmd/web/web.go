@@ -25,7 +25,7 @@ var webCmd = &cobra.Command{
 		var cfg Config
 		bindenvs(cfg)
 		fmt.Println("web called")
-		StartServer()
+		cfg.StartServer()
 	},
 }
 

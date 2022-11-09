@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "rabbitmq",
+    srcs = ["rabbitmq.go"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/internal/rabbitmq",
+    visibility = ["//app:__subpackages__"],
+    deps = ["@com_github_rabbitmq_amqp091_go//:amqp091-go"],
+)

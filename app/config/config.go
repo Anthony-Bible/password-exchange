@@ -14,6 +14,7 @@ type PassConfig struct {
 	DbHost                string `mapstructure:"dbhost"`
 	DbUser                string `mapstructure:"dbuser"`
 	DbPass                string `mapstructure:"dbpass"`
+	DbName                string `mapstructure:"dbname"`
 	ProdHost              string `mapstructure:"prodhost"`
 	DevHost               string `mapstructure:"devhost"`
 	EncryptionProdService string `mapstructure:"encryptionprodservice"`

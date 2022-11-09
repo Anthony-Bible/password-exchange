@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "web",
+    srcs = [
+        "forms.go",
+        "web.go",
+    ],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/cmd/web",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//app/cmd",
+        "//app/config",
+        "//app/message",
+        "//app/pkg:commons",
+        "@com_github_gin_gonic_gin//:gin",
+        "@com_github_rabbitmq_amqp091_go//:amqp091-go",
+        "@com_github_rs_xid//:xid",
+        "@com_github_rs_zerolog//log",
+        "@com_github_spf13_cobra//:go_default_library",
+        "@com_github_spf13_viper//:viper",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_x_crypto//bcrypt",
+    ],
+)

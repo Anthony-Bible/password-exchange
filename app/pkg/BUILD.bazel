@@ -10,3 +10,14 @@ go_library(
         "@com_github_spf13_viper//:viper",
     ],
 )
+
+go_library(
+    name = "pkg",
+    srcs = ["commons.go"],
+    importpath = "github.com/Anthony-Bible/password-exchange/app/pkg",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_rs_zerolog//log",
+        "@com_github_spf13_viper//:viper",
+    ],
+)
