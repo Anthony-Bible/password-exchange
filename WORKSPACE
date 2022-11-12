@@ -1694,10 +1694,10 @@ container_pull(
 
 container_pull(
     name = "python3_linux_amd64",
-    digest = "sha256:a5a7a63d6493977b0f13b1cb3a3764dba713a49baf6b87d3a53d547c41f90b2c",
+    digest = "sha256:09b30e3221996c42d14b05ee6bbc7a38e9a81d805748b43d50ce19a597ecabd3",
     registry = "index.docker.io",
     repository = "library/python",
-    tag = "3.8.12-slim-buster",
+    tag = "3.11.0-slim-buster",
 )
 
 #kubectl download
