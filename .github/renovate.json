@@ -2,5 +2,6 @@
     "kubernetes": {
       "fileMatch": ["kubernetes/.+\\.yaml$"]
     },
-    "dependencyDashboard": true
+    "dependencyDashboard": true,
+    "semanticCommits": true
   }
