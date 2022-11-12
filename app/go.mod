@@ -7,7 +7,7 @@ require (
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/zerolog v1.27.0
 	github.com/spf13/cobra v1.6.1
-	github.com/spf13/viper v1.13.0
+	github.com/spf13/viper v1.14.0
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.0 // indirect
 )
