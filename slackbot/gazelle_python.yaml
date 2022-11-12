@@ -148,10 +148,13 @@ manifest:
     greenlet: greenlet
     greenlet.__init__: greenlet
     greenlet._greenlet: greenlet
+    greenlet.platform: greenlet
+    greenlet.platform.__init__: greenlet
     greenlet.tests: greenlet
     greenlet.tests.__init__: greenlet
     greenlet.tests._test_extension: greenlet
     greenlet.tests._test_extension_cpp: greenlet
+    greenlet.tests.leakcheck: greenlet
     greenlet.tests.test_contextvars: greenlet
     greenlet.tests.test_cpp: greenlet
     greenlet.tests.test_extension_interface: greenlet
@@ -159,6 +162,7 @@ manifest:
     greenlet.tests.test_generator: greenlet
     greenlet.tests.test_generator_nested: greenlet
     greenlet.tests.test_greenlet: greenlet
+    greenlet.tests.test_greenlet_trash: greenlet
     greenlet.tests.test_leaks: greenlet
     greenlet.tests.test_stack_saved: greenlet
     greenlet.tests.test_throw: greenlet
@@ -285,6 +289,7 @@ manifest:
     importlib_metadata._functools: importlib_metadata
     importlib_metadata._itertools: importlib_metadata
     importlib_metadata._meta: importlib_metadata
+    importlib_metadata._py39compat: importlib_metadata
     importlib_metadata._text: importlib_metadata
     itsdangerous: itsdangerous
     itsdangerous.__init__: itsdangerous
@@ -1325,5 +1330,5 @@ manifest:
     zipp: zipp
   pip_repository:
     name: pip
-    incremental: false
-integrity: 9fabc820d844ff7fc74cf2a84cf2b42c1e548923b7f7ea2816156e28ca0783c4
+    incremental: true
+integrity: ca958cd23ef6e8f6e21a58cd46357208f685c1c019d19f6089bb443e56470f19
