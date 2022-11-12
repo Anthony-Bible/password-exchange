@@ -15,7 +15,7 @@ mysqlclient==2.1.0
 protobuf==3.20.2
 six==1.16.0
 slack-bolt==1.14.0
-slack-sdk==3.17.2
+slack-sdk==3.19.3
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.39
 Werkzeug==2.2.1
