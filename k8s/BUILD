@@ -66,6 +66,7 @@ k8s_object(
     # A template of a Kubernetes Deployment object yaml.
     template = ":email.service.yaml",
 )
+
 k8s_object(
     name = "encryption",
     cluster = "cluster.local",
@@ -134,47 +135,48 @@ k8s_object(
     template = ":database.service.yaml",
 )
 
-#k8s_object(
-#    name = "slackbot",
-#    cluster = "cluster.local",
-#
-#    # An optional collection of docker_build images to publish
-#    # when this target is bazel run.  The digest of the published
-#    # image is substituted as a part of the resolution process.
-#    images = {
-#        "ghcr.io/anthony-bible/passwordexchange-slackbot": "//slackbot:slackbot_bin",
-#    },
-#    kind = "deployment",
-#    substitutions = {
-#        "%{VERSION}": "{VERSION}",
-#        "%{PHASE}": "{PHASE}",
-#    },
-#    # A template of a Kubernetes Deployment object yaml.
-#    template = ":slackbot.deployment.yaml",
-#)
-#
-#k8s_object(
-#    name = "slackbot-service",
-#    cluster = "cluster.local",
-#
-#    # An optional collection of docker_build images to publish
-#    # when this target is bazel run.  The digest of the published
-#    # image is substituted as a part of the resolution process.
-#    kind = "service",
-#
-#    # A template of a Kubernetes Deployment object yaml.
-#    template = ":slackbot.service.yaml",
-#)
-#
+k8s_object(
+    name = "slackbot",
+    cluster = "cluster.local",
+
+    # An optional collection of docker_build images to publish
+    # when this target is bazel run.  The digest of the published
+    # image is substituted as a part of the resolution process.
+    images = {
+        "ghcr.io/anthony-bible/passwordexchange-slackbot": "//slackbot:slackbot_bin",
+    },
+    kind = "deployment",
+    substitutions = {
+        "%{VERSION}": "{VERSION}",
+        "%{PHASE}": "{PHASE}",
+    },
+    # A template of a Kubernetes Deployment object yaml.
+    template = ":slackbot.deployment.yaml",
+)
+
+k8s_object(
+    name = "slackbot-service",
+    cluster = "cluster.local",
+
+    # An optional collection of docker_build images to publish
+    # when this target is bazel run.  The digest of the published
+    # image is substituted as a part of the resolution process.
+    kind = "service",
+
+    # A template of a Kubernetes Deployment object yaml.
+    template = ":slackbot.service.yaml",
+)
+
 #CREATE ALL Services
 k8s_objects(
     name = "services",
     objects = [
         ":password-service",
-#        ":slackbot-service",
+        #        ":slackbot-service",
         ":encryption-service",
         ":database-service",
-        ":email-service"
+        ":email-service",
+        "slackbot-service",
     ],
 )
 
@@ -183,10 +185,10 @@ k8s_objects(
     name = "deployments",
     objects = [
         ":password",
-#        ":slackbot",
+        ":slackbot",
         ":encryption",
         ":database",
-        ":email"
+        ":email",
     ],
 )
 

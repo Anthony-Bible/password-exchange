@@ -5,6 +5,7 @@ bazel-out
 bazel-bin
 bazel-testlogs
 bazel-password.exchange
+bazel-passwordExchange
 # Entries below this point are managed by Please (DO NOT EDIT)
 plz-out
 .plzconfig.local

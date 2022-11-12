@@ -30,17 +30,17 @@ spec:
           - name: PASSWORDEXCHANGE_ENCRYPTIONSERVICE
             valueFrom:
               secretKeyRef:
-                key: PASSWORDEXCHANGE_ENCRYPTION_PROD_SERVICE
+                key: PASSWORDEXCHANGE_ENCRYPTIONPRODSERVICE
                 name: test-secret
           - name: PASSWORDEXCHANGE_DATABASESERVICE
             valueFrom:
               secretKeyRef:
-                key: PASSWORDEXCHANGE_DATABASE_PROD_SERVICE
+                key: PASSWORDEXCHANGE_DATABASEPRODSERVICE
                 name: test-secret
           - name: PASSWORDEXCHANGE_HOST
             valueFrom:
               secretKeyRef:
-                key: PASSWORDEXCHANGE_PROD_HOST
+                key: PASSWORDEXCHANGE_PRODHOST
                 name: test-secret
           - name: PASSWORDEXCHANGE_DBHOST
             valueFrom:

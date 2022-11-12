@@ -28,6 +28,7 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 # gazelle:proto_language python rule proto_compile
 # gazelle:proto_language python rule proto_python_library
 # gazelle:proto_language python rule grpc_py_library
+# gazelle::python_root //slackbot
 ##Python pip ##
 #gazelle:resolve py encryption_py_pb2 //protos:encryption_py_pb2
 #gazelle:resolve py encryption_py_pb2_grpc //protos:encryption_py_pb2_grpc
@@ -40,7 +41,6 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 # gazelle:log_level debug
 
 # --- show summary of total time on .Info ---
-# gazelle:progress true
 
 gazelle_binary(
     name = "gazelle_debug",

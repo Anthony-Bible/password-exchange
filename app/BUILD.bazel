@@ -1,7 +1,8 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_push")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+
 go_library(
     name = "app_lib",
     srcs = ["main.go"],
@@ -15,6 +16,7 @@ go_library(
         "//app/cmd/web",
     ],
 )
+
 container_image(
     name = "forms_image",
     base = "@alpine_linux_amd64//image",
@@ -22,13 +24,14 @@ container_image(
     files = ["//app/templates:tarred_file"],
     tars = ["//app/templates:tarred_file"],
 )
+
 go_image(
     name = "app",
     base = ":forms_image",
     basename = "app",
     embed = [":app_lib"],
+    pure = "on",
     visibility = ["//visibility:public"],
-    pure = "on", 
 )
 
 container_push(

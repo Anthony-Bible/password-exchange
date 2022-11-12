@@ -3,6 +3,7 @@ load("@build_stack_rules_proto//rules/py:grpc_py_library.bzl", "grpc_py_library"
 load("@build_stack_rules_proto//rules/py:proto_py_library.bzl", "proto_py_library")
 load("@build_stack_rules_proto//rules:proto_compile.bzl", "proto_compile")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
 proto_library(
     name = "databasepb_proto",
     srcs = ["database.proto"],
