@@ -13,7 +13,7 @@
 #RUN go install -v ./...
 #
 #CMD ["app"]
-From python:3.8.10-slim-buster
+From python:3.11.0-slim-buster
 RUN apt update && apt install zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang -y
 #RUN apt update && apt install -y curl libssl-dev python3-dev wget zstd gcc build-essential
 RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 && chmod +x /usr/local/bin/bazel 
