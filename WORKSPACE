@@ -34,9 +34,9 @@ http_archive(
 # Size: 14361 (14 kB)
 http_archive(
     name = "build_stack_bazel_gazelle_debug",
-    sha256 = "94abd91ca9e9a9950a84cdb3b6e4b3b033c2a5f3ea6b77acd51f7f7da3dbc69c",
-    strip_prefix = "bazel-gazelle-debug-66315dd31d70f2e03d7dfaa310f4d549be6522e4",
-    urls = ["https://github.com/stackb/bazel-gazelle-debug/archive/66315dd31d70f2e03d7dfaa310f4d549be6522e4.tar.gz"],
+    sha256 = "c4e8d487a06792b0086651c44cc0795d816d4b53f21e84f11b6bb4cb1746df5e",
+    strip_prefix = "bazel-gazelle-debug-2518a88cb0908f1896ff50b506e87d880a9695cb",
+    urls = ["https://github.com/stackb/bazel-gazelle-debug/archive/2518a88cb0908f1896ff50b506e87d880a9695cb.tar.gz"],
 )
 
 http_archive(
