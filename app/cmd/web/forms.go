@@ -226,7 +226,6 @@ func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context)
 	}
 	go func() {
 		if strings.ToLower(c.PostForm("color")) == "blue" {
-			fmt.Printf("%+v", conf)
 			if len(c.PostForm("skipEmail")) <= 0 {
 				msg := <-ch
 				isokay := verifyEmail(msg, c)
@@ -289,7 +288,6 @@ func (conf Config) publishToQueue(msg message.MessagePost) {
 			ContentType:  "text/plain",
 			Body:         []byte(data),
 		})
-	log.Info().Msgf("\n[x] sent %s\n", body)
 }
 
 //func sendEmail(c *gin.Context, msg *message.MessagePost) {

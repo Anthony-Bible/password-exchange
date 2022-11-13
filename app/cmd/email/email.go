@@ -31,11 +31,10 @@ var emailCmd = &cobra.Command{
     PASSWORDEXCHANGE_EMAILPORT: Port for email host`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("email called")
-		fmt.Printf("the value of loglevel is %s\n", viper.Get("loglevel"))
+		log.Debug().Msgf("the value of loglevel is %s\n", viper.Get("loglevel"))
 		var cfg Config
 		bindenvs(cfg)
 		viper.Unmarshal(&cfg.PassConfig)
-		fmt.Printf("CFG Is %+v\n", cfg)
 		cfg.StartProcessing()
 	},
 }

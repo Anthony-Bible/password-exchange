@@ -67,8 +67,6 @@ func (conn Config) startConsumer(queueName string, handler func(conf Config, d a
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			for msg := range msgs {
-				log.Info().Msg(string(msg.Body))
-				log.Info().Msg("recieved message")
 				// if tha handler returns true then ACK, else NACK
 				// the message back into the rabbit queue for
 				// another round of processing
@@ -101,7 +99,6 @@ func handler(conf Config, d amqp.Delivery) bool {
 		return false
 	}
 	bodyUnmarshal := pb.Message{}
-	log.Info().Msgf("unmarshal body: %+v", &bodyUnmarshal)
 	err := proto.Unmarshal(d.Body, &bodyUnmarshal)
 	if err != nil {
 		log.Error().Msg("Error with unmarshaling body")

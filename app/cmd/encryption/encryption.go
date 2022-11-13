@@ -29,7 +29,6 @@ to quickly create a Cobra application.`,
 		var cfg Config
 		bindenvs(cfg)
 		viper.Unmarshal(&cfg.PassConfig)
-		fmt.Printf("CFG Is %+v\n", cfg)
 		cfg.startServer()
 	},
 }
