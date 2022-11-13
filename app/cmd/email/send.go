@@ -1,7 +1,6 @@
 package email
 
 import (
-	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"

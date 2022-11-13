@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/rs/zerolog/log"
 
 	"reflect"
 	"strings"
