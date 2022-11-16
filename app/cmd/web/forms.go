@@ -167,7 +167,7 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 	inputtedPassphrase := c.PostForm("passphrase")
 	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
 	hashedPassword := selectResult.GetPassphrase()
-	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) {
+	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) || hashedPassword == "" {
 
 		// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
 		if err != nil {
@@ -365,7 +365,16 @@ func hashPassphrase(passphrase []byte) []byte {
 	return hashed
 }
 func checkPassword(hashedPassword []byte, password []byte) bool {
-	return bcrypt.CompareHashAndPassword(hashedPassword, password) == nil
+	err := bcrypt.CompareHashAndPassword(hashedPassword, password)
+	if password == nil {
+		log.Debug().Msg("password is empty")
+		return false
+	} else {
+		log.Debug().Msgf("password is not empty: %s", password)
+		log.Debug().Err(err).Msg("error is")
+		return err == nil
+	}
+
 }
 func printPost(c *gin.Context) {
 	//used for debugging
