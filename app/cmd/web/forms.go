@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	b64 "encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"time"
@@ -159,8 +161,8 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 }
 
 func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
+	printPost(c)
 	ctx := context.Background()
-
 	uuid := c.Param("uuid")
 	key := c.Param("key")
 	decodedKey := decodeString(key)
@@ -366,22 +368,25 @@ func hashPassphrase(passphrase []byte) []byte {
 }
 func checkPassword(hashedPassword []byte, password []byte) bool {
 	err := bcrypt.CompareHashAndPassword(hashedPassword, password)
-	if password == nil {
+	if strings.TrimSpace(string(hashedPassword)) == "" {
 		log.Debug().Msg("password is empty")
-		return false
-	} else {
-		log.Debug().Msgf("password is not empty: %s", password)
-		log.Debug().Err(err).Msg("error is")
-		return err == nil
+		return true
 	}
+	log.Debug().Err(err).Msg("error is")
+	log.Debug().Msgf("error==nil: %t", err == nil)
+	return err == nil
 
 }
 func printPost(c *gin.Context) {
 	//used for debugging
-	c.MultipartForm()
-	for key, value := range c.Request.PostForm {
-		log.Info().Msgf("%v = %v \n", key, value)
-	}
+	//	c.MultipartForm()
+	//	for key, value := range c.Request.PostForm {
+	//		log.Info().Msgf("%v = %v \n", key, value)
+	//	}
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	println(string(body))
+
+	c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
 }
 
 func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {

@@ -3,9 +3,11 @@
   <h3>Here is the decrypted message:</h3>
   <p style="white-space: pre-wrap">{{if not .DecryptedMessage}} Passphrase is required!! </p>
   <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
-    ReEnter Passphrase
+    Enter Passphrase
   </button>
-
+  <button formmethod="post" id="nopassphrase" type="button" class="btn btn-primary" >
+    No Passphrase
+  </button>
   <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
@@ -33,10 +35,17 @@
   
 <script  >
   $(document).ready(function(e) {
-  $('#loginModal').modal('show');
   //handle the form's "submit" events
   const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+});
+</script>
+<script>
+  const button = document.getElementById('nopassphrase');
+
+button.addEventListener('click', async _ => {
+    document.getElementById('passphrase').value = "";
+     document.getElementById("loginForm").submit();
 });
 </script>
 {{else}}
