@@ -17,6 +17,7 @@ go_library(
         "//protos:encryptionpb_go_proto",
         "//protos:messagepb_go_proto",
         "@com_github_gin_gonic_gin//:gin",
+        "@com_github_p768lwy3_gin_server_timing//:go_default_library",
         "@com_github_rabbitmq_amqp091_go//:amqp091-go",
         "@com_github_rs_xid//:xid",
         "@com_github_rs_zerolog//log",
