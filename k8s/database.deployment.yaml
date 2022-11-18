@@ -16,6 +16,7 @@ spec:
         linkerd.io/inject: enabled
         # Have to disable outbound ports since it's outside of cluster: https://linkerd.io/2.11/reference/proxy-configuration/
         config.linkerd.io/skip-outbound-ports: "3306"
+        proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
       labels:
         app: database
         name: database

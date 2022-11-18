@@ -14,6 +14,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
+        proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
       labels:
         app: email 
         name: email 
