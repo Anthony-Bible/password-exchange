@@ -2471,7 +2471,7 @@ container_pull(
 
 container_pull(
     name = "python3_linux_amd64",
-    digest = "sha256:09b30e3221996c42d14b05ee6bbc7a38e9a81d805748b43d50ce19a597ecabd3",
+    digest = "sha256:876053fd9c3f645ed21e9e03122ecc1520be76473be89e5d222c748cad432bde",
     registry = "index.docker.io",
     repository = "library/python",
     tag = "3.11.0-slim-buster",
