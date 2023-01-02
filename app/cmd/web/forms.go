@@ -1,12 +1,20 @@
 package web
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	b64 "encoding/base64"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	"time"
 
@@ -113,6 +121,7 @@ func (conf Config) StartServer() {
 	}
 
 	router := gin.Default()
+	router.MaxMultipartMemory = 32 << 20 // 8 MiB
 	router.Use(servertiming.Middleware())
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
@@ -329,7 +338,7 @@ func (conf Config) send(c *gin.Context) {
 		log.Error().Err(err).Msg("Problem with generating random string")
 	}
 	log.Info().Msg(string(encryptionbytes.GetEncryptionbytes()))
-	guid := xid.New()
+	guid := generateUniqueID()
 	environment := conf.RunningEnvironment
 	siteHost, err := commons.GetViperVariable(environment + "Host")
 	if err != nil {
@@ -353,7 +362,7 @@ func (conf Config) send(c *gin.Context) {
 	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
 	metric3.Stop()
 	metric4 := timing.NewMetric("insert").Start()
-	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
+	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid, Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
@@ -363,6 +372,66 @@ func (conf Config) send(c *gin.Context) {
 	log.Info().Msg("after stream")
 	servertiming.WriteHeader(c)
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
+	file, _, err := c.Request.FormFile("file")
+	if err != nil {
+		log.Error().Err(err).Msg("something went wrong with getting file from request")
+	}
+	defer file.Close()
+	fileid := generateUniqueID()
+	totalChunks, err := strconv.Atoi(c.Request.FormValue("totalChunks"))
+	if err != nil {
+		// Handle error
+		// ...
+		log.Error().Err(err).Msg("Couldn't save totalchunks")
+	}
+	currentChunk, err := strconv.Atoi(c.Request.FormValue("currentChunk"))
+	if err != nil {
+		// Handle error
+		// ...
+		log.Error().Err(err).Msg("Couldn't save currentChunk")
+	}
+	encryptedFilePath, err := filepath.Abs("/tmp/" + fileid + ".enc")
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with getting absolute path")
+
+	}
+	//todo: Perhaps we want to move this to the encryption service
+	// this is the final chunk time to create the final encrypted files
+	encryptedFile, err := os.OpenFile(encryptedFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with opening encryptefile")
+	}
+	defer encryptedFile.Close()
+	encryptedWriter := bufio.NewWriter(encryptedFile)
+
+	encryptedChunk, err := encryptChunk(file, encryptionRequest.Key)
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with encrypting chunk")
+
+	}
+	// read the encrypted file chunk one block at a tijme and write it to the final encrytped file
+	block := make([]byte, aes.BlockSize)
+	for {
+		n, err := encryptedChunk.Read(block)
+		if err != nil && err != io.EOF {
+			log.Error().Err(err).Msg("Something went wrong with reading encrypted block")
+		}
+		if n == 0 {
+			break
+
+		}
+		_, err = encryptedWriter.Write(block[:n])
+		if err != nil {
+			log.Error().Err(err).Msg("Something went wrong with writing encyrpted block to file")
+
+		}
+	}
+	//Flush the buffered writer to ensure the data is writen to file
+	encryptedWriter.Flush()
+	//check if this is the final chunk
+	if currentChunk == totalChunks-1 {
+		encryptedFile.Close()
+	}
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"url": msg.Url,
@@ -371,6 +440,48 @@ func (conf Config) send(c *gin.Context) {
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 	}
 }
+func encryptChunk(file io.Reader, key []byte) (io.Reader, error) {
+	buffer := bytes.NewBuffer(nil)
+	nonce := make([]byte, aes.BlockSize)
+	_, err := rand.Read(nonce)
+	if err != nil {
+		return nil, err
+
+	}
+	//read the file chunk one block at a time
+	block := make([]byte, aes.BlockSize)
+	for {
+		n, err := file.Read(block)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		if n == 0 {
+			break
+		}
+		newAesBlock, err := aes.NewCipher(key)
+		if err != nil {
+			log.Error().Err(err).Msg("Something went wrong with creating a new cipher")
+
+		}
+		encryptedBlock := make([]byte, aes.BlockSize)
+		// Encrypt the block using the key and nonce
+		stream := cipher.NewCTR(newAesBlock, nonce)
+		stream.XORKeyStream(encryptedBlock, block[:n])
+		if err != nil {
+			return nil, err
+		}
+		_, err = buffer.Write(block)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return buffer, nil
+}
+func generateUniqueID() string {
+	guid := xid.New()
+	return guid.String()
+}
+
 func hashPassphrase(passphrase []byte) []byte {
 	hashed, err := bcrypt.GenerateFromPassword(passphrase, 11)
 	if err != nil {
@@ -401,7 +512,7 @@ func printPost(c *gin.Context) {
 	c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
 }
 
-func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {
+func createMessageFromPost(c *gin.Context, siteHost string, guid string, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {
 	msg := message.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
@@ -411,7 +522,7 @@ func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encrypt
 		Uniqueid:       "",
 		Content:        "",
 		Errors:         map[string]string{},
-		Url:            siteHost + "decrypt/" + guid.String() + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
+		Url:            siteHost + "decrypt/" + guid + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
 		Hidden:         c.PostForm("other_information"),
 		Captcha:        c.PostForm("h-captcha-response"),
 	}
