@@ -3,6 +3,7 @@ module github.com/Anthony-Bible/password-exchange/app
 go 1.19
 
 require (
+	github.com/aws/aws-sdk-go v1.40.45
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-kit/kit v0.12.0
 	github.com/go-sql-driver/mysql v1.6.0
@@ -30,6 +31,7 @@ require (
 	github.com/golang/gddo v0.0.0-20200310004957-95ce5a452273 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect

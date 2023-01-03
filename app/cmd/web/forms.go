@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -37,9 +38,13 @@ import (
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
 	"github.com/Anthony-Bible/password-exchange/app/messagepb"
-	amqp "github.com/rabbitmq/amqp091-go"
-
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/mailgun/groupcache/v2"
 	servertiming "github.com/p768lwy3/gin-server-timing"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -47,6 +52,7 @@ import (
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
 	Channel           *amqp.Channel
+	S3Session         *session.Session
 	EncryptionClient
 }
 
@@ -58,7 +64,7 @@ type htmlHeaders struct {
 	Errors           map[string]string
 }
 
-// this type contains state of the server
+//EncryptionClient this type contains state of the server
 type EncryptionClient struct {
 	// client to GRPC service
 	Client   pb.MessageServiceClient
@@ -73,13 +79,15 @@ type EncryptionClient struct {
 	// or logger (to replace global logging)
 	// (...)
 }
-type Result struct {
-	Email string
-	Error error
-}
 
-func (conf *Config) GetConn(rabbitUrl string) error {
-	conn, err := amqp.Dial(rabbitUrl)
+//type Result struct {
+//	Email string
+//	Error error
+//}
+
+//GetConn adds rabitmq connection to config struct
+func (conf *Config) GetConn(rabbitURL string) error {
+	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
 		log.Err(err).Msg("Problem with connecting")
 	}
@@ -111,6 +119,7 @@ func newServerContext(endpoint1 string, endpoint2 string) (EncryptionClient, err
 	return ctx, nil
 }
 
+// StartServer starts the web server using gin-gonic
 func (conf Config) StartServer() {
 	//TODO put port in environment variable
 	encryptionServiceName, dbServiceName := conf.getServiceNames()
@@ -232,8 +241,8 @@ func decodeString(key string) []byte {
 	return decodedKey
 }
 func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context) {
-	rabUrl := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
-	err := conf.GetConn(rabUrl)
+	rabURL := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
+	err := conf.GetConn(rabURL)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
@@ -303,11 +312,6 @@ func (conf Config) publishToQueue(msg message.MessagePost) {
 		})
 }
 
-//func sendEmail(c *gin.Context, msg *message.MessagePost) {
-//		}
-//	}
-//}
-
 func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
 	if msg.Validate() == false {
 		log.Debug().Msgf("errors: %s", msg.Errors)
@@ -326,7 +330,7 @@ func (conf Config) send(c *gin.Context) {
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
 	// FOR DEBUGGING HTTP POST:
-	// printPost(c)
+	// pri(conf ntPost(c)
 	log.Info().Msg("sending")
 	ctx := context.Background()
 	timing := servertiming.FromContext(c)
@@ -376,8 +380,16 @@ func (conf Config) send(c *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong with getting file from request")
 	}
+	conf.createS3Connection()
 	defer file.Close()
-	fileid := generateUniqueID()
+	var fileid string
+	if len(c.Request.FormValue("fileID")) > 0 {
+		fileIDLength := len(c.Request.FormValue("fileID"))
+		fileid = c.Request.FormValue("fileID")
+		log.Debug().Msgf("Length of fileid is %d", fileIDLength)
+	} else {
+		fileid = generateUniqueID()
+	}
 	totalChunks, err := strconv.Atoi(c.Request.FormValue("totalChunks"))
 	if err != nil {
 		// Handle error
@@ -395,6 +407,7 @@ func (conf Config) send(c *gin.Context) {
 		log.Error().Err(err).Msg("Something went wrong with getting absolute path")
 
 	}
+	encryptedChunk, err := encryptChunk(file, encryptionRequest.Key)
 	//todo: Perhaps we want to move this to the encryption service
 	// this is the final chunk time to create the final encrypted files
 	encryptedFile, err := os.OpenFile(encryptedFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
@@ -404,7 +417,6 @@ func (conf Config) send(c *gin.Context) {
 	defer encryptedFile.Close()
 	encryptedWriter := bufio.NewWriter(encryptedFile)
 
-	encryptedChunk, err := encryptChunk(file, encryptionRequest.Key)
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with encrypting chunk")
 
@@ -428,6 +440,7 @@ func (conf Config) send(c *gin.Context) {
 	}
 	//Flush the buffered writer to ensure the data is writen to file
 	encryptedWriter.Flush()
+	c.JSON(http.StatusOK, gin.H{"fileID": fileid})
 	//check if this is the final chunk
 	if currentChunk == totalChunks-1 {
 		encryptedFile.Close()
@@ -440,7 +453,83 @@ func (conf Config) send(c *gin.Context) {
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
 	}
 }
+
+//Initialize s3 connection
+func (conf *Config) createS3Connection() {
+	// Create a single AWS session (we can re use this if we're uploading many files)
+	sess, err := session.NewSession(&aws.Config{
+		Credentials:      credentials.NewStaticCredentials(conf.S3apiID, conf.S3apiKey, ""),
+		Endpoint:         aws.String(conf.S3apiEndpoint),
+		Region:           aws.String(conf.S3apiRegion),
+		S3ForcePathStyle: aws.Bool(true),
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with creating session")
+	}
+	conf.S3Session = sess
+}
+
+//query kubernetes headless service for endpoints
+// Uses multiple A records to  get the endpoints
+func (conf Config) getEndpoints(svcName string) []string {
+	//query kubernetes headless service for endpoints
+	endpoints, err := net.LookupIP(svcName)
+	if err != nil {
+		log.Error().Err(err).Msgf("Something went wrong with looking up %s service", svcName)
+	}
+
+	var endpointsString []string
+	for _, endpoint := range endpoints {
+		endpointsString = append(endpointsString, endpoint.String())
+	}
+	return endpointsString
+
+}
+
+//create a new groupcache
+func (conf *Config) createGroupCache() {
+	//create a new groupcache
+	var endpointsString []string
+	endpointsString = conf.getEndpoints("groupcache")
+	newEndpointString := modifyStringSlice(endpointsString)
+	log.Info().Msgf("Endpoints are %v", endpointsString)
+	peers := groupcache.NewHTTPPoolOpts(newEndpointString[0], &groupcache.HTTPPoolOptions)
+	peers.Set(newEndpointString...)
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: peers,
+	}
+	go func() {
+		log.Info().Msg("Starting groupcache server")
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatal().Err(err).Msg("Something went wrong with starting groupcache server")
+		}
+	}()
+	defer server.Shutdown(context.Background())
+
+	group := groupcache.NewGroup("users", 64<<20, groupcache.GetterFunc(
+		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
+			log.Info().Msgf("Getting user %s", key)
+			user, err := conf.getUser(key)
+			if err != nil {
+				log.Error().Err(err).Msg("Something went wrong with getting user")
+			}
+			dest.SetBytes(user)
+			return nil
+		}))
+
+}
+
+//Modify string slice to modify each string
+func modifyStringSlice(slice []string) []string {
+	for i, s := range slice {
+		slice[i] = "http://" + s + ":8080"
+	}
+	return slice
+}
+
 func encryptChunk(file io.Reader, key []byte) (io.Reader, error) {
+	log.Debug().Msg("encrypting chunk")
 	buffer := bytes.NewBuffer(nil)
 	nonce := make([]byte, aes.BlockSize)
 	_, err := rand.Read(nonce)
@@ -470,11 +559,12 @@ func encryptChunk(file io.Reader, key []byte) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		_, err = buffer.Write(block)
+		_, err = buffer.Write(encryptedBlock)
 		if err != nil {
 			return nil, err
 		}
 	}
+	log.Debug().Msg("Chunk should now be encrypted")
 	return buffer, nil
 }
 func generateUniqueID() string {

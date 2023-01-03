@@ -1,7 +1,10 @@
+// Package config has the config struct that makes it a centralized place to put
+// user configurable values
 package config
 
 var Config PassConfig
 
+//PassConfig These are all options configurable by the user
 type PassConfig struct {
 	EmailHost             string `mapstructure:"emailhost"`
 	EmailUser             string `mapstructure:"emailuser"`
@@ -23,6 +26,13 @@ type PassConfig struct {
 	DatabaseDevService    string `mapstructure:"databasedevservice"`
 	Loglevel              string `mapstructure:"loglevel"`
 	RunningEnvironment    string `mapstructure:"runningenvironment"`
+	S3apiKey              string `mapstructure:"s3apikey"`
+	S3apiID               string `mapstructure:"s3apiid"`
+	S3apiEndpoint         string `mapstructure:"s3apiendpoint"`
+	S3apiBucket           string `mapstructure:"s3apibucket"`
+	S3apiRegion           string `mapstructure:"s3apiregion"`
+	GroupcacheSvcName     string `mapstructure:"groupcachesvcname"`
+	S3apiSsl              bool   `mapstructure:"s3apissl"`
 	DbPort                int    `mapstructure:"dbport"`
 	EmailPort             int    `mapstructure:"emailport"`
 	RabPort               int    `mapstructure:"rabport"`
