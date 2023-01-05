@@ -1186,6 +1186,34 @@ go_repository(
     version = "v1.5.1",
 )
 
+go_repository(
+    name = "com_github_mailgun_groupcache_v2",
+    importpath = "github.com/mailgun/groupcache/v2",
+    sum = "h1:mDj1t2rSjvZDYZO0shOHGstxbiZgxXMFohwfYn0Ac/M=",
+    version = "v2.4.2",
+)
+
+go_repository(
+    name = "com_github_segmentio_fasthash",
+    importpath = "github.com/segmentio/fasthash",
+    sum = "h1:EI9+KE1EwvMLBWwjpRDc+fEM+prwxDYbslddQGtrmhM=",
+    version = "v1.0.3",
+)
+
+go_repository(
+    name = "com_github_vimeo_galaxycache",
+    importpath = "github.com/vimeo/galaxycache",
+    sum = "h1:rCdbSOj90pzocTnINtXaF0wQoiy6bvhodkL8ujGxl8c=",
+    version = "v0.0.0-20221219181409-3fc36a9a6046",
+)
+
+go_repository(
+    name = "com_github_vimeo_go_clocks",
+    importpath = "github.com/vimeo/go-clocks",
+    sum = "h1:HAh+gZT4PIIWJEIc/cXi1EPExZWMUgL/9lO0SA+EPrw=",
+    version = "v1.1.2",
+)
+
 gazelle_protobuf_extension_go_deps()
 
 protobuf_core_deps()
@@ -2110,15 +2138,15 @@ go_repository(
 go_repository(
     name = "com_github_stretchr_objx",
     importpath = "github.com/stretchr/objx",
-    sum = "h1:M2gUjqZET1qApGOWNSnZ49BAIMX4F/1plDv3+l31EJ4=",
-    version = "v0.4.0",
+    sum = "h1:1zr/of2m5FGMsad5YfcqgdqdWrIhu+EBEJRhR1U7z/c=",
+    version = "v0.5.0",
 )
 
 go_repository(
     name = "com_github_stretchr_testify",
     importpath = "github.com/stretchr/testify",
-    sum = "h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=",
-    version = "v1.8.0",
+    sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=",
+    version = "v1.8.1",
 )
 
 go_repository(
@@ -2384,15 +2412,15 @@ go_repository(
 go_repository(
     name = "org_golang_x_sync",
     importpath = "golang.org/x/sync",
-    sum = "h1:5KslGYwFpkhGh+Q16bwMP3cOontH8FOep7tGV86Y7SQ=",
-    version = "v0.0.0-20210220032951-036812b2e83c",
+    sum = "h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=",
+    version = "v0.1.0",
 )
 
 go_repository(
     name = "org_golang_x_sys",
     importpath = "golang.org/x/sys",
-    sum = "h1:XeJjHH1KiLpKGb6lvMiksZ9l0fVUh+AmGcm0nOMEBOY=",
-    version = "v0.0.0-20220908164124-27713097b956",
+    sum = "h1:h+EGohizhe9XlX18rfpa8k8RAc5XyaeamM+0VHRd4lc=",
+    version = "v0.0.0-20220919091848-fb04ddd9f9c8",
 )
 
 go_repository(

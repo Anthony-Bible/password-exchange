@@ -20,24 +20,24 @@ type Message struct {
 }
 
 type MessagePost struct {
-	Email          []string
 	FirstName      string
 	OtherFirstName string
 	OtherLastName  string
-	OtherEmail     []string
 	Uniqueid       string
 	Content        string
-	Errors         map[string]string
-	Url            string
+	URL            string
 	Hidden         string
 	Captcha        string
+	Errors         map[string]string
+	Email          []string
+	OtherEmail     []string
 }
 
 func (msg *MessagePost) Validate() bool {
 	msg.Errors = make(map[string]string)
 
 	match := rxEmail.Match([]byte(strings.Join(msg.Email, "")))
-	if match == false {
+	if !match {
 		msg.Errors["Email"] = "Please enter a valid email address"
 	}
 

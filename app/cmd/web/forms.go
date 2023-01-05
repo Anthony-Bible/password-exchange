@@ -1,3 +1,4 @@
+//Package web This package starts the web server as the primary interface for interaction
 package web
 
 import (
@@ -41,10 +42,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/mailgun/groupcache/v2"
 	servertiming "github.com/p768lwy3/gin-server-timing"
 	amqp "github.com/rabbitmq/amqp091-go"
+	gcache "github.com/vimeo/galaxycache"
+	ghttp "github.com/vimeo/galaxycache/http"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -54,12 +55,13 @@ type Config struct {
 	Channel           *amqp.Channel
 	S3Session         *session.Session
 	EncryptionClient
+	Galaxy *gcache.Galaxy
 }
 
 // TODO add a size limit for messages
 type htmlHeaders struct {
 	Title            string
-	Url              string
+	URL              string
 	DecryptedMessage string
 	Errors           map[string]string
 }
@@ -291,7 +293,7 @@ func (conf Config) publishToQueue(msg message.MessagePost) {
 		OtherEmail:     strings.Join(msg.OtherEmail, ""),
 		Uniqueid:       msg.Uniqueid,
 		Content:        msg.Content,
-		Url:            msg.Url,
+		URL:            msg.URL,
 		Hidden:         msg.Hidden,
 		Captcha:        msg.Captcha,
 	}
@@ -383,13 +385,7 @@ func (conf Config) send(c *gin.Context) {
 	conf.createS3Connection()
 	defer file.Close()
 	var fileid string
-	if len(c.Request.FormValue("fileID")) > 0 {
-		fileIDLength := len(c.Request.FormValue("fileID"))
-		fileid = c.Request.FormValue("fileID")
-		log.Debug().Msgf("Length of fileid is %d", fileIDLength)
-	} else {
-		fileid = generateUniqueID()
-	}
+	fileid = getFileID(c)
 	totalChunks, err := strconv.Atoi(c.Request.FormValue("totalChunks"))
 	if err != nil {
 		// Handle error
@@ -447,11 +443,24 @@ func (conf Config) send(c *gin.Context) {
 	}
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"url": msg.Url,
+			"url": msg.URL,
 		})
 	} else {
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.Url))
+		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.URL))
 	}
+}
+
+//get file id
+func getFileID(c *gin.Context) string {
+	var fileid string
+	if len(c.Request.FormValue("fileID")) > 0 {
+		fileIDLength := len(c.Request.FormValue("fileID"))
+		fileid = c.Request.FormValue("fileID")
+		log.Debug().Msgf("Length of fileid is %d", fileIDLength)
+	} else {
+		fileid = generateUniqueID()
+	}
+	return fileid
 }
 
 //Initialize s3 connection
@@ -471,7 +480,7 @@ func (conf *Config) createS3Connection() {
 
 //query kubernetes headless service for endpoints
 // Uses multiple A records to  get the endpoints
-func (conf Config) getEndpoints(svcName string) []string {
+func getEndpoints(svcName string) []string {
 	//query kubernetes headless service for endpoints
 	endpoints, err := net.LookupIP(svcName)
 	if err != nil {
@@ -486,37 +495,46 @@ func (conf Config) getEndpoints(svcName string) []string {
 
 }
 
-//create a new groupcache
-func (conf *Config) createGroupCache() {
-	//create a new groupcache
-	var endpointsString []string
-	endpointsString = conf.getEndpoints("groupcache")
-	newEndpointString := modifyStringSlice(endpointsString)
-	log.Info().Msgf("Endpoints are %v", endpointsString)
-	peers := groupcache.NewHTTPPoolOpts(newEndpointString[0], &groupcache.HTTPPoolOptions)
-	peers.Set(newEndpointString...)
-	server := http.Server{
-		Addr:    ":8080",
-		Handler: peers,
-	}
+//Initialize galaxy cache
+func (conf *Config) initGalaxyCache() {
+	endpoints := getEndpoints("password-exchange")
+	modifiedEndpoints := modifyStringSlice(endpoints)
+	httpProto := ghttp.NewHTTPFetchProtocol(nil)
+	universe := gcache.NewUniverse(httpProto, endpoints[0])
+	//set peers of universe
+	universe.Set(modifiedEndpoints)
+	getter := gcache.GetterFunc(func(ctx context.Context, key string, dest gcache.Codec) error {
+		uploadID := initiateS3MultipartUpload(key)
+		return dest.UnmarshalBinary([]byte(uploadID))
+	})
+	//Create a new galaxy
+	galaxy := universe.NewGalaxy("password-exchange", 1<<20, getter)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serveMux := http.NewServeMux()
+	ghttp.RegisterHTTPHandler(universe, nil, serveMux)
+	//store galaxy in config struct so I can just call conf.g.get()
+	conf.Galaxy = galaxy
+	var srv http.Server
 	go func() {
-		log.Info().Msg("Starting groupcache server")
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatal().Err(err).Msg("Something went wrong with starting groupcache server")
+		log.Info().Msg("Starting HTTP server on :8080")
+		httpAltListener, err := net.Listen("tcp", ":8080")
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to start HTTP server")
+		}
+		srv.Handler = serveMux
+		if err := srv.Serve(httpAltListener); err != nil {
+			log.Error().Err(err).Msg("Something went wrong with starting http server")
 		}
 	}()
-	defer server.Shutdown(context.Background())
+	<-ctx.Done()
+	srv.Shutdown(ctx)
 
-	group := groupcache.NewGroup("users", 64<<20, groupcache.GetterFunc(
-		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
-			log.Info().Msgf("Getting user %s", key)
-			user, err := conf.getUser(key)
-			if err != nil {
-				log.Error().Err(err).Msg("Something went wrong with getting user")
-			}
-			dest.SetBytes(user)
-			return nil
-		}))
+}
+
+//Initialize s3 mulitpart uplaod
+func initiateS3MultipartUpload(key string) string {
 
 }
 
@@ -616,13 +634,13 @@ func createMessageFromPost(c *gin.Context, siteHost string, guid string, encrypt
 		Hidden:         c.PostForm("other_information"),
 		Captcha:        c.PostForm("h-captcha-response"),
 	}
-	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.Url + "\"> here</a>"
+	msg.Content = "please click this link to get your encrypted message" + "\n <a href=\"" + msg.URL + "\"> here</a>"
 	return msg
 }
 
 func confirmation(c *gin.Context) {
 	content := c.Query("content")
-	extraHeaders := htmlHeaders{Title: "passwordExchange", Url: content}
+	extraHeaders := htmlHeaders{Title: "passwordExchange", URL: content}
 
 	render(c, "confirmation.html", 0, extraHeaders)
 }
