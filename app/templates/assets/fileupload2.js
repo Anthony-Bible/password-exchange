@@ -10,7 +10,7 @@ async function uploadChunk(chunk, chunkNumber, totalChunks, fileId = null, formD
 
   formData.append('file', chunk);
   if (fileId) {
-    formData.append('fileId', fileId);
+    formData.append('fileID', fileId);
   }
   formData.append('currentChunk', chunkNumber);
   formData.append('totalChunks', totalChunks);
@@ -35,23 +35,29 @@ async function uploadFile(file) {
 
   // Total number of chunks
   const numChunks = Math.ceil(file.size / chunkSize);
-
+  console.log(`Total number of chunks: ${numChunks}`);
+  let start = 0;
+  let end = Math.min(chunkSize, file.size);
   // Loop through all the chunks
   // Calculate the start and end bytes for the chunk
 
   // Upload the first chunk and get the file ID
   let json;
   if (numChunks > 0) {
-    const start = 0;
-    const end = Math.min(chunkSize, file.size);
-    const chunk = file.slice(start, end);
+    start = 0;
     const formData = new FormData(document.querySelector('#contact-form'));
-    json = await uploadChunk(chunk, 1, numChunks, fileId, formData);
+    json = await uploadChunk(file.slice(start, end), 1, numChunks, fileId, formData);
+
+    console.log(end);
+    console.log(file.slice(start, end).size);
   }
   if (numChunks === 1) {
     return json.URL;
   }
-  fileId = json.fileId;
+  let totalSize = 0;
+  console.log(file.size);
+  totalSize += file.slice(start, end).size;
+  fileId = json.fileID;
 
   // check if fileid is empty
   if (fileId === null) {
@@ -60,16 +66,27 @@ async function uploadFile(file) {
   }
   // Upload the remaining chunks concurrently
   const promises = [];
-  for (let i = 1; i < numChunks; i += 1) {
-    const start = i * chunkSize;
-    const end = Math.min(start + chunkSize, file.size);
+  for (let i = 2; i < numChunks; i += 1) {
+    start = end;
+    end = Math.min(start + chunkSize, file.size);
+    // log start and end
+    console.log(start, end);
     const chunk = file.slice(start, end);
+    totalSize += chunk.size;
     promises.push(uploadChunk(chunk, i, numChunks, fileId));
+    console.log(chunk.size);
   }
 
   // Wait for all the promises to resolve
   await Promise.all(promises);
-
+  start = end;
+  end = Math.min(start + chunkSize, file.size);
+  console.log(start, end);
+  // to make sure we don't complete the upload before the last chunk is uploaded
+  console.log(file.slice(start).size);
+  totalSize += file.slice(start, end).size;
+  console.log(totalSize);
+  json = await uploadChunk(file.slice(start), numChunks, numChunks, fileId);
   // Return the final file ID
   return json.URL;
 }

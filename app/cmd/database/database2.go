@@ -23,7 +23,7 @@ type Config struct {
 
 func (conf *Config) Connect() (db *sql.DB) {
 	dbConnectionString := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true", conf.PassConfig.DbUser, conf.PassConfig.DbPass, conf.PassConfig.DbHost, conf.PassConfig.DbName)
-
+	log.Debug().Msgf("Connecting to database ")
 	db, err := sql.Open("mysql", dbConnectionString)
 	if err != nil {
 		panic(err.Error()) // Just for example purpose. You should use proper error handling instead of panic
@@ -35,6 +35,7 @@ func (conf *Config) Select(ctx context.Context, request *db.SelectRequest) (*db.
 	dbconnection := conf.Connect()
 	response := db.SelectResponse{}
 	uuid := request.GetUuid()
+	log.Debug().Msgf("select %s", uuid)
 	err := dbconnection.QueryRow("select message,uniqueid,other_lastname from messages where uniqueid=?", uuid).Scan(&response.Content, &request.Uuid, &response.Passphrase)
 
 	if err != nil {
@@ -47,8 +48,8 @@ func (conf *Config) Select(ctx context.Context, request *db.SelectRequest) (*db.
 //Insert encrypted information into database (this is base64 encoded)
 func (conf *Config) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.Empty, error) {
 	db := conf.Connect()
-
-	_, err := db.Exec("INSERT INTO messages( message, uniqueid, other_lastname) VALUES(?,?,?)", request.GetContent(), request.GetUuid(), request.GetPassphrase())
+	log.Debug().Msgf("Inserting into database: %+v", request)
+	_, err := db.Exec("INSERT INTO messages( message, uniqueid, other_lastname, fileid) VALUES(?,?,?,?)", request.GetContent(), request.GetUuid(), request.GetPassphrase(), request.GetFileid())
 	defer db.Close()
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with Inserting into database")

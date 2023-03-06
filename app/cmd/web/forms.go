@@ -2,7 +2,6 @@
 package web
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/aes"
@@ -12,10 +11,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
+	"math"
 	"net/http"
-	"os"
-	"path/filepath"
+	"sort"
 	"strconv"
 
 	"time"
@@ -32,20 +30,19 @@ import (
 
 	"encoding/json"
 	// "io/ioutil"
-
 	"github.com/Anthony-Bible/password-exchange/app/commons"
-	"github.com/Anthony-Bible/password-exchange/app/message"
-
 	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
 	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	"github.com/Anthony-Bible/password-exchange/app/message"
 	"github.com/Anthony-Bible/password-exchange/app/messagepb"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	dapr "github.com/dapr/go-sdk/client"
 	servertiming "github.com/p768lwy3/gin-server-timing"
 	amqp "github.com/rabbitmq/amqp091-go"
 	gcache "github.com/vimeo/galaxycache"
-	ghttp "github.com/vimeo/galaxycache/http"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -53,9 +50,12 @@ import (
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
 	Channel           *amqp.Channel
-	S3Session         *session.Session
+	S3Client          *s3.S3
 	EncryptionClient
-	Galaxy *gcache.Galaxy
+	ch         chan struct{}
+	retries    int
+	DaprClient dapr.Client
+	Galaxy     *gcache.Galaxy
 }
 
 // TODO add a size limit for messages
@@ -82,10 +82,10 @@ type EncryptionClient struct {
 	// (...)
 }
 
-//type Result struct {
-//	Email string
-//	Error error
-//}
+type partUploadResult struct {
+	completedPart *s3.CompletedPart
+	err           error
+}
 
 //GetConn adds rabitmq connection to config struct
 func (conf *Config) GetConn(rabbitURL string) error {
@@ -130,7 +130,6 @@ func (conf Config) StartServer() {
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
 	}
-
 	router := gin.Default()
 	router.MaxMultipartMemory = 32 << 20 // 8 MiB
 	router.Use(servertiming.Middleware())
@@ -182,8 +181,22 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 	render(c, "decryption.html", 0, extraHeaders)
 }
 
+func (s *EncryptionClient) isHashedPassphraseEmpty(uuid string) bool {
+	ctx := context.Background()
+	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
+	if err != nil {
+		log.Error().Err(err).Msg("something went wrong with getting the passphrase from the database")
+	}
+	hashedPassword := selectResult.GetPassphrase()
+	if hashedPassword == "" {
+		log.Debug().Msg("hashed password is empty")
+		return true
+
+	}
+	return false
+}
 func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
-	printPost(c)
+	//printPost(c)
 	ctx := context.Background()
 	uuid := c.Param("uuid")
 	key := c.Param("key")
@@ -243,11 +256,6 @@ func decodeString(key string) []byte {
 	return decodedKey
 }
 func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context) {
-	rabURL := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
-	err := conf.GetConn(rabURL)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
 	go func() {
 		if strings.ToLower(c.PostForm("color")) == "blue" {
 			if len(c.PostForm("skipEmail")) <= 0 {
@@ -271,18 +279,18 @@ func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context)
 }
 
 func (conf Config) publishToQueue(msg message.MessagePost) {
-	log.Info().Msg("Starting push")
-	q, err := conf.Channel.QueueDeclare(
-		conf.RabQName, //name
-		true,          //durable
-		false,         //delete when unused
-		false,         //exclusive
-		false,         //no-wait
-		nil,           //arguments
-	)
-	if err != nil {
-		log.Fatal().Msgf("Couldn't declare queue: %s\n", err)
-	}
+	log.Debug().Msg("Starting push")
+	//	q, err := conf.Channel.QueueDeclare(
+	//		conf.RabQName, //name
+	//		true,          //durable
+	//		false,         //delete when unused
+	//		false,         //exclusive
+	//		false,         //no-wait
+	//		nil,           //arguments
+	//	)
+	//	if err != nil {
+	//		log.Fatal().Msgf("Couldn't declare queue: %s\n", err)
+	//	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	body := messagepb.Message{
@@ -301,17 +309,22 @@ func (conf Config) publishToQueue(msg message.MessagePost) {
 	if err != nil {
 		log.Error().Msg("Error with marshaling body")
 	}
-	log.Info().Msg("before publish")
-	err = conf.Channel.PublishWithContext(ctx,
-		"",     //exchange
-		q.Name, //routing key
-		false,  //mandatory
-		false,
-		amqp.Publishing{
-			DeliveryMode: amqp.Persistent,
-			ContentType:  "text/plain",
-			Body:         []byte(data),
-		})
+	log.Debug().Msg("before publish")
+	//	err = conf.Channel.PublishWithContext(ctx,
+	//		"",     //exchange
+	//		q.Name, //routing key
+	//		false,  //mandatory
+	//		false,
+	//		amqp.Publishing{
+	//			DeliveryMode: amqp.Persistent,
+	//			ContentType:  "text/plain",
+	//			Body:         []byte(data),
+	//		})
+	if err := conf.DaprClient.PublishEvent(ctx, "pubsub", conf.RabQName, []byte(data)); err != nil {
+		log.Err(err).Msg("error publishing event")
+	}
+	log.Debug().Msg("after publish")
+
 }
 
 func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
@@ -327,17 +340,21 @@ func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
 	return false
 }
 
-func (conf Config) send(c *gin.Context) {
+func (conf *Config) send(c *gin.Context) {
 	// Step 1: Validate form
 	// Step 2: Send message in an email
 	// // Step 3: Redirect to confirmation page
 	// FOR DEBUGGING HTTP POST:
 	// pri(conf ntPost(c)
-	log.Info().Msg("sending")
+	//printPost(c)
+	conf.retries = 2
+	log.Debug().Msg("sending")
 	ctx := context.Background()
 	timing := servertiming.FromContext(c)
 	var msgStream chan message.MessagePost
 	msgStream = make(chan message.MessagePost)
+	var etag string
+
 	go conf.sendEmailtoQueue(msgStream, c)
 	encryptionbytes, err := conf.EncryptionClient.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -356,6 +373,7 @@ func (conf Config) send(c *gin.Context) {
 		Key: []byte(encryptionbytes.GetEncryptionbytes()),
 	}
 	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
+	log.Debug().Msg(encryptionRequest.PlainText[0])
 	m := timing.NewMetric("grpc-encrypt").Start()
 	encryptedStrings, err := conf.EncryptionClient.Client.EncryptMessage(ctx, encryptionRequest)
 	m.Stop()
@@ -367,12 +385,6 @@ func (conf Config) send(c *gin.Context) {
 	metric3 := timing.NewMetric("hashpassphrase").Start()
 	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
 	metric3.Stop()
-	metric4 := timing.NewMetric("insert").Start()
-	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid, Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
-	if err != nil {
-		log.Error().Err(err).Msg("Something went wrong with insert")
-	}
-	metric4.Stop()
 	log.Info().Msg("before stream")
 	msgStream <- msg
 	log.Info().Msg("after stream")
@@ -383,71 +395,207 @@ func (conf Config) send(c *gin.Context) {
 		log.Error().Err(err).Msg("something went wrong with getting file from request")
 	}
 	conf.createS3Connection()
+	conf.createDaprClient()
 	defer file.Close()
 	var fileid string
 	fileid = getFileID(c)
+	//	galaxyContext := context.Background()
+	//	var value gcche.StringCodec
+	//	//get the fileid from the cache
+	//	conf.Galaxy.Get(galaxyContext, fileid, &value)
 	totalChunks, err := strconv.Atoi(c.Request.FormValue("totalChunks"))
 	if err != nil {
-		// Handle error
-		// ...
 		log.Error().Err(err).Msg("Couldn't save totalchunks")
 	}
+	returnedValue, etag, err := conf.getFromStateStore(fileid)
+	if err != nil {
+		log.Error().Err(err).Msg("Couldn't get from state store")
+	}
+	var uploadid string
+	if len(returnedValue) > 0 {
+		uploadid = returnedValue
+	} else {
+		uploadid = conf.initiateS3MultipartUpload(fileid)
+		err = conf.saveToStateStore(fileid, uploadid, etag)
+		metric4 := timing.NewMetric("insert").Start()
+		log.Debug().Msg("starting insert in web")
+		_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid, Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName, Fileid: fileid})
+		if err != nil {
+			log.Error().Err(err).Msg("Something went wrong with insert")
+		}
+		metric4.Stop()
+	}
+	log.Debug().Msgf("uploadid: %s", uploadid)
+	if err != nil {
+		log.Error().Err(err).Msg("Couldn't save uploadid to state store")
+	}
+
 	currentChunk, err := strconv.Atoi(c.Request.FormValue("currentChunk"))
 	if err != nil {
 		// Handle error
 		// ...
 		log.Error().Err(err).Msg("Couldn't save currentChunk")
 	}
-	encryptedFilePath, err := filepath.Abs("/tmp/" + fileid + ".enc")
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with getting absolute path")
 
 	}
 	encryptedChunk, err := encryptChunk(file, encryptionRequest.Key)
-	//todo: Perhaps we want to move this to the encryption service
-	// this is the final chunk time to create the final encrypted files
-	encryptedFile, err := os.OpenFile(encryptedFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		log.Error().Err(err).Msg("Something went wrong with opening encryptefile")
-	}
-	defer encryptedFile.Close()
-	encryptedWriter := bufio.NewWriter(encryptedFile)
-
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with encrypting chunk")
-
 	}
-	// read the encrypted file chunk one block at a tijme and write it to the final encrytped file
-	block := make([]byte, aes.BlockSize)
-	for {
-		n, err := encryptedChunk.Read(block)
-		if err != nil && err != io.EOF {
-			log.Error().Err(err).Msg("Something went wrong with reading encrypted block")
-		}
-		if n == 0 {
-			break
-
-		}
-		_, err = encryptedWriter.Write(block[:n])
+	buf := new(bytes.Buffer)
+	io.Copy(buf, encryptedChunk)
+	result := conf.uploadChunkToS3(fileid, uploadid, buf.Bytes(), int64(currentChunk))
+	var completedParts []*s3.CompletedPart
+	var try int
+	for try <= conf.retries {
+		var PrejsoncompletedParts string
+		PrejsoncompletedParts, etag, err = conf.getFromStateStore(uploadid)
 		if err != nil {
-			log.Error().Err(err).Msg("Something went wrong with writing encyrpted block to file")
+			log.Error().Err(err).Msg("Couldn't get completed parts from state store")
+			if try == conf.retries {
+				log.Error().Err(err).Msg("Couldn't get completed parts from state store after retries")
+				conf.S3abortUpload(fileid, uploadid)
+				c.JSON(500, gin.H{"message": "Couldn't get completed parts from state store after retries"})
+			} else {
+				try++
+				time.Sleep(time.Second * 1)
+			}
 
+		} else {
+			log.Debug().Msg("got completed parts from state store")
+			if len(PrejsoncompletedParts) > 0 {
+				log.Debug().Msg("completed parts from state store not empty")
+				json.Unmarshal([]byte(PrejsoncompletedParts), &completedParts)
+				break
+
+			} else {
+				log.Debug().Msg("this is the first chunk")
+				break
+			}
 		}
 	}
-	//Flush the buffered writer to ensure the data is writen to file
-	encryptedWriter.Flush()
-	c.JSON(http.StatusOK, gin.H{"fileID": fileid})
-	//check if this is the final chunk
-	if currentChunk == totalChunks-1 {
-		encryptedFile.Close()
+	log.Debug().Msg("after for loop")
+
+	if result.err != nil {
+		log.Error().Err(err).Msg("Something went wrong with uploading chunk")
+		conf.S3abortUpload(fileid, uploadid)
+		log.Debug().Msgf("result: %s", result)
 	}
-	if len(c.PostForm("api")) > 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"url": msg.URL,
+	completedParts = append(completedParts, result.completedPart)
+
+	if len(completedParts) > 1 {
+		sort.Slice(completedParts, func(i, j int) bool {
+			return *completedParts[i].PartNumber < *completedParts[j].PartNumber
 		})
-	} else {
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/confirmation?content=%s", msg.URL))
 	}
+	if currentChunk == totalChunks {
+
+		sort.Slice(completedParts, func(i, j int) bool {
+			return *completedParts[i].PartNumber < *completedParts[j].PartNumber
+		})
+		log.Debug().Msgf("this is the last chunk: %+v", completedParts)
+		conf.completeS3Upload(fileid, uploadid, completedParts)
+		log.Debug().Msg("completed upload")
+		c.JSON(http.StatusOK, gin.H{"URL": msg.URL})
+	} else {
+		log.Debug().Msg("not completed upload")
+		marshaledCompletedParts, err := json.Marshal(completedParts)
+		if err != nil {
+			log.Error().Err(err).Msg("Couldn't marshal completed parts")
+		}
+		log.Debug().Msgf("marshaledCompletedParts: %s", marshaledCompletedParts)
+		err = conf.saveToStateStore(uploadid, string(marshaledCompletedParts), etag)
+		if err != nil {
+			log.Error().Err(err).Msg("Couldn't save completed parts to state store")
+		}
+		log.Debug().Msg("saved completed parts to state store")
+		c.JSON(http.StatusOK, gin.H{"fileID": fileid, "Message": "still uploading"})
+	}
+	//todo: Perhaps we want to move this to the encryption service
+	// this is the final chunk time to create the final encrypted files
+	// read the encrypted file chunk one block at a tijme and write it to the final encrytped file
+	//Flush the buffered writer to ensure the data is writen to file
+	//check if this is the final chunk
+
+}
+
+func (conf Config) completeS3Upload(fileid string, uploadid string, completedParts []*s3.CompletedPart) {
+	resp, err := conf.S3Client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+		Bucket:   aws.String(conf.S3Bucket),
+		Key:      aws.String(fileid),
+		UploadId: aws.String(uploadid),
+		MultipartUpload: &s3.CompletedMultipartUpload{
+			Parts: completedParts,
+		},
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with completing multipart upload")
+	}
+	log.Debug().Msgf("resp: %s", resp)
+}
+
+// S3abortUpload Abort s3 multipart upload
+func (conf *Config) S3abortUpload(fileid, uploadid string) {
+	// Abort the multipart upload.
+	_, err := conf.S3Client.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+		Bucket:   aws.String(conf.S3Bucket),
+		Key:      aws.String(fileid),
+		UploadId: aws.String(uploadid),
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with aborting multipart upload")
+	} else {
+		log.Warn().Msgf("Multipart upload aborted for file %s with uploadid: %s", fileid, uploadid)
+	}
+}
+
+//create and store dapr client in config struct
+func (conf *Config) createDaprClient() {
+	client, err := dapr.NewClient()
+	if err != nil {
+		log.Error().Err(err).Msg("Couldn't create dapr client")
+	}
+	conf.DaprClient = client
+}
+
+// Store value in dapr state store with key
+func (conf *Config) saveToStateStore(key string, value string, etag string) error {
+
+	//exponential backoff for saving to state store
+	var try int
+	for {
+		try++
+		if err := conf.DaprClient.SaveStateWithETag(context.Background(), "statestore", key, []byte(value), etag, nil); err != nil {
+			// get etag from state store
+			_, etag, err = conf.getFromStateStore(key)
+			if err != nil {
+				_, etag, err = conf.getFromStateStore(key)
+			}
+			log.Debug().Msgf("etag: %s", etag)
+			//exponential backoff
+			time.Sleep(time.Duration(math.Pow(2, float64(try))) * 100 * time.Millisecond)
+			// stop after 6 tries or 2^6 = 6400 ms
+			if try > 5 {
+				log.Error().Err(err).Msg("Something went wrong with saving to state store")
+				return err
+			}
+		} else {
+			return nil
+		}
+	}
+}
+
+// Get value from dapr state store with key
+func (conf *Config) getFromStateStore(key string) (string, string, error) {
+	log.Debug().Msgf("Getting from state store with key: %s", key)
+	item, err := conf.DaprClient.GetState(context.Background(), "statestore", key, nil)
+	log.Debug().Msgf("item: %s", item.Etag)
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with geting from state store")
+	}
+	return string(item.Value), item.Etag, nil
 }
 
 //get file id
@@ -467,86 +615,94 @@ func getFileID(c *gin.Context) string {
 func (conf *Config) createS3Connection() {
 	// Create a single AWS session (we can re use this if we're uploading many files)
 	sess, err := session.NewSession(&aws.Config{
-		Credentials:      credentials.NewStaticCredentials(conf.S3apiID, conf.S3apiKey, ""),
-		Endpoint:         aws.String(conf.S3apiEndpoint),
-		Region:           aws.String(conf.S3apiRegion),
+		Credentials:      credentials.NewStaticCredentials(conf.S3ID, conf.S3Key, ""),
+		Endpoint:         aws.String(conf.S3Endpoint),
+		Region:           aws.String(conf.S3Region),
 		S3ForcePathStyle: aws.Bool(true),
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with creating session")
 	}
-	conf.S3Session = sess
-}
-
-//query kubernetes headless service for endpoints
-// Uses multiple A records to  get the endpoints
-func getEndpoints(svcName string) []string {
-	//query kubernetes headless service for endpoints
-	endpoints, err := net.LookupIP(svcName)
-	if err != nil {
-		log.Error().Err(err).Msgf("Something went wrong with looking up %s service", svcName)
-	}
-
-	var endpointsString []string
-	for _, endpoint := range endpoints {
-		endpointsString = append(endpointsString, endpoint.String())
-	}
-	return endpointsString
-
+	conf.S3Client = s3.New(sess)
 }
 
 //Initialize galaxy cache
-func (conf *Config) initGalaxyCache() {
-	endpoints := getEndpoints("password-exchange")
-	modifiedEndpoints := modifyStringSlice(endpoints)
-	httpProto := ghttp.NewHTTPFetchProtocol(nil)
-	universe := gcache.NewUniverse(httpProto, endpoints[0])
-	//set peers of universe
-	universe.Set(modifiedEndpoints)
-	getter := gcache.GetterFunc(func(ctx context.Context, key string, dest gcache.Codec) error {
-		uploadID := initiateS3MultipartUpload(key)
-		return dest.UnmarshalBinary([]byte(uploadID))
-	})
-	//Create a new galaxy
-	galaxy := universe.NewGalaxy("password-exchange", 1<<20, getter)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	serveMux := http.NewServeMux()
-	ghttp.RegisterHTTPHandler(universe, nil, serveMux)
-	//store galaxy in config struct so I can just call conf.g.get()
-	conf.Galaxy = galaxy
-	var srv http.Server
-	go func() {
-		log.Info().Msg("Starting HTTP server on :8080")
-		httpAltListener, err := net.Listen("tcp", ":8080")
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to start HTTP server")
-		}
-		srv.Handler = serveMux
-		if err := srv.Serve(httpAltListener); err != nil {
-			log.Error().Err(err).Msg("Something went wrong with starting http server")
-		}
-	}()
-	<-ctx.Done()
-	srv.Shutdown(ctx)
-
-}
+//func (conf *Config) initGalaxyCache() {
+//	endpoints := getEndpoints("password-exchange")
+//	modifiedEndpoints := modifyStringSlice(endpoints)
+//	httpProto := ghttp.NewHTTPFetchProtocol(nil)
+//	universe := gcache.NewUniverse(httpProto, endpoints[0])
+//	//set peers of universe
+//	universe.Set(modifiedEndpoints...)
+//	getter := gcache.GetterFunc(func(ctx context.Context, key string, dest gcache.Codec) error {
+//		uploadID := conf.initiateS3MultipartUpload(key)
+//		return dest.UnmarshalBinary([]byte(uploadID))
+//	})
+//	//Create a new galaxy
+//	galaxy := universe.NewGalaxy("password-exchange", 1<<20, getter)
+//	ctx, cancel := context.WithCancel(context.Background())
+//	defer cancel()
+//
+//	serveMux := http.NewServeMux()
+//	ghttp.RegisterHTTPHandler(universe, nil, serveMux)
+//	//store galaxy in config struct so I can just call conf.g.get()
+//	conf.Galaxy = galaxy
+//	var srv http.Server
+//	go func() {
+//		log.Info().Msg("Starting HTTP server on :8081")
+//		httpAltListener, err := net.Listen("tcp", ":8081")
+//		if err != nil {
+//			log.Fatal().Err(err).Msg("Failed to start HTTP server")
+//		}
+//		srv.Handler = serveMux
+//		if err := srv.Serve(httpAltListener); err != nil {
+//			log.Error().Err(err).Msg("Something went wrong with starting http server")
+//		}
+//	}()
+//	<-ctx.Done()
+//	srv.Shutdown(ctx)
+//
+//}
 
 //Initialize s3 mulitpart uplaod
-func initiateS3MultipartUpload(key string) string {
-
+func (conf Config) initiateS3MultipartUpload(key string) string {
+	resp, err := conf.S3Client.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+		Bucket: aws.String(conf.S3Bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with creating multipart upload")
+	}
+	log.Debug().Msgf("Upload ID is %s", *resp.UploadId)
+	return *resp.UploadId
 }
 
-//Modify string slice to modify each string
-func modifyStringSlice(slice []string) []string {
-	for i, s := range slice {
-		slice[i] = "http://" + s + ":8080"
+// Upload a chunk to s3
+func (conf Config) uploadChunkToS3(key string, uploadID string, chunk []byte, partNumber int64) partUploadResult {
+	//print size of chunk
+	uploadRes, err := conf.S3Client.UploadPart(&s3.UploadPartInput{
+		Bucket:        aws.String(conf.S3Bucket),
+		Key:           aws.String(key),
+		UploadId:      aws.String(uploadID),
+		Body:          bytes.NewReader(chunk),
+		PartNumber:    aws.Int64(partNumber),
+		ContentLength: aws.Int64(int64(len(chunk))),
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with uploading chunk to s3")
+		return partUploadResult{
+			&s3.CompletedPart{}, err}
 	}
-	return slice
+	log.Debug().Msgf("Uploaded part %d", partNumber)
+	return partUploadResult{&s3.CompletedPart{
+		ETag:       uploadRes.ETag,
+		PartNumber: aws.Int64(partNumber),
+	}, nil}
 }
 
 func encryptChunk(file io.Reader, key []byte) (io.Reader, error) {
+	//get  sizeofa file
+
 	log.Debug().Msg("encrypting chunk")
 	buffer := bytes.NewBuffer(nil)
 	nonce := make([]byte, aes.BlockSize)
@@ -591,7 +747,7 @@ func generateUniqueID() string {
 }
 
 func hashPassphrase(passphrase []byte) []byte {
-	hashed, err := bcrypt.GenerateFromPassword(passphrase, 11)
+	hashed, err := bcrypt.GenerateFromPassword(passphrase, 12)
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong with hashing passphrase")
 	}
@@ -603,8 +759,10 @@ func checkPassword(hashedPassword []byte, password []byte) bool {
 		log.Debug().Msg("password is empty")
 		return true
 	}
-	log.Debug().Err(err).Msg("error is")
-	log.Debug().Msgf("error==nil: %t", err == nil)
+	if err != nil {
+		log.Error().Err(err).Msg("something went wrong with checking password")
+	}
+
 	return err == nil
 
 }
@@ -630,7 +788,7 @@ func createMessageFromPost(c *gin.Context, siteHost string, guid string, encrypt
 		Uniqueid:       "",
 		Content:        "",
 		Errors:         map[string]string{},
-		Url:            siteHost + "decrypt/" + guid + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
+		URL:            siteHost + "decrypt/" + guid + "/" + string(b64.URLEncoding.EncodeToString(encryptionRequest.Key)),
 		Hidden:         c.PostForm("other_information"),
 		Captcha:        c.PostForm("h-captcha-response"),
 	}

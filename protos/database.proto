@@ -5,20 +5,21 @@ import "google/protobuf/empty.proto";
 
 message SelectRequest{
     string uuid =1;
-    
+
 }
 message SelectResponse
 {
     string uuid = 1;
     string content = 2;
     string passphrase = 3;
-   
+
 }
 message InsertRequest
 {
     string uuid = 1;
     string content = 2;
     string passphrase = 3;
+    string fileid = 4;
 }
 
 service dbService{

@@ -2,6 +2,7 @@
 // user configurable values
 package config
 
+// Config is the struct that holds all the user configurable values
 var Config PassConfig
 
 //PassConfig These are all options configurable by the user
@@ -26,13 +27,13 @@ type PassConfig struct {
 	DatabaseDevService    string `mapstructure:"databasedevservice"`
 	Loglevel              string `mapstructure:"loglevel"`
 	RunningEnvironment    string `mapstructure:"runningenvironment"`
-	S3apiKey              string `mapstructure:"s3apikey"`
-	S3apiID               string `mapstructure:"s3apiid"`
-	S3apiEndpoint         string `mapstructure:"s3apiendpoint"`
-	S3apiBucket           string `mapstructure:"s3apibucket"`
-	S3apiRegion           string `mapstructure:"s3apiregion"`
+	S3Key                 string `mapstructure:"s3key"`
+	S3ID                  string `mapstructure:"s3id"`
+	S3Endpoint            string `mapstructure:"s3endpoint"`
+	S3Bucket              string `mapstructure:"s3bucket"`
+	S3Region              string `mapstructure:"s3region"`
 	GroupcacheSvcName     string `mapstructure:"groupcachesvcname"`
-	S3apiSsl              bool   `mapstructure:"s3apissl"`
+	S3Ssl                 bool   `mapstructure:"s3ssl"`
 	DbPort                int    `mapstructure:"dbport"`
 	EmailPort             int    `mapstructure:"emailport"`
 	RabPort               int    `mapstructure:"rabport"`
