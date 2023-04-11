@@ -130,6 +130,7 @@ func (conf Config) StartServer() {
 	if err != nil {
 		log.Error().Err(err).Msg("something went wrong 	with contacting encryption grpc server")
 	}
+	conf.initGalaxyCache()
 	router := gin.Default()
 	router.MaxMultipartMemory = 32 << 20 // 8 MiB
 	router.Use(servertiming.Middleware())
@@ -403,6 +404,7 @@ func (conf *Config) send(c *gin.Context) {
 	//	var value gcche.StringCodec
 	//	//get the fileid from the cache
 	//	conf.Galaxy.Get(galaxyContext, fileid, &value)
+	//
 	totalChunks, err := strconv.Atoi(c.Request.FormValue("totalChunks"))
 	if err != nil {
 		log.Error().Err(err).Msg("Couldn't save totalchunks")
@@ -520,6 +522,9 @@ func (conf *Config) send(c *gin.Context) {
 	//check if this is the final chunk
 
 }
+
+// Get Encryption key from galaxy cache
+//func (conf *Config) getEncryptionKey(fileid string) (string, error) {
 
 func (conf Config) completeS3Upload(fileid string, uploadid string, completedParts []*s3.CompletedPart) {
 	resp, err := conf.S3Client.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
