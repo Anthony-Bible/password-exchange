@@ -224,13 +224,13 @@ func decodeString(key string) []byte {
 }
 func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context) {
 	rabUrl := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
-	err := conf.GetConn(rabUrl)
-	if err != nil {
-		log.Fatal().Err(err)
-	}
 	go func() {
 		if strings.ToLower(c.PostForm("color")) == "blue" {
 			if len(c.PostForm("skipEmail")) <= 0 {
+				err := conf.GetConn(rabUrl)
+				if err != nil {
+					log.Fatal().Err(err)
+				}
 				msg := <-ch
 				isokay := verifyEmail(msg, c)
 				log.Debug().Msg("verified email")
