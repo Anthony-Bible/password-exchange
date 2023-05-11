@@ -163,47 +163,47 @@ func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
 }
 
 func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
-	printPost(c)
-	ctx := context.Background()
-	uuid := c.Param("uuid")
-	key := c.Param("key")
-	decodedKey := decodeString(key)
-	inputtedPassphrase := c.PostForm("passphrase")
-	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
-	hashedPassword := selectResult.GetPassphrase()
-	// print warning if password is empty
-	if hashedPassword == "" {
-		log.Warn().Msg("Password is empty")
-	}
-	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) || hashedPassword == "" {
+    printPost(c)
+    ctx := context.Background()
+    uuid := c.Param("uuid")
+    key := c.Param("key")
+    decodedKey := decodeString(key)
+    inputtedPassphrase := c.PostForm("passphrase")
+    selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
+    hashedPassword := selectResult.GetPassphrase()
 
-		// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
-		if err != nil {
-			log.Error().Err(err).Msg("Something went wrong with select from db")
-		}
-		if len(selectResult.GetContent()) == 0 {
-			render(c, "404.html", 404, nil)
+    if hashedPassword == "" {
+        log.Warn().Msg("Password is empty")
+        displayDecryptedContent(c, selectResult, decodedKey)
+        return
+    }
 
-			return
-		}
-		var decodedContent []string
-		decodedContent = append(decodedContent, string(selectResult.GetContent()))
-		var arr [32]byte
-		copy(arr[:], decodedKey)
-		content := s.decryptMessage(ctx, decodedContent, decodedKey, selectResult)
-		msg := &message.MessagePost{
-			Content: strings.Join((content.GetPlaintext()), ""),
-		}
-		decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
-		decryptedContentString := string(decryptedContent)
-		extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
+    if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) {
+        displayDecryptedContent(c, selectResult, decodedKey)
+    } else {
+        extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: "Wrong Passphrase/Lastname. Please try again(can be empty)"}
+        render(c, "decryption.html", 0, extraHeaders)
+    }
+}
 
-		render(c, "decryption.html", 0, extraHeaders)
-	} else {
-		extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: "Wrong Passphrase/Lastname. Please try again(can be empty)"}
+func displayDecryptedContent(c *gin.Context, selectResult *db.SelectResponse, decodedKey []byte) {
+    if len(selectResult.GetContent()) == 0 {
+        render(c, "404.html", 404, nil)
+        return
+    }
+    var decodedContent []string
+    decodedContent = append(decodedContent, string(selectResult.GetContent()))
+    var arr [32]byte
+    copy(arr[:], decodedKey)
+    content := s.decryptMessage(ctx, decodedContent, decodedKey, selectResult)
+    msg := &message.MessagePost{
+        Content: strings.Join((content.GetPlaintext()), ""),
+    }
+    decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
+    decryptedContentString := string(decryptedContent)
+    extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", DecryptedMessage: decryptedContentString}
 
-		render(c, "decryption.html", 0, extraHeaders)
-	}
+    render(c, "decryption.html", 0, extraHeaders)
 }
 
 func (s *EncryptionClient) decryptMessage(ctx context.Context, decodedContent []string, decodedKey []byte, selectResult *db.SelectResponse) *pb.DecryptedMessageResponse {
