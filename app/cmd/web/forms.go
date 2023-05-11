@@ -171,6 +171,10 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 	inputtedPassphrase := c.PostForm("passphrase")
 	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
 	hashedPassword := selectResult.GetPassphrase()
+	// print warning if password is empty
+	if hashedPassword == "" {
+		log.Warn().Msg("Password is empty")
+	}
 	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) || hashedPassword == "" {
 
 		// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
