@@ -48,6 +48,7 @@ type htmlHeaders struct {
 	Url              string
 	DecryptedMessage string
 	Errors           map[string]string
+	HasPassword      bool
 }
 
 // this type contains state of the server
@@ -156,31 +157,41 @@ func failedtoFind(c *gin.Context) {
 	render(c, "404.html", 404, nil)
 }
 func (s *EncryptionClient) displaydecrypted(c *gin.Context) {
+	uuid := c.Param("uuid")
+	hashedPassword, _ := s.getHashedPassphrase(context.Background(), uuid)
+	hasPassword := true
+	if hashedPassword == "" {
+		hasPassword = false
+		s.displaydecryptedWithPassword(c)
+	} else {
+		extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted", HasPassword: hasPassword}
 
-	extraHeaders := htmlHeaders{Title: "passwordExchange Decrypted"}
-
-	render(c, "decryption.html", 0, extraHeaders)
+		render(c, "decryption.html", 0, extraHeaders)
+	}
 }
+func (s *EncryptionClient) getHashedPassphrase(ctx context.Context, uuid string) (string, *db.SelectResponse) {
 
+	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
+	hashedPassword := selectResult.GetPassphrase()
+
+	if err != nil {
+		log.Error().Err(err).Msg("Something went wrong with select from db")
+	}
+	return hashedPassword, selectResult
+}
 func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 	printPost(c)
 	ctx := context.Background()
 	uuid := c.Param("uuid")
 	key := c.Param("key")
+	hashedPassword, selectResult := s.getHashedPassphrase(ctx, uuid)
 	decodedKey := decodeString(key)
 	inputtedPassphrase := c.PostForm("passphrase")
-	selectResult, err := s.DbClient.Select(ctx, &db.SelectRequest{Uuid: uuid})
-	hashedPassword := selectResult.GetPassphrase()
 	// print warning if password is empty
-	if hashedPassword == "" {
-		log.Warn().Msg("Password is empty")
-	}
+	// print hashedPassword
 	if checkPassword([]byte(hashedPassword), []byte(inputtedPassphrase)) || hashedPassword == "" {
 
 		// bytesDecodedContent, err := b64.URLEncoding.DecodeString(selectResult.Content)
-		if err != nil {
-			log.Error().Err(err).Msg("Something went wrong with select from db")
-		}
 		if len(selectResult.GetContent()) == 0 {
 			render(c, "404.html", 404, nil)
 
@@ -354,7 +365,11 @@ func (conf Config) send(c *gin.Context) {
 	metric2.Stop()
 
 	metric3 := timing.NewMetric("hashpassphrase").Start()
-	msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
+	// only hash if it's not empty
+	if len(msg.OtherLastName) > 0 {
+
+		msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
+	}
 	metric3.Stop()
 	metric4 := timing.NewMetric("insert").Start()
 	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})

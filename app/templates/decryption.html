@@ -2,6 +2,7 @@
 <div class="container">
   <h3>Here is the decrypted message:</h3>
   <p style="white-space: pre-wrap">{{if not .DecryptedMessage}} Passphrase is required!! </p>
+  {{if .HasPassword}}
   <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
     Enter Passphrase
   </button>
@@ -32,7 +33,6 @@
       </div>
     </div>
   </div>
-  
 <script  >
   $(document).ready(function(e) {
   //handle the form's "submit" events
@@ -48,6 +48,7 @@ button.addEventListener('click', async _ => {
      document.getElementById("loginForm").submit();
 });
 </script>
+{{end}}
 {{else}}
 <p style="white-space: pre-wrap">{{.DecryptedMessage}} </p>
 {{end}}
