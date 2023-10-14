@@ -39,7 +39,8 @@ load("@bazel_gazelle//:def.bzl", "gazelle", "gazelle_binary")
 # gazelle:prefix github.com/Anthony-Bible/password-exchange/
 # --- show debugging output ---
 # gazelle:log_level debug
-
+# --- Ignore fake go packages ---
+# gazelle:exclude empty.go
 # --- show summary of total time on .Info ---
 
 gazelle_binary(
