@@ -10,7 +10,7 @@ require (
 	github.com/p768lwy3/gin-server-timing v0.0.0-20200316080543-ab69795cf847
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/xid v1.4.0
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/zerolog v1.32.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
