@@ -1,5 +1,5 @@
 // Require the Forge library.
-const CHUNK_SIZE = 64 * 1024; // 64 KB
+const CHUNK_SIZE = 100 * 1024 * 1024; // 64 KB
 
 // Create an encryption key.
 const key = forge.random.getBytesSync(16);

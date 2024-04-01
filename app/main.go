@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package main
 
@@ -9,6 +8,7 @@ import (
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/database"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/email"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/encryption"
+	_ "github.com/Anthony-Bible/password-exchange/app/cmd/keymanager"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/web"
 )
 

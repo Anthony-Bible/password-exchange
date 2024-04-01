@@ -1,86 +1,94 @@
 const form = document.getElementById('contact-form');
-// changed to sandbox, becuase we cannot have nice things
 const url = 'https://dev.password.exchange/';
-let chunkCounter = 0;
-const CHUNK_SIZE = 1024 * 1024 * 5; // 1MB chunk sizes
+let chunkCounter = 1;
+const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunk sizes
 let fileId = '';
-const ChunkfileId = '';
-// We may need this for decrypt url
-// const playerUrl = '';
-// TODO: We may needa to listen for another event
+let start = 0;
+let file;
+let filename;
+let numberofChunks; // Added these variable declarations
 
-function uploadChunk(chunkForm, startUploadChunk, UploadchunkEnd) {
+// Create an encryption key.
+const key = forge.random.getBytesSync(16);
+
+function encryptChunk(chunk, chunkNumber, totalChunks) {
+  const iv = forge.random.getBytesSync(12);
+  const cipher = forge.cipher.createCipher('AES-GCM', key);
+  try {
+    console.log(`Encrypting chunk number ${chunkNumber} out of ${totalChunks}`);
+    console.log('Key:', forge.util.encode64(key));
+    console.log('IV:', forge.util.encode64(iv));
+
+    cipher.start({ iv, additionalData: `binary-encoded string${chunkNumber.toString()}${totalChunks.toString()}`, tagLength: 128 });
+    const buffer = forge.util.createBuffer(chunk, 'binary');
+    cipher.update(buffer);
+    cipher.finish();
+  } catch (error) {
+    throw new Error(`Error creating cipher: ${error.message}`);
+  }
+
+  const encrypted = cipher.output;
+  const { tag } = cipher.mode;
+  console.log('Encrypted chunk size:', encrypted.length());
+  console.log('Tag:', forge.util.bytesToHex(tag));
+  const combined = forge.util.createBuffer();
+  combined.putBytes(iv);
+  combined.putBuffer(encrypted);
+  combined.putBuffer(tag);
+
+  return combined.getBytes();
+}
+
+function uploadChunk(chunkForm, chunkStart, chunkEnd) {
   const oReq = new XMLHttpRequest();
   oReq.upload.addEventListener('progress', updateProgress);
   oReq.open('POST', url, true);
-  const blobEnd = UploadchunkEnd - 1;
-  const contentRange = `bytes ${startUploadChunk}-${blobEnd}/${file.size}`;
+  const blobEnd = chunkEnd - 1;
+  const contentRange = `bytes ${chunkStart}-${blobEnd}/${file.size}`;
   oReq.setRequestHeader('Content-Range', contentRange);
   console.log('Content-Range', contentRange);
+
   function updateProgress(oEvent) {
     if (oEvent.lengthComputable) {
-      const percentComplete = Math.round(
-        (oEvent.loaded / oEvent.total) * 100,
-      );
-
-      const totalPercentComplete = Math.round(
-        ((chunkCounter - 1) / numberofChunks) * 100
-                        + percentComplete / numberofChunks,
-      );
+      const percentComplete = Math.round((oEvent.loaded / oEvent.total) * 100);
+      const totalPercentComplete = Math.round(((chunkCounter - 1) / numberofChunks) * 100 + percentComplete / numberofChunks);
       document.getElementById('chunk-information').innerHTML = `Total uploaded: ${totalPercentComplete}%`;
-      //      console.log (percentComplete);
-      // ...
     } else {
       console.log('not computable');
-      // Unable to compute progress information since the total size is unknown
     }
   }
+
   oReq.onload = function uploadOnLoad(oEvent) {
-    // Uploaded.
     console.log('uploaded chunk');
     console.log('oReq.response', oReq.response);
     const resp = JSON.parse(oReq.response);
     fileId = resp.fileID;
-    // playerUrl = resp.assets.player;
     console.log('fileId', fileId);
 
-    // now we have the video ID - loop through and add the remaining chunks
-    // we start one chunk in, as we have uploaded the first one.
-    // next chunk starts at + chunkSize from start
     start += CHUNK_SIZE;
-    // if start is smaller than file size - we have more to still upload
     if (start < file.size) {
-      // create the new chunk
-      createChunk(fileId, startUploadChunk);
+      createChunk(fileId, start, file, numberofChunks); // Passing all arguments
     } else {
-      // the video is fully uploaded. there will now be a url in the response
-      // playerUrl = resp.assets.player;
       console.log('all uploaded! Watch here: ', resp);
       document.getElementById('contact-form').innerHTML = `<a href="${resp.URL}">Click here to view your content</a>`;
     }
   };
+
   oReq.send(chunkForm);
 }
+
 function createChunk(sentChunkfileId, chunkStart, file, numberofChunks) {
-  if (sentChunkfileId == null) {
-    sentChunkfileId = '';
-  }
-  chunkCounter += 1;
+  const outputBuffer = forge.util.createBuffer();
   console.log('created chunk: ', chunkCounter);
   const chunkEnd = Math.min(chunkStart + CHUNK_SIZE, file.size);
   const chunk = file.slice(chunkStart, chunkEnd);
-  console.log(
-    `i created a chunk of video ${
-      chunkStart
-    } - ${
-      chunkEnd
-    } minus 1    `,
-  );
+  const encryptedChunk = encryptChunk(chunk, chunkCounter, numberofChunks);
+  console.log(`i created a chunk of video ${chunkStart} - ${chunkEnd} minus 1`);
   const chunkForm = new FormData();
   chunkForm.append('totalChunks', numberofChunks);
   chunkForm.append('currentChunk', chunkCounter);
+
   if (sentChunkfileId.length > 0) {
-    // we have a fileId
     chunkForm.append('fileID', sentChunkfileId);
     console.log('added fileId');
   } else {
@@ -113,30 +121,25 @@ function createChunk(sentChunkfileId, chunkStart, file, numberofChunks) {
       document.getElementById('form_message').value,
     );
   }
-
-  chunkForm.append('file', chunk, filename);
+  const blob = new Blob([encryptedChunk], { type: 'application/octet-stream' });
+  chunkForm.append('file', blob, filename);
   console.log('added file');
 
-  // created the chunk, now upload iit
   uploadChunk(chunkForm, chunkStart, chunkEnd);
+  chunkCounter += 1;
 }
 
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   const fileinput = document.getElementById('file-to-upload');
   if (fileinput.value) {
-    console.log(fileinput.length);
-    const file = fileinput.files[0];
-    const filename = fileinput.files[0].name;
-    const numberofChunks = Math.ceil(file.size / CHUNK_SIZE);
+    file = fileinput.files[0]; // Setting the global file variable
+    filename = fileinput.files[0].name; // Setting the global filename variable
+    numberofChunks = Math.ceil(file.size / CHUNK_SIZE); // Setting the global numberofChunks variable
     console.log(`There will be ${numberofChunks}chunks uploaded`);
-    const start = 0;
     const chunkEnd = start + CHUNK_SIZE;
-    // upload the first chunk to get the fileId
-    createChunk(fileId, start);
+    createChunk(fileId, start, file, numberofChunks); // Passing all arguments
   } else {
     console.log('no files selected');
   }
-  // get the file name to name the file.  If we do not name the file,
-  // the upload will be called 'blob'
 });

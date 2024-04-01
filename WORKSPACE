@@ -1203,8 +1203,8 @@ go_repository(
 go_repository(
     name = "com_github_vimeo_galaxycache",
     importpath = "github.com/vimeo/galaxycache",
-    sum = "h1:rCdbSOj90pzocTnINtXaF0wQoiy6bvhodkL8ujGxl8c=",
-    version = "v0.0.0-20221219181409-3fc36a9a6046",
+    sum = "h1:Z9n8dXhMhzCtC1+V7dQHRyOXRvu2I7G3DxRwdpEn9qY=",
+    version = "v0.0.0-20230207143858-f7799dfd0646",
 )
 
 go_repository(
@@ -2433,8 +2433,8 @@ go_repository(
 go_repository(
     name = "org_golang_x_sync",
     importpath = "golang.org/x/sync",
-    sum = "h1:uVc8UZUe6tr40fFVnUP5Oj+veunVezqYl9z7DYw9xzw=",
-    version = "v0.0.0-20220722155255-886fb9371eb4",
+    sum = "h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=",
+    version = "v0.1.0",
 )
 
 go_repository(
