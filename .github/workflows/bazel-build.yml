@@ -26,8 +26,9 @@ jobs:
           BAZEL_USER: ${{ secrets.bazel_user }}
           BAZEL_PASS: ${{ secrets.bazel_pass }}
         run: |
-          /bin/bash -c 'echo "run --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
-          /bin/bash -c 'echo "build --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
+            echo "no longer needed"
+#          /bin/bash -c 'echo "run --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
+#          /bin/bash -c 'echo "build --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
       - name: Build the code
         run: bazel build //... 
       - name: Render manifests
