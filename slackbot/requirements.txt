@@ -19,4 +19,4 @@ slack-sdk==3.19.4
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.44
 Werkzeug==2.2.3
-zipp==3.11.0
+zipp==3.19.1
