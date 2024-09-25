@@ -2463,10 +2463,10 @@ _py_image_repos()
 
 container_pull(
     name = "alpine_linux_amd64",
-    digest = "sha256:1304f174557314a7ed9eddb4eab12fed12cb0cd9809e4c28f29af86979a3c870",
+    digest = "sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d",
     registry = "index.docker.io",
     repository = "library/alpine",
-    tag = "3.16",
+    tag = "3.20",
 )
 
 container_pull(
