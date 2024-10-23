@@ -61,9 +61,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_python",
-    sha256 = "cdf6b84084aad8f10bf20b46b77cb48d83c319ebe6458a18e9d2cebf57807cdd",
-    strip_prefix = "rules_python-0.8.1",
-    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.8.1.tar.gz",
+    sha256 = "bd4797821b72b80b69e3c5ab4ad037e7fd1e6a0a27aebf42424c7ab0ce32e254",
+    strip_prefix = "rules_python-0.37.1",
+    url = "https://github.com/bazelbuild/rules_python/archive/refs/tags/0.37.1.tar.gz",
 )
 
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
