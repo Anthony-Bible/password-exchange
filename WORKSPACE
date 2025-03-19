@@ -1241,11 +1241,11 @@ grpc_deps()
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "90de7e780db97e0ee8cfabc3aecc0da56c3d443824b968ec0c7c600f9585b9ba",
-    strip_prefix = "protobuf-3.21.10",
+    sha256 = "abfbd1e4999517ad3ef14f350a4aae202f1fd9712a09a1004aa4d1d8bfb8d98b",
+    strip_prefix = "protobuf-3.29.4",
     urls = [
-        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v3.21.10.tar.gz",
-        "https://github.com/protocolbuffers/protobuf/archive/v3.21.10.tar.gz",
+        "https://mirror.bazel.build/github.com/protocolbuffers/protobuf/archive/v3.29.4.tar.gz",
+        "https://github.com/protocolbuffers/protobuf/archive/v3.29.4.tar.gz",
     ],
 )
 
