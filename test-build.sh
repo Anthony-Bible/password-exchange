@@ -48,10 +48,13 @@ echo "Testing Kubernetes manifest generation..."
 cd ..
 
 # Set VERSION and PHASE
-VERSION="dev"
-PHASE=$(git rev-parse --short HEAD)
-
-source ./tools/bazel_stamp_vars.sh
+if [[ "${GITHUB_REF_TYPE}" =~ "tag" ]]; then
+  VERSION="${GITHUB_REF##*/}"
+  PHASE="prod"
+else
+  VERSION=$(git rev-parse HEAD)
+  PHASE="dev"
+fi
 
 # Combine manifests with dashes between each file
 rm -f combined.yaml
