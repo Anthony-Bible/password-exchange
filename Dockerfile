@@ -1,24 +1,44 @@
-#From golang:1.17.0-alpine3.13
-#
-##COPY go-rewrite /app
-##WORKDIR /app
-##RUN go mod download 
-##RUN go build /app
-## RUN echo $GODEBUG
-#
-#WORKDIR /go/src/app
-#COPY app/ .
-#
-#RUN go get -d -v ./...
-#RUN go install -v ./...
-#
-#CMD ["app"]
-From python:3.11.0-slim-buster
-RUN apt update && apt install zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang -y
-#RUN apt update && apt install -y curl libssl-dev python3-dev wget zstd gcc build-essential
-RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 && chmod +x /usr/local/bin/bazel 
-RUN   curl -fsSL https://get.docker.com -o get-docker.sh && DRY_RUN=1 sh ./get-docker.sh  &&  echo -ne "DONE WITH DRY-RUN \n-----------------------\n-----------------------\n-----------------------\n-----------------------\n" && sh ./get-docker.sh
-ADD ./ /app
+# Build stage
+FROM ubuntu:24.04 AS builder
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y golang-go git gcc musl-dev libmariadb-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
-RUN bazel build //k8s:slackbot
-#FOR DOCKER LOGIN
+
+# Copy go.mod and go.sum files
+COPY app/go.mod app/go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy the source code
+COPY app/ ./
+
+# Build the application
+RUN CGO_ENABLED=1 GOOS=linux go build -o app
+
+# Final stage
+FROM ubuntu:24.04
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y libmariadb3 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/app /app/app
+
+# Copy templates and assets
+COPY app/templates /app/templates
+COPY app/assets /app/assets
+
+# Set working directory
+WORKDIR /app
+
+# Command to run
+ENTRYPOINT ["./app"]
+

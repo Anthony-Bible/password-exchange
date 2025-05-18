@@ -2,7 +2,7 @@ syntax = "proto3";
 package messagepb;
 
 
-option go_package = "github.com/Anthony-Bible/password-exchange/app/protos/messagepb";
+option go_package = "github.com/Anthony-Bible/password-exchange/app/messagepb";
 message Message {
     string email = 1;
     string firstname = 2;
@@ -16,6 +16,4 @@ message Message {
     string Hidden = 10;
     string Captcha = 11;
 }
-
-
 

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package databasepb;
-option go_package = "github.com/Anthony-Bible/password-exchange/protos/databasepb";
+option go_package = "github.com/Anthony-Bible/password-exchange/app/databasepb";
 import "google/protobuf/empty.proto";
 
 message SelectRequest{

@@ -17,32 +17,76 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PUSH_SECRET}}
       - uses: actions/checkout@v3
-      #install neccessary tools under $GITHUB_WORKSPACE
+        with:
+          fetch-depth: 0
+
+      # Set up Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      # Install necessary tools
       - name: Install tools
         run: sudo apt update && sudo apt install -y libmariadb-dev
 
-      - name: generate bazelrc
-        env:
-          BAZEL_USER: ${{ secrets.bazel_user }}
-          BAZEL_PASS: ${{ secrets.bazel_pass }}
-        run: |
-            echo "no longer needed"
-#          /bin/bash -c 'echo "run --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
-#          /bin/bash -c 'echo "build --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh --remote_cache=https://$BAZEL_USER:$BAZEL_PASS@cache.anthony.bible" >> .bazelrc'
+      # Build the Go application
       - name: Build the code
-        run: bazel build //... 
+        working-directory: ./app
+        run: |
+          go mod tidy
+          go build -o app
+
+      # Set version and phase variables
+      - name: Set version and phase
+        id: vars
+        run: |
+          source ./tools/bazel_stamp_vars.sh
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "PHASE=${PHASE}" >> $GITHUB_ENV
+
+      # Build and push main application Docker image
+      - name: Build and push main Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/anthony-bible/passwordexchange-container-${{ env.PHASE }}:${{ env.VERSION }}
+
+      # Build and push slackbot Docker image
+      - name: Build and push slackbot Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./slackbot
+          file: ./slackbot/Dockerfile
+          push: true
+          tags: ghcr.io/anthony-bible/passwordexchange-slackbot:${{ env.VERSION }}
+
+      # Render Kubernetes manifests
       - name: Render manifests
         run: | 
-          mkdir build
+          mkdir -p build
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
           echo "rendering k8s manifests"
+
+          # Create combined manifest file
+          cat k8s/*.yaml > combined.yaml
+
+          # Replace variables in the manifest
+          sed -i "s/%{VERSION}/${VERSION}/g" combined.yaml
+          sed -i "s/%{PHASE}/${PHASE}/g" combined.yaml
+
+          # Save to appropriate directory
           if [[ "${GITHUB_REF_TYPE}" =~ "tag" ]]; then
-            bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/prod/password-exchange.yaml 
+            mkdir -p ./build/prod
+            cp combined.yaml ./build/prod/password-exchange.yaml
           else
-            bazel run //k8s:deployments-and-services --stamp --workspace_status_command=./tools/bazel_stamp_vars.sh  > ./build/dev/password-exchange.yaml 
+            mkdir -p ./build/dev
+            cp combined.yaml ./build/dev/password-exchange.yaml
           fi
+
           cd ./build
-          pwd
           git config --local user.email "cd@password.exchange"
           git config --local user.name "github-actions[bot]"
           git add .
@@ -62,4 +106,3 @@ jobs:
           github_token: ${{ secrets.git_push_token }}
           repository: "Anthony-Bible/password-exchange-deploy"
           directory: ./build
-
