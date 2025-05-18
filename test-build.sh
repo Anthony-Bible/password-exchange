@@ -57,7 +57,7 @@ source ./tools/bazel_stamp_vars.sh
 rm -f combined.yaml
 first=1
 for f in k8s/*.yaml; do
-  if [ $first -eq 0 ]; then
+  if [ "$first" -eq 0 ]; then
     printf "\n---\n" >> combined.yaml
   fi
   cat "$f" >> combined.yaml
