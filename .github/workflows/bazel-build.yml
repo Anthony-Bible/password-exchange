@@ -44,7 +44,7 @@ jobs:
           go mod tidy
           go build -o app
       - name: Upload Go application artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: go-app
           path: ./app/app
@@ -64,7 +64,7 @@ jobs:
           password: ${{ secrets.PUSH_SECRET }}
       - uses: actions/checkout@v3
       - name: Download Go application artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: go-app
           path: ./app # Downloads to ./app/app
