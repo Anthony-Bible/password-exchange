@@ -42,7 +42,13 @@ jobs:
       - name: Set version and phase
         id: vars
         run: |
-          source ./tools/bazel_stamp_vars.sh
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            PHASE="prod"
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            PHASE="dev"
+            VERSION="$(git rev-parse --short HEAD)"
+          fi
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
           echo "PHASE=${PHASE}" >> $GITHUB_ENV
 
