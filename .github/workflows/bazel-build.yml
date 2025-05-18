@@ -76,8 +76,16 @@ jobs:
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
           echo "rendering k8s manifests"
 
-          # Create combined manifest file
-          cat k8s/*.yaml > combined.yaml
+          # Create combined manifest file with dashes between each file
+          rm -f combined.yaml
+          first=1
+          for f in k8s/*.yaml; do
+            if [ $first -eq 0 ]; then
+              printf "\n---\n" >> combined.yaml
+            fi
+            cat "$f" >> combined.yaml
+            first=0
+          done
 
           # Replace variables in the manifest
           sed -i "s/%{VERSION}/${VERSION}/g" combined.yaml

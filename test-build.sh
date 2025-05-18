@@ -46,8 +46,24 @@ fi
 
 echo "Testing Kubernetes manifest generation..."
 cd ..
+
+# Set VERSION and PHASE
+VERSION="dev"
+PHASE=$(git rev-parse --short HEAD)
+
 source ./tools/bazel_stamp_vars.sh
-cat k8s/*.yaml > combined.yaml
+
+# Combine manifests with dashes between each file
+rm -f combined.yaml
+first=1
+for f in k8s/*.yaml; do
+  if [ "$first" -eq 0 ]; then
+    printf "\n---\n" >> combined.yaml
+  fi
+  cat "$f" >> combined.yaml
+  first=0
+done
+
 sed -i "s/%{VERSION}/${VERSION}/g" combined.yaml
 sed -i "s/%{PHASE}/${PHASE}/g" combined.yaml
 if [ -f combined.yaml ]; then
@@ -58,4 +74,3 @@ else
 fi
 
 echo "All tests passed!"
-
