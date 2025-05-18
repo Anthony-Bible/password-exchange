@@ -11,8 +11,8 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/p768lwy3/gin-server-timing v0.0.0-20200316080543-ab69795cf847
 	github.com/rabbitmq/amqp091-go v1.5.0
-	github.com/rs/xid v1.4.0
-	github.com/rs/zerolog v1.28.0
+	github.com/rs/xid v1.6.0
+	github.com/rs/zerolog v1.34.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	golang.org/x/crypto v0.35.0
@@ -39,7 +39,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
