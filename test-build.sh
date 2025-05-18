@@ -58,7 +58,7 @@ rm -f combined.yaml
 first=1
 for f in k8s/*.yaml; do
   if [ $first -eq 0 ]; then
-    echo -e "\n---" >> combined.yaml
+    printf "\n---\n" >> combined.yaml
   fi
   cat "$f" >> combined.yaml
   first=0
