@@ -117,16 +117,7 @@ jobs:
 
           # Create combined manifest file
           rm -f combined.yaml
-<<<<<<< Updated upstream
-          first=1
-          for f in k8s/*.yaml; do
-            if [ $first -eq 0 ]; then
-              printf "\n---\n" >> combined.yaml
-            fi
-            cat "$f" >> combined.yaml
-            first=0
-          done
-=======
+
           touch combined.yaml # Ensure file exists for sed, even if empty
           first_file=true
           # Check if any yaml files exist in k8s/
@@ -142,7 +133,6 @@ jobs:
           else
             echo "No YAML files found in k8s/."
           fi
->>>>>>> Stashed changes
 
           # Replace variables in the manifest
           if [ -s combined.yaml ] || grep -q -e "%{VERSION}" -e "%{PHASE}" combined.yaml; then
@@ -183,4 +173,3 @@ jobs:
         with:
           files: |
             ./build/${{ env.PHASE }}/password-exchange.yaml
-```
