@@ -29,33 +29,9 @@ jobs:
           echo "VERSION=${VERSION_VAL}" >> $GITHUB_OUTPUT
           echo "PHASE=${PHASE_VAL}" >> $GITHUB_OUTPUT
 
-  build_go_application:
-    runs-on: ubuntu-24.04
-    needs: determine_version
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-          cache: true
-          cache-dependency-path: ./app/go.sum
-      - name: Install tools
-        run: sudo apt update && sudo apt install -y libmariadb-dev
-      - name: Build the code
-        working-directory: ./app
-        run: |
-          go mod tidy
-          go build -o app
-      - name: Upload Go application artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-app
-          path: ./app/app
-
   build_main_image:
     runs-on: ubuntu-24.04
-    needs: [determine_version, build_go_application]
+    needs: [determine_version]
     env:
       VERSION: ${{ needs.determine_version.outputs.version }}
       PHASE: ${{ needs.determine_version.outputs.phase }}
@@ -67,13 +43,21 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PUSH_SECRET }}
       - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+          cache-dependency-path: ./app/go.sum
+      - name: Install tools
+        run: sudo apt update && sudo apt install -y libmariadb-dev
+      - name: Build the Go application
+        working-directory: ./app
+        run: |
+          go mod tidy
+          go build -o app
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Download Go application artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: go-app
-          path: ./app # Downloads to ./app/app
       - name: Build and push main Docker image
         uses: docker/build-push-action@v4
         with:
