@@ -14,7 +14,7 @@ MarkupSafe==2.1.1
 mysqlclient==2.1.1
 protobuf==4.21.9
 six==1.16.0
-slack-bolt==1.15.5
+slack-bolt==1.23.0
 slack-sdk==3.19.4
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.44
