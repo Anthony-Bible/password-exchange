@@ -3,64 +3,94 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  test:
-    # virtual environments: https://github.com/actions/virtual-environments
+  determine_version:
     runs-on: ubuntu-24.04
-
-    steps:         
-      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
-      # the rest of the steps
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.PUSH_SECRET}}
+    outputs:
+      version: ${{ steps.vars.outputs.VERSION }}
+      phase: ${{ steps.vars.outputs.PHASE }}
+    steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Required for git history based versioning
+      - name: Set version and phase
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            PHASE_VAL="prod"
+            VERSION_VAL="${GITHUB_REF#refs/tags/}"
+          else
+            PHASE_VAL="dev"
+            VERSION_VAL="$(git rev-parse --short HEAD)"
+          fi
+          echo "VERSION=${VERSION_VAL}" >> $GITHUB_OUTPUT
+          echo "PHASE=${PHASE_VAL}" >> $GITHUB_OUTPUT
 
-      # Set up Go
+  build_go_application:
+    runs-on: ubuntu-24.04
+    needs: determine_version
+    steps:
+      - uses: actions/checkout@v3
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
           cache: true
-
-      # Install necessary tools
+          cache-dependency-path: ./app/go.sum
       - name: Install tools
         run: sudo apt update && sudo apt install -y libmariadb-dev
-
-      # Build the Go application
       - name: Build the code
         working-directory: ./app
         run: |
           go mod tidy
           go build -o app
+      - name: Upload Go application artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-app
+          path: ./app/app
 
-      # Set version and phase variables
-      - name: Set version and phase
-        id: vars
-        run: |
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            PHASE="prod"
-            VERSION="${GITHUB_REF#refs/tags/}"
-          else
-            PHASE="dev"
-            VERSION="$(git rev-parse --short HEAD)"
-          fi
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-          echo "PHASE=${PHASE}" >> $GITHUB_ENV
-
-      # Build and push main application Docker image
+  build_main_image:
+    runs-on: ubuntu-24.04
+    needs: [determine_version, build_go_application]
+    env:
+      VERSION: ${{ needs.determine_version.outputs.version }}
+      PHASE: ${{ needs.determine_version.outputs.phase }}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PUSH_SECRET }}
+      - uses: actions/checkout@v3
+      - name: Download Go application artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: go-app
+          path: ./app # Downloads to ./app/app
       - name: Build and push main Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ghcr.io/anthony-bible/passwordexchange-container-${{ env.PHASE }}:${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      # Build and push slackbot Docker image
+  build_slackbot_image:
+    runs-on: ubuntu-24.04
+    needs: determine_version
+    env:
+      VERSION: ${{ needs.determine_version.outputs.version }}
+      PHASE: ${{ needs.determine_version.outputs.phase }}
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PUSH_SECRET }}
+      - uses: actions/checkout@v3
       - name: Build and push slackbot Docker image
         uses: docker/build-push-action@v4
         with:
@@ -68,16 +98,26 @@ jobs:
           file: ./slackbot/Dockerfile
           push: true
           tags: ghcr.io/anthony-bible/passwordexchange-slackbot:${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      # Render Kubernetes manifests
+  render_and_deploy:
+    runs-on: ubuntu-24.04
+    needs: [determine_version, build_main_image, build_slackbot_image]
+    env:
+      VERSION: ${{ needs.determine_version.outputs.version }}
+      PHASE: ${{ needs.determine_version.outputs.phase }}
+    steps:
+      - uses: actions/checkout@v3
       - name: Render manifests
-        run: | 
+        run: |
           mkdir -p build
           git clone https://github.com/Anthony-Bible/password-exchange-deploy.git ./build
           echo "rendering k8s manifests"
 
-          # Create combined manifest file with dashes between each file
+          # Create combined manifest file
           rm -f combined.yaml
+<<<<<<< Updated upstream
           first=1
           for f in k8s/*.yaml; do
             if [ $first -eq 0 ]; then
@@ -86,10 +126,28 @@ jobs:
             cat "$f" >> combined.yaml
             first=0
           done
+=======
+          touch combined.yaml # Ensure file exists for sed, even if empty
+          first_file=true
+          # Check if any yaml files exist in k8s/
+          if ls k8s/*.yaml 1> /dev/null 2>&1; then
+            for f in k8s/*.yaml; do
+              if [ "$first_file" = true ]; then
+                first_file=false
+              else
+                echo "---" >> combined.yaml
+              fi
+              cat "$f" >> combined.yaml
+            done
+          else
+            echo "No YAML files found in k8s/."
+          fi
+>>>>>>> Stashed changes
 
           # Replace variables in the manifest
-          sed -i "s/%{VERSION}/${VERSION}/g" combined.yaml
-          sed -i "s/%{PHASE}/${PHASE}/g" combined.yaml
+          if [ -s combined.yaml ] || grep -q -e "%{VERSION}" -e "%{PHASE}" combined.yaml; then
+            sed -i -e "s/%{VERSION}/${VERSION}/g" -e "s/%{PHASE}/${PHASE}/g" combined.yaml
+          fi
 
           # Save to appropriate directory
           if [[ "${GITHUB_REF_TYPE}" =~ "tag" ]]; then
@@ -104,19 +162,25 @@ jobs:
           git config --local user.email "cd@password.exchange"
           git config --local user.name "github-actions[bot]"
           git add .
-          git commit -m "Add changes" -a
+          # Allow empty commit if no changes, or fail if strict
+          git commit -m "Update manifests for ${PHASE} ${VERSION}" -a || echo "No changes to commit in deployment repo."
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            ./build/password-exchange.yaml
-      - name: Push changes
+
+      - name: Push changes to deploy repo
         uses: ad-m/github-push-action@master
         if: |
-          github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+          (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) && needs.determine_version.outputs.phase != ''
         with:
           github_token: ${{ secrets.git_push_token }}
           repository: "Anthony-Bible/password-exchange-deploy"
           directory: ./build
+          force: false # Be careful with force push
+          branch: ${{ github.ref_name }} # Push to a branch matching current, or specific like main/master
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./build/${{ env.PHASE }}/password-exchange.yaml
+```
