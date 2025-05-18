@@ -9,7 +9,7 @@ gunicorn==20.1.0
 importlib-metadata==5.0.0
 itsdangerous==2.1.2
 Jinja2==3.1.2
-mariadb==1.0.11
+mariadb>=1.0.11
 MarkupSafe==2.1.1
 mysqlclient==2.1.1
 protobuf==4.21.9
