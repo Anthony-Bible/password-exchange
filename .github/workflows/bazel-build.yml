@@ -157,7 +157,7 @@ jobs:
           repository: "Anthony-Bible/password-exchange-deploy"
           directory: ./build
           force: false # Be careful with force push
-          branch: ${{ github.ref_name }} # Push to a branch matching current, or specific like main/master
+          branch: main
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
