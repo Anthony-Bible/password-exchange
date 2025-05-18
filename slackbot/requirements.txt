@@ -18,5 +18,5 @@ slack-bolt==1.15.5
 slack-sdk==3.19.4
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.44
-Werkzeug==2.2.3
+Werkzeug==3.0.6
 zipp==3.11.0
