@@ -23,7 +23,7 @@ spec:
         version: "%{VERSION}" 
     spec:
       containers:
-      - image: ghcr.io/anthony-bible/passwordexchange-slackbot@sha256:%{SLACKBOT_IMAGE_SHA}
+      - image: ghcr.io/anthony-bible/passwordexchange-slackbot@%{SLACKBOT_IMAGE_SHA}
         ports:
         - containerPort: 3000
         env:

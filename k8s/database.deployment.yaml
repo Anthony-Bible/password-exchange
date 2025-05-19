@@ -27,7 +27,7 @@ spec:
       - envFrom:
         - secretRef:
             name: test-secret
-        image: ghcr.io/anthony-bible/passwordexchange-database@sha256:%{MAIN_IMAGE_SHA}
+        image: ghcr.io/anthony-bible/passwordexchange-database@%{MAIN_IMAGE_SHA}
         args: ["database"]
         env:
         - name: "PASSWORDEXCHANGE_RUNNING_ENVIRONMENT"
