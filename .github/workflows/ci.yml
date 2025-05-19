@@ -45,19 +45,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PUSH_SECRET }}
       - uses: actions/checkout@v3
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-          cache: true
-          cache-dependency-path: ./app/go.sum
-      - name: Install tools
-        run: sudo apt update && sudo apt install -y libmariadb-dev
-      - name: Build the Go application
-        working-directory: ./app
-        run: |
-          go mod tidy
-          go build -o app
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push main Docker image
