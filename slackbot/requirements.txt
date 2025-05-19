@@ -4,7 +4,7 @@ Flask==2.3.3
 google==3.0.0
 greenlet==2.0.2
 grpcio==1.71.0
-grpcio-tools==1.50.0
+grpcio-tools==1.71.0
 gunicorn==23.0.0
 importlib-metadata==5.2.0
 itsdangerous==2.1.2
