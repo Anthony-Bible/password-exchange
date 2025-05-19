@@ -86,7 +86,7 @@ jobs:
           context: ./slackbot
           file: ./slackbot/Dockerfile
           push: true
-          tags: ghcr.io/anthony-bible/passwordexchange-slackbot:${{ env.VERSION }}
+          tags: ghcr.io/anthony-bible/passwordexchange-slackbot-${{ env.PHASE }}:${{ env.VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
