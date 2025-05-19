@@ -2,9 +2,19 @@
 set -e
 
 echo "Generating Go code from protobuf definitions..."
+# Check for grpc_python_plugin
+#if ! command -v protoc-gen-grpc_python &> /dev/null
+#then
+#    echo "protoc-gen-grpc_python not found. Please install grpcio-tools:"
+#    echo "pip install grpcio-tools"
+#    exit 1
+#fi
+
 protoc --proto_path=protos \
        --go_out=./app --go_opt=module=github.com/Anthony-Bible/password-exchange/app \
        --go-grpc_out=./app --go-grpc_opt=module=github.com/Anthony-Bible/password-exchange/app \
+       --python_out=./python_protos \
+       --python_grpc_out=./python_protos \
        protos/database.proto protos/encryption.proto protos/message.proto
 
 if [ $? -ne 0 ]; then
@@ -36,8 +46,8 @@ else
 fi
 
 echo "Testing Docker build for slackbot..."
-cd slackbot
-docker build -t slackbot-test .
+
+docker build -t slackbot-test -f slackbot/Dockerfile .
 if [ $? -eq 0 ]; then
   echo "Docker build for slackbot successful!"
   SLACKBOT_IMAGE_SHA=$(docker inspect -f "{{.Id}}" slackbot-test)

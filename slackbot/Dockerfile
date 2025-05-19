@@ -39,7 +39,7 @@ COPY slackbot/requirements.txt .
 RUN . /opt/venv/bin/activate && pip3 install --no-cache-dir -r requirements.txt
 
 # Copy the protos directory from the repository root (build context) to /app/protos
-COPY protos ./protos
+COPY python_protos ./protos
 
 # Copy the slackbot application code from the 'slackbot' directory in the build context to /app/slackbot
 COPY slackbot ./slackbot
