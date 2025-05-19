@@ -33,7 +33,7 @@ RUN apt-get update && \
 COPY --from=builder /app/app /app/app
 
 # Copy templates and assets
-COPY app/templates /app/templates
+COPY app/templates /templates
 COPY app/assets /app/assets
 
 # Set working directory
@@ -41,4 +41,3 @@ WORKDIR /app
 
 # Command to run
 ENTRYPOINT ["./app"]
-
