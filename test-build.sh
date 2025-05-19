@@ -29,6 +29,7 @@ cd ..
 docker build -t passwordexchange-test .
 if [ $? -eq 0 ]; then
   echo "Docker build for main application successful!"
+  MAIN_IMAGE_SHA=$(docker inspect -f "{{.Id}}" passwordexchange-test)
 else
   echo "Docker build for main application failed!"
   exit 1
@@ -39,6 +40,7 @@ cd slackbot
 docker build -t slackbot-test .
 if [ $? -eq 0 ]; then
   echo "Docker build for slackbot successful!"
+  SLACKBOT_IMAGE_SHA=$(docker inspect -f "{{.Id}}" slackbot-test)
 else
   echo "Docker build for slackbot failed!"
   exit 1
@@ -67,8 +69,12 @@ for f in k8s/*.yaml; do
   first=0
 done
 
-sed -i "s/%{VERSION}/${VERSION}/g" combined.yaml
-sed -i "s/%{PHASE}/${PHASE}/g" combined.yaml
+sed -i \
+  -e "s/%{VERSION}/${VERSION}/g" \
+  -e "s/%{PHASE}/${PHASE}/g" \
+  -e "s/%{MAIN_IMAGE_SHA}/${MAIN_IMAGE_SHA}/g" \
+  -e "s/%{SLACKBOT_IMAGE_SHA}/${SLACKBOT_IMAGE_SHA}/g" \
+  combined.yaml
 if [ -f combined.yaml ]; then
   echo "Kubernetes manifest generation successful!"
 else

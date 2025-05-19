@@ -23,7 +23,7 @@ spec:
         version: "%{VERSION}" 
     spec:
       containers:
-      - image: ghcr.io/anthony-bible/passwordexchange-slackbot
+      - image: ghcr.io/anthony-bible/passwordexchange-slackbot@sha256:%{SLACKBOT_IMAGE_DIGEST}
         ports:
         - containerPort: 3000
         env:
@@ -78,4 +78,6 @@ spec:
                 key: SLACK_CLIENT_SECRET
                 name: test-secret        
         name: slackbot
+
+
 
