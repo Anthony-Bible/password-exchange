@@ -50,6 +50,8 @@ jobs:
       - name: Build and push main Docker image
         uses: docker/build-push-action@v4
         id: build-and-push-main
+        env:
+          SOURCE_DATE_EPOCH: 0
         with:
           context: .
           push: true
