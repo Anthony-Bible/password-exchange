@@ -83,7 +83,7 @@ jobs:
           SOURCE_DATE_EPOCH: 0
         id: build-and-push-slackbot
         with:
-          context: ./slackbot
+          context: .  # Changed from ./slackbot to .
           file: ./slackbot/Dockerfile
           push: true
           tags: ghcr.io/anthony-bible/passwordexchange-slackbot-${{ env.PHASE }}:${{ env.VERSION }}

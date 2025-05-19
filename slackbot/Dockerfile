@@ -33,13 +33,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
-
 # Activate the virtual environment and install Python dependencies
-COPY requirements.txt .
+# Copy slackbot-specific requirements.txt from the 'slackbot' directory in the build context
+COPY slackbot/requirements.txt .
 RUN . /opt/venv/bin/activate && pip3 install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY . .
+# Copy the protos directory from the repository root (build context) to /app/protos
+COPY protos ./protos
+
+# Copy the slackbot application code from the 'slackbot' directory in the build context to /app/slackbot
+COPY slackbot ./slackbot
 
 # Command to run the application using the virtual environment's Python
-CMD ["/opt/venv/bin/python3", "program.py"]
+# The main script is program.py inside the /app/slackbot directory
+CMD ["/opt/venv/bin/python3", "slackbot/program.py"]
