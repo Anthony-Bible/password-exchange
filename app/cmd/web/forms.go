@@ -31,7 +31,6 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/messagepb"
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	servertiming "github.com/p768lwy3/gin-server-timing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 )
@@ -114,7 +113,6 @@ func (conf Config) StartServer() {
 	}
 
 	router := gin.Default()
-	router.Use(servertiming.Middleware())
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
 	router.GET("/", home)
@@ -335,7 +333,6 @@ func (conf Config) send(c *gin.Context) {
 	// printPost(c)
 	log.Info().Msg("sending")
 	ctx := context.Background()
-	timing := servertiming.FromContext(c)
 	var msgStream chan message.MessagePost
 	msgStream = make(chan message.MessagePost)
 	go conf.sendEmailtoQueue(msgStream, c)
@@ -356,31 +353,22 @@ func (conf Config) send(c *gin.Context) {
 		Key: []byte(encryptionbytes.GetEncryptionbytes()),
 	}
 	encryptionRequest.PlainText = append(encryptionRequest.PlainText, c.PostForm("content"))
-	m := timing.NewMetric("grpc-encrypt").Start()
 	encryptedStrings, err := conf.EncryptionClient.Client.EncryptMessage(ctx, encryptionRequest)
-	m.Stop()
 	encryptedStringSlice := encryptedStrings.GetCiphertext()
-	metric2 := timing.NewMetric("messageFromPost").Start()
 	msg := createMessageFromPost(c, siteHost, guid, encryptionRequest)
-	metric2.Stop()
 
-	metric3 := timing.NewMetric("hashpassphrase").Start()
 	// only hash if it's not empty
 	if len(msg.OtherLastName) > 0 {
 
 		msg.OtherLastName = string(hashPassphrase([]byte(msg.OtherLastName)))
 	}
-	metric3.Stop()
-	metric4 := timing.NewMetric("insert").Start()
 	_, err = conf.DbClient.Insert(ctx, &db.InsertRequest{Uuid: guid.String(), Content: strings.Join(encryptedStringSlice, ""), Passphrase: msg.OtherLastName})
 	if err != nil {
 		log.Error().Err(err).Msg("Something went wrong with insert")
 	}
-	metric4.Stop()
 	log.Info().Msg("before stream")
 	msgStream <- msg
 	log.Info().Msg("after stream")
-	servertiming.WriteHeader(c)
 	// TODO Figure out how to use a fucntion from another package on a struct on another package
 	if len(c.PostForm("api")) > 0 {
 		c.JSON(http.StatusOK, gin.H{
