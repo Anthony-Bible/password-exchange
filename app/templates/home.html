@@ -260,8 +260,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateEmailDependentFields() {
         const emailEnabled = emailToggle.checked;
         
-        // Update hidden field for backend (inverted logic for compatibility)
-        skipEmailHidden.value = emailEnabled ? 'false' : 'true';
+        // Update hidden field for backend (send empty string when email enabled, "true" when disabled)
+        skipEmailHidden.value = emailEnabled ? '' : 'true';
         
         // Show/hide email-dependent sections
         emailDependentElements.forEach(element => {
