@@ -15,7 +15,7 @@ import (
 	// "net/url"
 	"strings"
 
-	"github.com/Anthony-Bible/password-exchange/app/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
@@ -23,12 +23,12 @@ import (
 	"encoding/json"
 	// "io/ioutil"
 
-	"github.com/Anthony-Bible/password-exchange/app/commons"
-	"github.com/Anthony-Bible/password-exchange/app/message"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/validation"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 
-	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
-	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
-	"github.com/Anthony-Bible/password-exchange/app/messagepb"
+	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
+	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
+	messagepb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"google.golang.org/grpc"
@@ -132,8 +132,8 @@ func (conf Config) StartServer() {
 }
 
 func (conf Config) getServiceNames() (string, string) {
-	encryptionServiceName, err := commons.GetViperVariable(fmt.Sprintf("Encryption%sService", conf.RunningEnvironment))
-	dbServiceName, err := commons.GetViperVariable(fmt.Sprintf("Database%sService", conf.RunningEnvironment))
+	encryptionServiceName, err := validation.GetViperVariable(fmt.Sprintf("Encryption%sService", conf.RunningEnvironment))
+	dbServiceName, err := validation.GetViperVariable(fmt.Sprintf("Database%sService", conf.RunningEnvironment))
 	log.Debug().Msg(dbServiceName)
 
 	encryptionServiceName += ":50051"
@@ -200,7 +200,7 @@ func (s *EncryptionClient) displaydecryptedWithPassword(c *gin.Context) {
 		var arr [32]byte
 		copy(arr[:], decodedKey)
 		content := s.decryptMessage(ctx, decodedContent, decodedKey, selectResult)
-		msg := &message.MessagePost{
+		msg := &domain.MessagePost{
 			Content: strings.Join((content.GetPlaintext()), ""),
 		}
 		decryptedContent, _ := b64.URLEncoding.DecodeString(msg.Content)
@@ -235,7 +235,7 @@ func decodeString(key string) []byte {
 	}
 	return decodedKey
 }
-func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context) {
+func (conf Config) sendEmailtoQueue(ch chan domain.MessagePost, c *gin.Context) {
 	rabUrl := fmt.Sprintf("amqp://%s:%s@%s", conf.RabUser, conf.RabPass, conf.RabHost)
 	go func() {
 		if strings.ToLower(c.PostForm("color")) == "blue" {
@@ -263,7 +263,7 @@ func (conf Config) sendEmailtoQueue(ch chan message.MessagePost, c *gin.Context)
 	}()
 }
 
-func (conf Config) publishToQueue(msg message.MessagePost) {
+func (conf Config) publishToQueue(msg domain.MessagePost) {
 	log.Info().Msg("Starting push")
 	q, err := conf.Channel.QueueDeclare(
 		conf.RabQName, //name
@@ -307,12 +307,12 @@ func (conf Config) publishToQueue(msg message.MessagePost) {
 		})
 }
 
-//func sendEmail(c *gin.Context, msg *message.MessagePost) {
+//func sendEmail(c *gin.Context, msg *domain.MessagePost) {
 //		}
 //	}
 //}
 
-func verifyEmail(msg message.MessagePost, c *gin.Context) bool {
+func verifyEmail(msg domain.MessagePost, c *gin.Context) bool {
 	if msg.Validate() == false {
 		log.Debug().Msgf("errors: %s", msg.Errors)
 		htmlHeaders := htmlHeaders{
@@ -333,8 +333,8 @@ func (conf Config) send(c *gin.Context) {
 	// printPost(c)
 	log.Info().Msg("sending")
 	ctx := context.Background()
-	var msgStream chan message.MessagePost
-	msgStream = make(chan message.MessagePost)
+	var msgStream chan domain.MessagePost
+	msgStream = make(chan domain.MessagePost)
 	go conf.sendEmailtoQueue(msgStream, c)
 	encryptionbytes, err := conf.EncryptionClient.Client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
 	if err != nil {
@@ -343,7 +343,7 @@ func (conf Config) send(c *gin.Context) {
 	log.Info().Msg(string(encryptionbytes.GetEncryptionbytes()))
 	guid := xid.New()
 	environment := conf.RunningEnvironment
-	siteHost, err := commons.GetViperVariable(environment + "Host")
+	siteHost, err := validation.GetViperVariable(environment + "Host")
 	if err != nil {
 		log.Error().Err(err).Msg("Problem with env variable")
 	}
@@ -408,8 +408,8 @@ func printPost(c *gin.Context) {
 	c.Request.Body = ioutil.NopCloser(bytes.NewReader(body))
 }
 
-func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) message.MessagePost {
-	msg := message.MessagePost{
+func createMessageFromPost(c *gin.Context, siteHost string, guid xid.ID, encryptionRequest *pb.EncryptedMessageRequest) domain.MessagePost {
+	msg := domain.MessagePost{
 		Email:          []string{c.PostForm("email")},
 		FirstName:      c.PostForm("firstname"),
 		OtherFirstName: c.PostForm("other_firstname"),

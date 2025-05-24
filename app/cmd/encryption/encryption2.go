@@ -10,14 +10,14 @@ import (
 	"io"
 	"net"
 
-	"github.com/Anthony-Bible/password-exchange/app/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/go-kit/kit/transport/amqp"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
 
 	// "password.exchange/message"
 	// b "password.exchange/aws"
-	pb "github.com/Anthony-Bible/password-exchange/app/encryptionpb"
+	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc/reflection"
 
 	"google.golang.org/grpc"

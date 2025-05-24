@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Anthony-Bible/password-exchange/app/config"
-	db "github.com/Anthony-Bible/password-exchange/app/databasepb"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/rs/zerolog/log"

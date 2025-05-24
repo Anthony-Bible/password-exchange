@@ -10,9 +10,21 @@ echo "Generating Go code from protobuf definitions..."
 #    exit 1
 #fi
 
+# Generate Go protobuf files to pkg/pb directories
 protoc --proto_path=protos \
        --go_out=./app --go_opt=module=github.com/Anthony-Bible/password-exchange/app \
        --go-grpc_out=./app --go-grpc_opt=module=github.com/Anthony-Bible/password-exchange/app \
+       protos/database.proto protos/encryption.proto protos/message.proto
+
+# Move generated files to correct pkg/pb locations
+mkdir -p ./app/pkg/pb/{database,encryption,message}
+mv ./app/databasepb/* ./app/pkg/pb/database/ 2>/dev/null || true
+mv ./app/encryptionpb/* ./app/pkg/pb/encryption/ 2>/dev/null || true  
+mv ./app/messagepb/* ./app/pkg/pb/message/ 2>/dev/null || true
+rmdir ./app/databasepb ./app/encryptionpb ./app/messagepb 2>/dev/null || true
+
+# Generate Python protobuf files for slackbot
+protoc --proto_path=protos \
        --python_out=./python_protos \
        --python_grpc_out=./python_protos \
        protos/database.proto protos/encryption.proto protos/message.proto

@@ -1,9 +1,8 @@
-package message
+package domain
 
 import (
 	"regexp"
 	"strings"
-	// "github.com/Anthony-Bible/password-exchange/app/commons"
 )
 
 var rxEmail = regexp.MustCompile(".+@.+\\..+")

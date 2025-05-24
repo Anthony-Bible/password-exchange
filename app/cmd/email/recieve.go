@@ -7,8 +7,8 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/Anthony-Bible/password-exchange/app/config"
-	pb "github.com/Anthony-Bible/password-exchange/app/messagepb"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/golang/protobuf/proto"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"

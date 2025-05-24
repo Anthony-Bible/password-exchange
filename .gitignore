@@ -11,3 +11,6 @@ plz-out
 .plzconfig.local
 slackbot/.venv/*
 .bazelrc
+.idea/
+app/app
+combined.yaml
