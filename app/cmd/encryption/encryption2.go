@@ -11,6 +11,9 @@ import (
 	"net"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	encryptionDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
+	encryptionGRPC "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/primary/grpc"
+	memoryKeygen "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/secondary/memory"
 	"github.com/go-kit/kit/transport/amqp"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
@@ -138,6 +141,31 @@ func (*server) GenerateRandomString(ctx context.Context, request *pb.Randomreque
 }
 
 func (conf Config) startServer() {
+	// Use hexagonal architecture
+	conf.startHexagonalServer()
+}
+
+func (conf Config) startHexagonalServer() {
+	address := "0.0.0.0:50051"
+	
+	// Create key generator (secondary adapter)
+	keyGenerator := memoryKeygen.NewKeyGenerator()
+	
+	// Create encryption service (domain)
+	encryptionService := encryptionDomain.NewEncryptionService(keyGenerator)
+	
+	// Create gRPC server (primary adapter)
+	grpcServer := encryptionGRPC.NewGRPCServer(encryptionService, address)
+	
+	// Start the server
+	log.Info().Str("address", address).Msg("Starting encryption service with hexagonal architecture")
+	if err := grpcServer.Start(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to start hexagonal encryption server")
+	}
+}
+
+// Legacy methods kept for backward compatibility
+func (conf Config) startLegacyServer() {
 	address := "0.0.0.0:50051"
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
