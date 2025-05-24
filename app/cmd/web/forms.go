@@ -16,15 +16,20 @@ import (
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/validation"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	messageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	grpcClients "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/grpc_clients"
+	rabbitMQAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/rabbitmq"
+	bcryptAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/bcrypt"
+	urlAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/url"
+	webAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/web"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/xid"
 	"github.com/rs/zerolog/log"
 
 	"encoding/json"
 	// "io/ioutil"
-
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/validation"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
@@ -104,6 +109,73 @@ func newServerContext(endpoint1 string, endpoint2 string) (EncryptionClient, err
 }
 
 func (conf Config) StartServer() {
+	// Use hexagonal architecture
+	conf.startHexagonalServer()
+}
+
+func (conf Config) startHexagonalServer() {
+	// Get service endpoints
+	encryptionServiceName, dbServiceName := conf.getServiceNames()
+	
+	// Create secondary adapters (clients to other services)
+	encryptionClient, err := grpcClients.NewEncryptionClient(encryptionServiceName)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create encryption client")
+	}
+	defer encryptionClient.Close()
+	
+	storageClient, err := grpcClients.NewStorageClient(dbServiceName)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create storage client")
+	}
+	defer storageClient.Close()
+	
+	// Create notification publisher
+	notificationConfig := rabbitMQAdapter.NotificationConfig{
+		Host:      conf.RabHost,
+		Port:      conf.RabPort,
+		User:      conf.RabUser,
+		Password:  conf.RabPass,
+		QueueName: conf.RabQName,
+	}
+	
+	notificationPublisher, err := rabbitMQAdapter.NewNotificationPublisher(notificationConfig)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create notification publisher")
+	}
+	defer notificationPublisher.Close()
+	
+	// Create other secondary adapters
+	passwordHasher := bcryptAdapter.NewPasswordHasher(11)
+	
+	environment := conf.RunningEnvironment
+	siteHost, err := validation.GetViperVariable(environment + "Host")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to get site host")
+	}
+	urlBuilder := urlAdapter.NewURLBuilder(siteHost)
+	
+	// Create message service (domain)
+	messageService := messageDomain.NewMessageService(
+		encryptionClient,
+		storageClient,
+		notificationPublisher,
+		passwordHasher,
+		urlBuilder,
+	)
+	
+	// Create web server (primary adapter)
+	webServer := webAdapter.NewWebServer(messageService)
+	
+	// Start the server
+	log.Info().Msg("Starting message service with hexagonal architecture")
+	if err := webServer.Start(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to start hexagonal web server")
+	}
+}
+
+// Legacy methods kept for backward compatibility
+func (conf Config) startLegacyServer() {
 	//TODO put port in environment variable
 	encryptionServiceName, dbServiceName := conf.getServiceNames()
 	s, err := newServerContext(encryptionServiceName, dbServiceName)
@@ -128,7 +200,6 @@ func (conf Config) StartServer() {
 	// By default it serves on :8080 unless a
 	// PORT environment variable was defined.
 	router.Run()
-
 }
 
 func (conf Config) getServiceNames() (string, string) {

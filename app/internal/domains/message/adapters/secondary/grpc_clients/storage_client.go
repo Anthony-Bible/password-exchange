@@ -1,0 +1,84 @@
+package grpc_clients
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
+)
+
+// StorageClient implements the StorageServicePort using gRPC
+type StorageClient struct {
+	client db.DbServiceClient
+	conn   *grpc.ClientConn
+}
+
+// NewStorageClient creates a new storage gRPC client
+func NewStorageClient(endpoint string) (*StorageClient, error) {
+	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
+	if err != nil {
+		log.Error().Err(err).Str("endpoint", endpoint).Msg("Failed to connect to storage service")
+		return nil, fmt.Errorf("failed to connect to storage service: %w", err)
+	}
+
+	client := db.NewDbServiceClient(conn)
+
+	return &StorageClient{
+		client: client,
+		conn:   conn,
+	}, nil
+}
+
+// StoreMessage stores an encrypted message
+func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStorageRequest) error {
+	grpcReq := &db.InsertRequest{
+		Uuid:       req.MessageID,
+		Content:    req.Content,
+		Passphrase: req.Passphrase,
+	}
+
+	_, err := c.client.Insert(ctx, grpcReq)
+	if err != nil {
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to store message")
+		return fmt.Errorf("failed to store message: %w", err)
+	}
+
+	log.Debug().Str("messageId", req.MessageID).Msg("Stored message successfully")
+	return nil
+}
+
+// RetrieveMessage retrieves a stored message by ID
+func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageRetrievalStorageRequest) (*domain.MessageStorageResponse, error) {
+	grpcReq := &db.SelectRequest{
+		Uuid: req.MessageID,
+	}
+
+	resp, err := c.client.Select(ctx, grpcReq)
+	if err != nil {
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve message")
+		return nil, fmt.Errorf("failed to retrieve message: %w", err)
+	}
+
+	hasPassphrase := resp.GetPassphrase() != ""
+
+	response := &domain.MessageStorageResponse{
+		MessageID:        req.MessageID,
+		EncryptedContent: resp.GetContent(),
+		HashedPassphrase: resp.GetPassphrase(),
+		HasPassphrase:    hasPassphrase,
+	}
+
+	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message successfully")
+	return response, nil
+}
+
+// Close closes the gRPC connection
+func (c *StorageClient) Close() error {
+	if c.conn != nil {
+		return c.conn.Close()
+	}
+	return nil
+}
