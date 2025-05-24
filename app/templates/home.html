@@ -78,27 +78,11 @@
                 </div>
             </div>
 
-            <!-- Recipient Information -->
+            <!-- Passphrase (always visible) -->
             <div class="section-group">
-                <h5 class="section-title">Recipient Information</h5>
+                <h5 class="section-title">Security</h5>
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            <label for="other_firstname" class="form-label">
-                                Recipient's First Name
-                                <span class="text-danger email-required">*</span>
-                            </label>
-                            <input id="other_firstname" 
-                                   type="text" 
-                                   name="other_firstname" 
-                                   class="form-control" 
-                                   placeholder="Recipient's first name"
-                                   aria-describedby="otherFirstnameError">
-                            <div id="otherFirstnameError" class="invalid-feedback"></div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="other_lastname" class="form-label">
                                 Passphrase (Optional)
@@ -121,12 +105,34 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="col-md-4">
+            <!-- Recipient Information (shown when email enabled) -->
+            <div id="recipient-section" class="section-group">
+                <h5 class="section-title">Recipient Information</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="other_firstname" class="form-label">
+                                Recipient's First Name
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input id="other_firstname" 
+                                   type="text" 
+                                   name="other_firstname" 
+                                   class="form-control" 
+                                   placeholder="Recipient's first name"
+                                   aria-describedby="otherFirstnameError">
+                            <div id="otherFirstnameError" class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
                         <div class="form-group mb-3">
                             <label for="other_email" class="form-label">
                                 Recipient's Email
-                                <span class="text-danger email-required">*</span>
+                                <span class="text-danger">*</span>
                             </label>
                             <input id="other_email" 
                                    type="email" 
@@ -160,7 +166,6 @@
                                    id="color"
                                    class="form-control" 
                                    name="color" 
-                                   placeholder="blue"
                                    pattern="[ ]*(red|blue|orange|green)[ ]*" 
                                    aria-describedby="colorHelp colorError">
                             <div id="colorHelp" class="form-text">
@@ -236,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailToggle = document.getElementById('enableEmail');
     const skipEmailHidden = document.getElementById('skipEmailHidden');
     const senderSection = document.getElementById('sender-section');
+    const recipientSection = document.getElementById('recipient-section');
     const verificationSection = document.getElementById('verification-section');
     
     // Elements that are required when email is enabled
@@ -248,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
     
     // Elements that should be hidden when email is disabled
-    const emailDependentElements = [senderSection, verificationSection];
+    const emailDependentElements = [senderSection, recipientSection, verificationSection];
     
     // Initialize tooltips
     const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -285,11 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Update visual indicators
-        const requiredIndicators = document.querySelectorAll('.email-required');
-        requiredIndicators.forEach(indicator => {
-            indicator.style.display = emailEnabled ? 'inline' : 'none';
-        });
+        // Visual indicators are now handled by showing/hiding entire sections
     }
     
     // Email toggle event listener
