@@ -1,7 +1,7 @@
 {{ template "header.html" }}
 
 <div class="back min-vh-100">
-    <div class="bg-white h-80 shadow-lg rounded w-80 p-5 my-5 m-md-5">
+    <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
         <h2 class="mb-4">Share Secure Password</h2>
         
         <form id="password-form" method="post" action="/" role="form" novalidate>
@@ -361,55 +361,245 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <style>
+/* Modern gradient background */
+.back {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.back::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+}
+
+/* Enhanced container */
+.container-main {
+    max-width: 900px;
+    border-radius: 24px !important;
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 32px 64px rgba(0, 0, 0, 0.15), 
+                0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* Enhanced page title */
+h2 {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    font-size: 2.2rem;
+    text-align: center;
+    margin-bottom: 2.5rem !important;
+}
+
+/* Modern section styling */
 .section-group {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background-color: #f8f9fa;
-    border-radius: 0.5rem;
-    border-left: 4px solid #0d6efd;
+    margin-bottom: 2.5rem;
+    padding: 2rem;
+    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    border-radius: 16px;
+    border: 1px solid rgba(108, 117, 125, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+}
+
+.section-group::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 .section-title {
-    color: #495057;
+    color: #2c3e50;
     font-weight: 600;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.section-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+/* Enhanced form controls */
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
+    background: #fff;
+    transform: translateY(-1px);
 }
 
 .form-label {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
 }
 
-.btn-link {
-    color: #6c757d;
-    text-decoration: none;
+/* Enhanced button styling */
+.btn-success {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
 }
 
-.btn-link:hover {
-    color: #0d6efd;
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
+
+/* Toggle switch enhancement */
+.form-check-input {
+    border-radius: 2em;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
 }
 
 .form-check-label {
     font-weight: 500;
+    color: #2c3e50;
 }
 
+/* Tooltip styling */
+.btn-link {
+    color: #667eea;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-link:hover {
+    color: #764ba2;
+    transform: scale(1.1);
+}
+
+/* Enhanced form text */
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+/* Validation styles */
 .invalid-feedback {
     display: block;
+    color: #e74c3c;
+    font-weight: 500;
 }
 
 .was-validated .form-control:invalid {
-    border-color: #dc3545;
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 0.25rem rgba(231, 76, 60, 0.15);
 }
 
 .was-validated .form-control:valid {
-    border-color: #198754;
+    border-color: #27ae60;
+    box-shadow: 0 0 0 0.25rem rgba(39, 174, 96, 0.15);
 }
 
+/* Responsive design */
 @media (max-width: 768px) {
+    .container-main {
+        margin: 1rem !important;
+        padding: 1.5rem !important;
+        border-radius: 16px !important;
+    }
+    
+    .section-group {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.8rem;
+        margin-bottom: 2rem !important;
+    }
+    
+    .btn-success {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .container-main {
+        margin: 0.5rem !important;
+        padding: 1rem !important;
+    }
+    
     .section-group {
         padding: 1rem;
     }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container-main {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Enhanced alert styling */
+.alert-danger {
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffe6e6, #ffcccc);
+    color: #c53030;
+    border-left: 4px solid #e53e3e;
+    box-shadow: 0 4px 16px rgba(229, 62, 62, 0.1);
 }
 </style>
 
