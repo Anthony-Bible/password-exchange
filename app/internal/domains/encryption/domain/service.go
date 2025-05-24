@@ -122,7 +122,7 @@ func (s *EncryptionService) GenerateRandomKey(ctx context.Context, req RandomReq
 		return nil, ErrInvalidKeyLength
 	}
 
-	key, err := s.keyGenerator.GenerateKey(req.Length)
+	key, err := s.keyGenerator.GenerateKey(ctx, req.Length)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate random key")
 		return nil, err
@@ -138,6 +138,6 @@ func (s *EncryptionService) GenerateRandomKey(ctx context.Context, req RandomReq
 }
 
 // GenerateID generates a new unique identifier
-func (s *EncryptionService) GenerateID() string {
-	return s.keyGenerator.GenerateID()
+func (s *EncryptionService) GenerateID(ctx context.Context) string {
+	return s.keyGenerator.GenerateID(ctx)
 }

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"encoding/base64"
 )
 
@@ -52,6 +53,6 @@ type RandomResponse struct {
 
 // KeyGenerator defines the interface for generating encryption keys
 type KeyGenerator interface {
-	GenerateKey(length int32) (EncryptionKey, error)
-	GenerateID() string
+	GenerateKey(ctx context.Context, length int32) (EncryptionKey, error)
+	GenerateID(ctx context.Context) string
 }

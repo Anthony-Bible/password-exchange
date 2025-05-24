@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -19,7 +20,7 @@ func NewKeyGenerator() *KeyGenerator {
 }
 
 // GenerateKey generates a cryptographically secure random key
-func (g *KeyGenerator) GenerateKey(length int32) (domain.EncryptionKey, error) {
+func (g *KeyGenerator) GenerateKey(ctx context.Context, length int32) (domain.EncryptionKey, error) {
 	if length != 32 {
 		log.Error().Int32("length", length).Msg("Invalid key length requested")
 		return domain.EncryptionKey{}, domain.ErrInvalidKeyLength
@@ -37,7 +38,7 @@ func (g *KeyGenerator) GenerateKey(length int32) (domain.EncryptionKey, error) {
 }
 
 // GenerateID generates a unique identifier using xid
-func (g *KeyGenerator) GenerateID() string {
+func (g *KeyGenerator) GenerateID(ctx context.Context) string {
 	guid := xid.New()
 	id := guid.String()
 	log.Debug().Str("id", id).Msg("Generated unique ID")

@@ -18,5 +18,5 @@ type EncryptionServicePort interface {
 	GenerateRandomKey(ctx context.Context, req domain.RandomRequest) (*domain.RandomResponse, error)
 	
 	// GenerateID generates a new unique identifier
-	GenerateID() string
+	GenerateID(ctx context.Context) string
 }
