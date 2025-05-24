@@ -392,6 +392,78 @@ document.addEventListener('DOMContentLoaded', function() {
     z-index: 1;
 }
 
+/* 4K and ultra-wide display optimization */
+@media (min-width: 1920px) {
+    .container-main {
+        max-width: 1200px;
+        padding: 3rem 4rem !important;
+        margin: 4rem auto !important;
+    }
+    
+    h2 {
+        font-size: 3rem;
+        margin-bottom: 3rem !important;
+    }
+    
+    .section-group {
+        padding: 2.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-control {
+        padding: 1rem 1.25rem;
+        font-size: 1.1rem;
+    }
+    
+    .form-label {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-success {
+        padding: 1.25rem 2.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .form-text {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 3000px) {
+    .container-main {
+        max-width: 1400px;
+        padding: 4rem 5rem !important;
+    }
+    
+    h2 {
+        font-size: 3.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.75rem;
+    }
+    
+    .form-control {
+        padding: 1.25rem 1.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .form-label {
+        font-size: 1.25rem;
+    }
+    
+    .btn-success {
+        padding: 1.5rem 3rem;
+        font-size: 1.4rem;
+    }
+}
+
 /* Enhanced page title */
 h2 {
     background: linear-gradient(135deg, #667eea, #764ba2);
