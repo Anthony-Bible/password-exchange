@@ -206,8 +206,20 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		return fmt.Errorf("message content is required")
 	}
 
-	if strings.TrimSpace(req.SenderEmail) == "" {
-		return fmt.Errorf("sender email is required")
+	// Only validate sender information if email notifications are enabled
+	if !req.SkipEmail {
+		if strings.TrimSpace(req.SenderName) == "" {
+			return fmt.Errorf("sender name is required")
+		}
+		
+		if strings.TrimSpace(req.SenderEmail) == "" {
+			return fmt.Errorf("sender email is required")
+		}
+		
+		// Basic email validation for sender
+		if !strings.Contains(req.SenderEmail, "@") {
+			return ErrInvalidEmailAddress
+		}
 	}
 
 	if req.SendNotification {
@@ -218,15 +230,11 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		if strings.TrimSpace(req.RecipientName) == "" {
 			return fmt.Errorf("recipient name is required when sending notifications")
 		}
-	}
-
-	// Basic email validation
-	if !strings.Contains(req.SenderEmail, "@") {
-		return ErrInvalidEmailAddress
-	}
-
-	if req.SendNotification && !strings.Contains(req.RecipientEmail, "@") {
-		return ErrInvalidEmailAddress
+		
+		// Basic email validation for recipient
+		if !strings.Contains(req.RecipientEmail, "@") {
+			return ErrInvalidEmailAddress
+		}
 	}
 
 	return nil
