@@ -1,0 +1,31 @@
+# Install RabbitMQ Cluster Operator
+# kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml"
+
+# RabbitMQ Cluster Instance
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmq
+  namespace: default
+spec:
+  replicas: 3
+  service:
+    type: ClusterIP
+  persistence:
+    storageClassName: "hcloud-volumes"  # Use default storage class
+    storage: 1Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  rabbitmq:
+    additionalConfig: |
+      management.tcp.port = 15672
+      management.tcp.ip = 0.0.0.0
+      log.console.level = info
+    envConfig: |
+      RABBITMQ_DEFAULT_USER=guest
+      RABBITMQ_DEFAULT_PASS=guest
