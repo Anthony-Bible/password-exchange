@@ -6,12 +6,12 @@ import (
 
 // Message represents a stored encrypted message with metadata
 type Message struct {
-	ID         int64     `json:"id"`
-	Content    string    `json:"content"`    // Base64 encoded encrypted message
-	UniqueID   string    `json:"unique_id"`  // UUID for message retrieval
-	Passphrase string    `json:"passphrase"` // Additional security passphrase
-	ViewCount  int       `json:"view_count"` // Number of times the message has been viewed
-	CreatedAt  time.Time `json:"created_at"`
+	ID         int64      `json:"id"`
+	Content    string     `json:"content"`    // Base64 encoded encrypted message
+	UniqueID   string     `json:"unique_id"`  // UUID for message retrieval
+	Passphrase string     `json:"passphrase"` // Additional security passphrase
+	ViewCount  int        `json:"view_count"` // Number of times the message has been viewed
+	CreatedAt  time.Time  `json:"created_at"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 }
 
@@ -21,6 +21,7 @@ type MessageRepository interface {
 	SelectMessageByUniqueID(uniqueID string) (*Message, error)
 	IncrementViewCountAndGet(uniqueID string) (*Message, error)
 	DeleteExpiredMessages() error
+	GetMessage(uniqueID string) (*Message, error)
 	Close() error
 }
 
@@ -31,4 +32,3 @@ type DatabaseConfig struct {
 	Password string
 	Name     string
 }
-

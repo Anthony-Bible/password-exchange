@@ -2,7 +2,7 @@ package domain
 
 import (
 	"context"
-	
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,7 +29,7 @@ func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, pa
 		log.Warn().Msg("Attempted to store message with empty unique ID")
 		return ErrEmptyUniqueID
 	}
-	
+
 	// Delegate to repository
 	return s.repository.InsertMessage(content, uniqueID, passphrase)
 }
@@ -41,15 +41,34 @@ func (s *StorageService) RetrieveMessage(ctx context.Context, uniqueID string) (
 		log.Warn().Msg("Attempted to retrieve message with empty unique ID")
 		return nil, ErrEmptyUniqueID
 	}
-	
+
 	// Increment view count and get message atomically
 	message, err := s.repository.IncrementViewCountAndGet(uniqueID)
 	if err != nil {
 		log.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count and retrieve message")
 		return nil, err
 	}
-	
+
 	log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message retrieved and view count incremented")
+	return message, nil
+}
+
+// GetMessage retrieves a message by its unique ID without incrementing view count
+func (s *StorageService) GetMessage(ctx context.Context, uniqueID string) (*Message, error) {
+	// Business rule validation
+	if uniqueID == "" {
+		log.Warn().Msg("Attempted to get message with empty unique ID")
+		return nil, ErrEmptyUniqueID
+	}
+
+	// Delegate to repository
+	message, err := s.repository.GetMessage(uniqueID)
+	if err != nil {
+		log.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to retrieve message")
+		return nil, err
+	}
+
+	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
 	return message, nil
 }
 
