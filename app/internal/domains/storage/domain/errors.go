@@ -10,7 +10,7 @@ var (
 	ErrEmptyUniqueID = errors.New("unique ID cannot be empty")
 	
 	// ErrInvalidMaxViewCount is returned when max view count is invalid
-	ErrInvalidMaxViewCount = errors.New("max view count must be greater than 0")
+	ErrInvalidMaxViewCount = errors.New("max view count must be between 1 and 100")
 	
 	// ErrMessageNotFound is returned when a message is not found in storage
 	ErrMessageNotFound = errors.New("message not found")
