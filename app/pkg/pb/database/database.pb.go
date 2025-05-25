@@ -72,6 +72,7 @@ type SelectResponse struct {
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	Passphrase    string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
 	ViewCount     int32                  `protobuf:"varint,4,opt,name=view_count,json=viewCount,proto3" json:"view_count,omitempty"`
+	MaxViewCount  int32                  `protobuf:"varint,5,opt,name=max_view_count,json=maxViewCount,proto3" json:"max_view_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -134,11 +135,19 @@ func (x *SelectResponse) GetViewCount() int32 {
 	return 0
 }
 
+func (x *SelectResponse) GetMaxViewCount() int32 {
+	if x != nil {
+		return x.MaxViewCount
+	}
+	return 0
+}
+
 type InsertRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	Passphrase    string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
+	MaxViewCount  int32                  `protobuf:"varint,4,opt,name=max_view_count,json=maxViewCount,proto3" json:"max_view_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,6 +203,13 @@ func (x *InsertRequest) GetPassphrase() string {
 	return ""
 }
 
+func (x *InsertRequest) GetMaxViewCount() int32 {
+	if x != nil {
+		return x.MaxViewCount
+	}
+	return 0
+}
+
 var File_database_proto protoreflect.FileDescriptor
 
 const file_database_proto_rawDesc = "" +
@@ -201,7 +217,7 @@ const file_database_proto_rawDesc = "" +
 	"\x0edatabase.proto\x12\n" +
 	"databasepb\x1a\x1bgoogle/protobuf/empty.proto\"#\n" +
 	"\rSelectRequest\x12\x12\n" +
-	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"}\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"\xa3\x01\n" +
 	"\x0eSelectResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
@@ -209,13 +225,15 @@ const file_database_proto_rawDesc = "" +
 	"passphrase\x18\x03 \x01(\tR\n" +
 	"passphrase\x12\x1d\n" +
 	"\n" +
-	"view_count\x18\x04 \x01(\x05R\tviewCount\"]\n" +
+	"view_count\x18\x04 \x01(\x05R\tviewCount\x12$\n" +
+	"\x0emax_view_count\x18\x05 \x01(\x05R\fmaxViewCount\"\x83\x01\n" +
 	"\rInsertRequest\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
 	"\n" +
 	"passphrase\x18\x03 \x01(\tR\n" +
-	"passphrase2\xd4\x01\n" +
+	"passphrase\x12$\n" +
+	"\x0emax_view_count\x18\x04 \x01(\x05R\fmaxViewCount2\xd4\x01\n" +
 	"\tdbService\x12A\n" +
 	"\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n" +
 	"\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12E\n" +

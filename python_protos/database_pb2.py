@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"W\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\"B\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t2\xd4\x01\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"o\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\x12\x16\n\x0emax_view_count\x18\x05 \x01(\x05\"Z\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x16\n\x0emax_view_count\x18\x04 \x01(\x05\x32\xd4\x01\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'database_pb2', globals())
@@ -25,9 +25,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _SELECTREQUEST._serialized_start=59
   _SELECTREQUEST._serialized_end=88
   _SELECTRESPONSE._serialized_start=90
-  _SELECTRESPONSE._serialized_end=177
-  _INSERTREQUEST._serialized_start=179
-  _INSERTREQUEST._serialized_end=245
-  _DBSERVICE._serialized_start=248
-  _DBSERVICE._serialized_end=460
+  _SELECTRESPONSE._serialized_end=201
+  _INSERTREQUEST._serialized_start=203
+  _INSERTREQUEST._serialized_end=293
+  _DBSERVICE._serialized_start=296
+  _DBSERVICE._serialized_end=508
 # @@protoc_insertion_point(module_scope)
