@@ -57,8 +57,8 @@ func (s *GRPCServer) Select(ctx context.Context, request *db.SelectRequest) (*db
 	return response, nil
 }
 
-// SelectNoIncrement handles gRPC select requests without incrementing view count
-func (s *GRPCServer) SelectNoIncrement(ctx context.Context, request *db.SelectRequest) (*db.SelectResponse, error) {
+// GetMessage handles gRPC select requests without incrementing view count
+func (s *GRPCServer) GetMessage(ctx context.Context, request *db.SelectRequest) (*db.SelectResponse, error) {
 	message, err := s.storageService.GetMessage(ctx, request.GetUuid())
 	if err != nil {
 		log.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to select message without incrementing view count via gRPC")
