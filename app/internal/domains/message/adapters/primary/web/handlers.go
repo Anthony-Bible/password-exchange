@@ -78,16 +78,10 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		return
 	}
 
-	// If no passphrase required, proceed to decrypt
-	if !accessInfo.RequiresPassphrase {
-		h.DecryptMessage(c)
-		return
-	}
-
-	// Render decryption form with passphrase requirement
+	// Render decryption page 
 	data := gin.H{
 		"Title":       "passwordExchange Decrypted",
-		"HasPassword": true,
+		"HasPassword": accessInfo.RequiresPassphrase,
 	}
 
 	c.HTML(http.StatusOK, "decryption.html", data)
