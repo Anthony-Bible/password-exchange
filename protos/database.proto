@@ -24,4 +24,5 @@ message InsertRequest
 service dbService{
     rpc Select(SelectRequest) returns (SelectResponse) {}
     rpc Insert(InsertRequest) returns (google.protobuf.Empty) {}
+    rpc GetMessage(SelectRequest) returns (SelectResponse) {}
   }

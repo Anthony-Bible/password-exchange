@@ -25,6 +25,7 @@ const _ = grpc.SupportPackageIsVersion7
 type DbServiceClient interface {
 	Select(ctx context.Context, in *SelectRequest, opts ...grpc.CallOption) (*SelectResponse, error)
 	Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetMessage(ctx context.Context, in *SelectRequest, opts ...grpc.CallOption) (*SelectResponse, error)
 }
 
 type dbServiceClient struct {
@@ -53,12 +54,22 @@ func (c *dbServiceClient) Insert(ctx context.Context, in *InsertRequest, opts ..
 	return out, nil
 }
 
+func (c *dbServiceClient) GetMessage(ctx context.Context, in *SelectRequest, opts ...grpc.CallOption) (*SelectResponse, error) {
+	out := new(SelectResponse)
+	err := c.cc.Invoke(ctx, "/databasepb.dbService/GetMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DbServiceServer is the server API for DbService service.
 // All implementations must embed UnimplementedDbServiceServer
 // for forward compatibility
 type DbServiceServer interface {
 	Select(context.Context, *SelectRequest) (*SelectResponse, error)
 	Insert(context.Context, *InsertRequest) (*emptypb.Empty, error)
+	GetMessage(context.Context, *SelectRequest) (*SelectResponse, error)
 	mustEmbedUnimplementedDbServiceServer()
 }
 
@@ -71,6 +82,9 @@ func (UnimplementedDbServiceServer) Select(context.Context, *SelectRequest) (*Se
 }
 func (UnimplementedDbServiceServer) Insert(context.Context, *InsertRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Insert not implemented")
+}
+func (UnimplementedDbServiceServer) GetMessage(context.Context, *SelectRequest) (*SelectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessage not implemented")
 }
 func (UnimplementedDbServiceServer) mustEmbedUnimplementedDbServiceServer() {}
 
@@ -121,6 +135,24 @@ func _DbService_Insert_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DbService_GetMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SelectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DbServiceServer).GetMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/databasepb.dbService/GetMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DbServiceServer).GetMessage(ctx, req.(*SelectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DbService_ServiceDesc is the grpc.ServiceDesc for DbService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -135,6 +167,10 @@ var DbService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Insert",
 			Handler:    _DbService_Insert_Handler,
+		},
+		{
+			MethodName: "GetMessage",
+			Handler:    _DbService_GetMessage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
