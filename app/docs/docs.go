@@ -352,6 +352,11 @@ const docTemplate = `{
                     "maxLength": 10000,
                     "minLength": 1
                 },
+                "maxViewCount": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
+                },
                 "passphrase": {
                     "type": "string",
                     "maxLength": 500

@@ -60,6 +60,7 @@ func TestSubmitMessage_Success(t *testing.T) {
 		RecipientEmail:   "jane@example.com",
 		Passphrase:       "test123",
 		AdditionalInfo:   "Additional info",
+		Captcha:          "blue",
 		SendNotification: true,
 		SkipEmail:        false,
 	}
@@ -254,6 +255,7 @@ func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
 		RecipientEmail:   "jane@example.com",
 		SendNotification: true,
 		SkipEmail:        false,
+		Captcha:          "blue",
 		MaxViewCount:     25, // Custom view count
 	}
 
@@ -277,6 +279,7 @@ func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
 			Email: "jane@example.com",
 		},
 		SendNotification: true,
+		AntiSpamAnswer:   "blue",
 		MaxViewCount:     25, // Custom view count
 	}
 
@@ -323,6 +326,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 					RecipientEmail:   "jane@example.com",
 					SendNotification: true,
 					SkipEmail:        false,
+					Captcha:          "blue",
 					MaxViewCount:     tc.maxViewCount,
 				}
 
@@ -347,6 +351,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 					Email: "jane@example.com",
 				},
 				SendNotification: true,
+				AntiSpamAnswer:   "blue",
 				MaxViewCount:     tc.maxViewCount,
 			}
 
