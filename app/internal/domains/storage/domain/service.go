@@ -34,7 +34,7 @@ func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, pa
 	return s.repository.InsertMessage(content, uniqueID, passphrase)
 }
 
-// RetrieveMessage retrieves a message by its unique ID with validation
+// RetrieveMessage retrieves a message by its unique ID with validation and increments view count
 func (s *StorageService) RetrieveMessage(ctx context.Context, uniqueID string) (*Message, error) {
 	// Business rule validation
 	if uniqueID == "" {
@@ -42,8 +42,15 @@ func (s *StorageService) RetrieveMessage(ctx context.Context, uniqueID string) (
 		return nil, ErrEmptyUniqueID
 	}
 	
-	// Delegate to repository
-	return s.repository.SelectMessageByUniqueID(uniqueID)
+	// Increment view count and get message atomically
+	message, err := s.repository.IncrementViewCountAndGet(uniqueID)
+	if err != nil {
+		log.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count and retrieve message")
+		return nil, err
+	}
+	
+	log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message retrieved and view count incremented")
+	return message, nil
 }
 
 // CleanupExpiredMessages removes expired messages from storage

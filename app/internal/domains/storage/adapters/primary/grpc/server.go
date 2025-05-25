@@ -50,9 +50,10 @@ func (s *GRPCServer) Select(ctx context.Context, request *db.SelectRequest) (*db
 	response := &db.SelectResponse{
 		Content:    message.Content,
 		Passphrase: message.Passphrase,
+		ViewCount:  int32(message.ViewCount),
 	}
 	
-	log.Info().Str("uuid", request.GetUuid()).Msg("Message selected successfully via gRPC")
+	log.Info().Str("uuid", request.GetUuid()).Int("viewCount", message.ViewCount).Msg("Message selected successfully via gRPC")
 	return response, nil
 }
 
