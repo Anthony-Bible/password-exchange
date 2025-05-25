@@ -71,6 +71,7 @@ type SelectResponse struct {
 	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
 	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
 	Passphrase    string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
+	ViewCount     int32                  `protobuf:"varint,4,opt,name=view_count,json=viewCount,proto3" json:"view_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -124,6 +125,13 @@ func (x *SelectResponse) GetPassphrase() string {
 		return x.Passphrase
 	}
 	return ""
+}
+
+func (x *SelectResponse) GetViewCount() int32 {
+	if x != nil {
+		return x.ViewCount
+	}
+	return 0
 }
 
 type InsertRequest struct {
@@ -193,13 +201,15 @@ const file_database_proto_rawDesc = "" +
 	"\x0edatabase.proto\x12\n" +
 	"databasepb\x1a\x1bgoogle/protobuf/empty.proto\"#\n" +
 	"\rSelectRequest\x12\x12\n" +
-	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"^\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"}\n" +
 	"\x0eSelectResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
 	"\n" +
 	"passphrase\x18\x03 \x01(\tR\n" +
-	"passphrase\"]\n" +
+	"passphrase\x12\x1d\n" +
+	"\n" +
+	"view_count\x18\x04 \x01(\x05R\tviewCount\"]\n" +
 	"\rInsertRequest\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
