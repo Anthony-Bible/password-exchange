@@ -113,6 +113,7 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	response := &MessageSubmissionResponse{
 		MessageID:  messageID,
 		DecryptURL: decryptURL,
+		Key:        base64.URLEncoding.EncodeToString(encryptionKey),
 		Success:    true,
 	}
 

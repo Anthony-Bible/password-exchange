@@ -31,6 +31,7 @@ type Recipient struct {
 type MessageSubmissionResponse struct {
 	MessageID        string    `json:"messageId"`
 	DecryptURL       string    `json:"decryptUrl"`
+	Key              string    `json:"key"`
 	WebURL           string    `json:"webUrl"`
 	ExpiresAt        time.Time `json:"expiresAt"`
 	NotificationSent bool      `json:"notificationSent"`
@@ -68,8 +69,8 @@ type HealthCheckResponse struct {
 
 // APIInfoResponse represents information about the API
 type APIInfoResponse struct {
-	Version       string                 `json:"version"`
-	Documentation string                 `json:"documentation"`
-	Endpoints     map[string]string      `json:"endpoints"`
-	Features      map[string]bool        `json:"features"`
+	Version       string            `json:"version"`
+	Documentation string            `json:"documentation"`
+	Endpoints     map[string]string `json:"endpoints"`
+	Features      map[string]bool   `json:"features"`
 }

@@ -86,7 +86,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 			Err(err).
 			Interface("correlation_id", correlationID).
 			Msg("Failed to submit message")
-		
+
 		middleware.JSONErrorResponse(c, http.StatusInternalServerError, models.ErrorCodeInternalError, "Failed to submit message", nil)
 		return
 	}
@@ -95,7 +95,8 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	apiResponse := models.MessageSubmissionResponse{
 		MessageID:        response.MessageID,
 		DecryptURL:       response.DecryptURL,
-		WebURL:           response.DecryptURL, // Same URL works for both
+		Key:              response.Key,
+		WebURL:           response.DecryptURL,            // Same URL works for both
 		ExpiresAt:        time.Now().Add(24 * time.Hour), // TODO: Get from config
 		NotificationSent: req.SendNotification && response.Success,
 	}
@@ -138,7 +139,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 			Str("messageId", messageID).
 			Interface("correlation_id", correlationID).
 			Msg("Failed to check message access")
-		
+
 		middleware.JSONErrorResponse(c, http.StatusInternalServerError, models.ErrorCodeInternalError, "Failed to check message access", nil)
 		return
 	}
@@ -153,7 +154,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 		MessageID:          messageID,
 		Exists:             accessInfo.Exists,
 		RequiresPassphrase: accessInfo.RequiresPassphrase,
-		HasBeenAccessed:    false, // TODO: Add this to domain if needed
+		HasBeenAccessed:    false,                          // TODO: Add this to domain if needed
 		ExpiresAt:          time.Now().Add(24 * time.Hour), // TODO: Get from storage
 	}
 
@@ -306,4 +307,3 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-

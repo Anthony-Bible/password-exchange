@@ -21,6 +21,7 @@ type MessageSubmissionRequest struct {
 // MessageSubmissionResponse represents the response to a message submission
 type MessageSubmissionResponse struct {
 	MessageID  string
+	Key        string
 	DecryptURL string
 	Success    bool
 	Error      error
