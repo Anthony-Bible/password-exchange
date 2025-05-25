@@ -16,7 +16,6 @@ jobs:
 
           # Define which tools Claude can use
           allowed_tools: [
-            # Git inspection commands (read-only)
             "Bash(git status)",
             "Bash(git log)",
             "Bash(git show)",
@@ -27,12 +26,10 @@ jobs:
             "Bash(git branch)",
             "Bash(git tag)",
             "Bash(git diff)",
-
-            # File exploration tools
-            "View",        # Read file contents
-            "GlobTool",    # Find files by pattern
-            "GrepTool",    # Search file contents
-            "BatchTool"    # Run multiple tools in parallel
+            "View",
+            "GlobTool",
+            "GrepTool",
+            "BatchTool"
           ]
 
           # Your Anthropic API key (stored as a GitHub secret)
