@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/base64"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
@@ -29,18 +30,27 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	
 	log.Info().Msg("Processing message submission request")
 
+	// Parse max view count
+	maxViewCount := 0
+	if maxViewCountStr := c.PostForm("max_view_count"); maxViewCountStr != "" {
+		if parsed, err := strconv.Atoi(maxViewCountStr); err == nil && parsed >= 1 && parsed <= 100 {
+			maxViewCount = parsed
+		}
+	}
+
 	// Extract form data
 	req := domain.MessageSubmissionRequest{
-		Content:         c.PostForm("content"),
-		SenderName:      c.PostForm("firstname"),
-		SenderEmail:     c.PostForm("email"),
-		RecipientName:   c.PostForm("other_firstname"),
-		RecipientEmail:  c.PostForm("other_email"),
-		Passphrase:      c.PostForm("other_lastname"),
-		AdditionalInfo:  c.PostForm("other_information"),
-		Captcha:         c.PostForm("h-captcha-response"),
+		Content:          c.PostForm("content"),
+		SenderName:       c.PostForm("firstname"),
+		SenderEmail:      c.PostForm("email"),
+		RecipientName:    c.PostForm("other_firstname"),
+		RecipientEmail:   c.PostForm("other_email"),
+		Passphrase:       c.PostForm("other_lastname"),
+		AdditionalInfo:   c.PostForm("other_information"),
+		Captcha:          c.PostForm("h-captcha-response"),
 		SendNotification: strings.ToLower(c.PostForm("color")) == "blue" && c.PostForm("skipEmail") == "",
-		SkipEmail:       c.PostForm("skipEmail") != "",
+		SkipEmail:        c.PostForm("skipEmail") != "",
+		MaxViewCount:     maxViewCount,
 	}
 
 	// Submit the message

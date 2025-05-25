@@ -125,6 +125,32 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="max_view_count" class="form-label">
+                                Max View Count (Optional)
+                                <button type="button" 
+                                        class="btn btn-link btn-sm p-0 ms-1" 
+                                        data-bs-toggle="tooltip" 
+                                        title="Maximum number of times this message can be accessed before automatic deletion (1-100)"
+                                        aria-label="Help about max view count">
+                                    <i class="fas fa-lightbulb"></i>
+                                </button>
+                            </label>
+                            <input id="max_view_count" 
+                                   type="number" 
+                                   name="max_view_count" 
+                                   class="form-control" 
+                                   placeholder="5"
+                                   min="1"
+                                   max="100"
+                                   aria-describedby="maxViewCountHelp">
+                            <div id="maxViewCountHelp" class="form-text">
+                                Leave empty to use default (5 views)
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -220,7 +246,7 @@
                                       required 
                                       aria-describedby="messageHelp messageError">{{.Content}}</textarea>
                             <div id="messageHelp" class="form-text">
-                                This will be encrypted and can be accessed up to 5 times before being automatically deleted
+                                This will be encrypted and can be accessed up to the specified view count before being automatically deleted
                             </div>
                             <div id="messageError" class="invalid-feedback"></div>
                         </div>

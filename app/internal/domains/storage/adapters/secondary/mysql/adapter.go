@@ -45,21 +45,21 @@ func (m *MySQLAdapter) Connect() error {
 }
 
 // InsertMessage stores a new encrypted message in the database
-func (m *MySQLAdapter) InsertMessage(content, uniqueID, passphrase string) error {
+func (m *MySQLAdapter) InsertMessage(content, uniqueID, passphrase string, maxViewCount int) error {
 	if m.db == nil {
 		if err := m.Connect(); err != nil {
 			return err
 		}
 	}
 
-	query := "INSERT INTO messages (message, uniqueid, other_lastname, view_count) VALUES (?, ?, ?, 0)"
-	_, err := m.db.Exec(query, content, uniqueID, passphrase)
+	query := "INSERT INTO messages (message, uniqueid, other_lastname, view_count, max_view_count) VALUES (?, ?, ?, 0, ?)"
+	_, err := m.db.Exec(query, content, uniqueID, passphrase, maxViewCount)
 	if err != nil {
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to insert message")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Str("uniqueID", uniqueID).Msg("Message stored successfully")
+	log.Info().Str("uniqueID", uniqueID).Int("maxViewCount", maxViewCount).Msg("Message stored successfully")
 	return nil
 }
 
@@ -71,11 +71,11 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -97,11 +97,11 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -152,11 +152,11 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	}
 
 	// Get the updated message with the new view count
-	selectQuery := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
+	selectQuery := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := tx.QueryRow(selectQuery, uniqueID)
 
 	var message domain.Message
-	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
+	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
@@ -166,15 +166,15 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	// If view count has reached 5, delete the message
-	if message.ViewCount >= 5 {
+	// If view count has reached max view count, delete the message
+	if message.ViewCount >= message.MaxViewCount {
 		deleteQuery := "DELETE FROM messages WHERE uniqueid = ?"
 		_, err = tx.Exec(deleteQuery, uniqueID)
 		if err != nil {
 			log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to delete message after reaching view limit")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
-		log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message deleted after reaching view limit")
+		log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Int("maxViewCount", message.MaxViewCount).Msg("Message deleted after reaching view limit")
 	}
 
 	// Commit the transaction

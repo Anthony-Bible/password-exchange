@@ -9,8 +9,8 @@ import (
 // StorageServicePort defines the primary interface for storage operations
 // This will be implemented by the storage service and used by external adapters
 type StorageServicePort interface {
-	// StoreMessage stores a new encrypted message with unique ID and passphrase
-	StoreMessage(ctx context.Context, content, uniqueID, passphrase string) error
+	// StoreMessage stores a new encrypted message with unique ID, passphrase, and max view count
+	StoreMessage(ctx context.Context, content, uniqueID, passphrase string, maxViewCount int) error
 
 	// RetrieveMessage retrieves a message by its unique ID
 	RetrieveMessage(ctx context.Context, uniqueID string) (*domain.Message, error)

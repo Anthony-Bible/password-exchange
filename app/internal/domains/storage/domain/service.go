@@ -19,7 +19,7 @@ func NewStorageService(repository MessageRepository) *StorageService {
 }
 
 // StoreMessage stores a new encrypted message with validation
-func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, passphrase string) error {
+func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, passphrase string, maxViewCount int) error {
 	// Business rule validation
 	if content == "" {
 		log.Warn().Msg("Attempted to store message with empty content")
@@ -29,9 +29,13 @@ func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, pa
 		log.Warn().Msg("Attempted to store message with empty unique ID")
 		return ErrEmptyUniqueID
 	}
+	if maxViewCount < 1 {
+		log.Warn().Int("maxViewCount", maxViewCount).Msg("Attempted to store message with invalid max view count")
+		return ErrInvalidMaxViewCount
+	}
 
 	// Delegate to repository
-	return s.repository.InsertMessage(content, uniqueID, passphrase)
+	return s.repository.InsertMessage(content, uniqueID, passphrase, maxViewCount)
 }
 
 // RetrieveMessage retrieves a message by its unique ID with validation and increments view count

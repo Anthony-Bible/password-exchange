@@ -240,3 +240,127 @@ func TestAPIInfo(t *testing.T) {
 	assert.True(t, response.Features["passphraseProtection"])
 	assert.True(t, response.Features["antiSpamProtection"])
 }
+
+func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	// Setup mock expectations - should receive the MaxViewCount in domain request
+	expectedDomainReq := domain.MessageSubmissionRequest{
+		Content:          "Test message with custom view count",
+		SenderName:       "John Doe",
+		SenderEmail:      "john@example.com",
+		RecipientName:    "Jane Doe",
+		RecipientEmail:   "jane@example.com",
+		SendNotification: true,
+		SkipEmail:        false,
+		MaxViewCount:     25, // Custom view count
+	}
+
+	expectedResponse := &domain.MessageSubmissionResponse{
+		MessageID:  "test-message-id",
+		DecryptURL: "https://example.com/decrypt/test-message-id/key123",
+		Success:    true,
+	}
+
+	mockService.On("SubmitMessage", mock.Anything, expectedDomainReq).Return(expectedResponse, nil)
+
+	// Prepare request with maxViewCount
+	requestBody := models.MessageSubmissionRequest{
+		Content: "Test message with custom view count",
+		Sender: &models.Sender{
+			Name:  "John Doe",
+			Email: "john@example.com",
+		},
+		Recipient: &models.Recipient{
+			Name:  "Jane Doe",
+			Email: "jane@example.com",
+		},
+		SendNotification: true,
+		MaxViewCount:     25, // Custom view count
+	}
+
+	body, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Correlation-ID", "test-correlation-id")
+
+	// Execute request
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusCreated, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	testCases := []struct {
+		name           string
+		maxViewCount   int
+		expectedStatus int
+	}{
+		{"ValidLow", 1, http.StatusCreated},
+		{"ValidMid", 50, http.StatusCreated}, 
+		{"ValidHigh", 100, http.StatusCreated},
+		{"InvalidZero", 0, http.StatusCreated}, // 0 should be valid (use default)
+		{"InvalidNegative", -1, http.StatusBadRequest},
+		{"InvalidTooHigh", 101, http.StatusBadRequest},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Only set up mock expectation for valid cases
+			if tc.expectedStatus == http.StatusCreated {
+				expectedDomainReq := domain.MessageSubmissionRequest{
+					Content:          "Test message",
+					SenderName:       "John Doe",
+					SenderEmail:      "john@example.com",
+					RecipientName:    "Jane Doe", 
+					RecipientEmail:   "jane@example.com",
+					SendNotification: true,
+					SkipEmail:        false,
+					MaxViewCount:     tc.maxViewCount,
+				}
+
+				expectedResponse := &domain.MessageSubmissionResponse{
+					MessageID:  "test-message-id",
+					DecryptURL: "https://example.com/decrypt/test-message-id/key123",
+					Success:    true,
+				}
+
+				mockService.On("SubmitMessage", mock.Anything, expectedDomainReq).Return(expectedResponse, nil).Once()
+			}
+
+			// Prepare request
+			requestBody := models.MessageSubmissionRequest{
+				Content: "Test message",
+				Sender: &models.Sender{
+					Name:  "John Doe",
+					Email: "john@example.com",
+				},
+				Recipient: &models.Recipient{
+					Name:  "Jane Doe",
+					Email: "jane@example.com",
+				},
+				SendNotification: true,
+				MaxViewCount:     tc.maxViewCount,
+			}
+
+			body, _ := json.Marshal(requestBody)
+			req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Correlation-ID", "test-correlation-id")
+
+			// Execute request
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			// Verify response
+			assert.Equal(t, tc.expectedStatus, w.Code, "Test case: %s", tc.name)
+		})
+	}
+}

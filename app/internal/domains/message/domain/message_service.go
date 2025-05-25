@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -79,11 +80,21 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	// Build the decryption URL
 	decryptURL := s.urlBuilder.BuildDecryptURL(messageID, encryptionKey)
 
+	// Determine max view count (use request value or default from config)
+	maxViewCount := req.MaxViewCount
+	if maxViewCount <= 0 {
+		maxViewCount = config.Config.DefaultMaxViewCount
+		if maxViewCount <= 0 {
+			maxViewCount = 5 // Fallback default
+		}
+	}
+
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{
-		MessageID:  messageID,
-		Content:    strings.Join(encryptedContent, ""),
-		Passphrase: hashedPassphrase,
+		MessageID:    messageID,
+		Content:      strings.Join(encryptedContent, ""),
+		Passphrase:   hashedPassphrase,
+		MaxViewCount: maxViewCount,
 	}
 
 	err = s.storageService.StoreMessage(ctx, storeReq)
@@ -213,6 +224,13 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest) error {
 	if strings.TrimSpace(req.Content) == "" {
 		return fmt.Errorf("message content is required")
+	}
+
+	// Validate max view count if provided
+	if req.MaxViewCount != 0 {
+		if req.MaxViewCount < 1 || req.MaxViewCount > 100 {
+			return fmt.Errorf("max view count must be between 1 and 100")
+		}
 	}
 
 	// Only validate sender information if email notifications are enabled
