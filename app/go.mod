@@ -11,6 +11,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
+	github.com/prometheus/client_golang v1.22.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/xid v1.6.0
 	github.com/rs/zerolog v1.34.0
@@ -20,6 +21,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.8.12
+	github.com/ulule/limiter/v3 v3.11.2
 	golang.org/x/crypto v0.38.0
 	google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf v1.36.6
@@ -67,7 +69,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
@@ -80,7 +81,6 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
-	github.com/ulule/limiter/v3 v3.11.2 // indirect
 	golang.org/x/arch v0.17.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect

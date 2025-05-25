@@ -51,18 +51,8 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		return
 	}
 
-	// Return response based on request type
-	if c.PostForm("api") != "" {
-		// API request - return JSON
-		c.JSON(http.StatusOK, gin.H{
-			"success": response.Success,
-			"url":     response.DecryptURL,
-			"messageId": response.MessageID,
-		})
-	} else {
-		// Web request - redirect to confirmation
-		c.Redirect(http.StatusSeeOther, "/confirmation?content="+response.DecryptURL)
-	}
+	// Web request - redirect to confirmation page
+	c.Redirect(http.StatusSeeOther, "/confirmation?content="+response.DecryptURL)
 
 	log.Info().Str("messageId", response.MessageID).Msg("Message submitted successfully")
 }

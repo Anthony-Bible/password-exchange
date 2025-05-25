@@ -8,9 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -37,7 +39,12 @@ func (m *MockMessageService) RetrieveMessage(ctx context.Context, req domain.Mes
 
 func setupTestRouter(mockService *MockMessageService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-	return setupRouter(NewMessageAPIHandler(mockService))
+	
+	// Create minimal metrics setup for testing
+	registry := prometheus.NewRegistry()
+	metrics := middleware.NewPrometheusMetrics(registry)
+	
+	return setupRouter(NewMessageAPIHandler(mockService), metrics, registry)
 }
 
 func TestSubmitMessage_Success(t *testing.T) {

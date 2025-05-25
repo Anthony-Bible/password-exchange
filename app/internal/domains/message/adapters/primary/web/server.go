@@ -3,11 +3,14 @@ package web
 import (
 	"html/template"
 
+	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // WebServer handles HTTP requests for the message service
@@ -101,6 +104,9 @@ func (s *WebServer) setupAPIRoutes() {
 		// Utility endpoints
 		v1.GET("/health", apiHandler.HealthCheck)
 		v1.GET("/info", apiHandler.APIInfo)
+		
+		// Documentation endpoints
+		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 	
 	log.Info().Msg("API routes configured directly on main router")
