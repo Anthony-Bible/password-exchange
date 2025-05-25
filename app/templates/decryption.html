@@ -154,8 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // Check message access on page load
-    checkMessageAccess(messageId, key);
+    // Try to decrypt message directly without passphrase first
+    decryptMessage(messageId, key, '');
     
     // Handle "No Passphrase" button
     const noPassphraseButton = document.getElementById('nopassphrase');
@@ -198,40 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // API Functions
-async function checkMessageAccess(messageId, key) {
-    try {
-        const response = await fetch(`/api/v1/messages/${messageId}?key=${encodeURIComponent(key)}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            handleMessageAccessResponse(data, messageId, key);
-        } else if (response.status === 404) {
-            showError('Message not found or has expired.');
-        } else {
-            const errorData = await response.json().catch(() => ({}));
-            showError(errorData.message || 'Failed to check message access.');
-        }
-    } catch (error) {
-        console.error('Error checking message access:', error);
-        showError('Network error. Please check your connection and try again.');
-    }
-}
-
-function handleMessageAccessResponse(data, messageId, key) {
-    hideLoading();
-    
-    if (data.requiresPassphrase) {
-        showAccessForm();
-    } else {
-        // Automatically decrypt if no passphrase required
-        decryptMessage(messageId, key, '');
-    }
-}
 
 async function decryptMessage(messageId, key, passphrase) {
     showDecryptSpinner(true);
@@ -253,6 +219,13 @@ async function decryptMessage(messageId, key, passphrase) {
             const data = await response.json();
             handleDecryptionSuccess(data);
         } else if (response.status === 401) {
+            // If this is the initial load with empty passphrase, show access form
+            if (passphrase === '') {
+                hideLoading();
+                showAccessForm();
+                return;
+            }
+            // Otherwise, show passphrase error
             showPassphraseError('Invalid passphrase. Please try again.');
         } else if (response.status === 404) {
             showError('Message not found or has expired.');
