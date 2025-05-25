@@ -76,6 +76,32 @@ func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageR
 	return response, nil
 }
 
+// GetMessage retrieves a message by its unique ID without incrementing view count
+func (c *StorageClient) GetMessage(ctx context.Context, req domain.MessageRetrievalStorageRequest) (*domain.MessageStorageResponse, error) {
+	grpcReq := &db.SelectRequest{
+		Uuid: req.MessageID,
+	}
+
+	resp, err := c.client.GetMessage(ctx, grpcReq)
+	if err != nil {
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve message without incrementing view count")
+		return nil, fmt.Errorf("failed to retrieve message without incrementing view count: %w", err)
+	}
+
+	hasPassphrase := resp.GetPassphrase() != ""
+
+	response := &domain.MessageStorageResponse{
+		MessageID:        req.MessageID,
+		EncryptedContent: resp.GetContent(),
+		HashedPassphrase: resp.GetPassphrase(),
+		HasPassphrase:    hasPassphrase,
+		ViewCount:        int(resp.GetViewCount()),
+	}
+
+	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message without incrementing view count successfully")
+	return response, nil
+}
+
 // Close closes the gRPC connection
 func (c *StorageClient) Close() error {
 	if c.conn != nil {

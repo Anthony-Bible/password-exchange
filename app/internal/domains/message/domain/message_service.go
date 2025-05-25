@@ -11,11 +11,11 @@ import (
 
 // MessageService provides message sharing operations
 type MessageService struct {
-	encryptionService EncryptionService
-	storageService    StorageService
+	encryptionService   EncryptionService
+	storageService      StorageService
 	notificationService NotificationService
-	passwordHasher    PasswordHasher
-	urlBuilder        URLBuilder
+	passwordHasher      PasswordHasher
+	urlBuilder          URLBuilder
 }
 
 // NewMessageService creates a new message service
@@ -81,9 +81,9 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{
-		MessageID:   messageID,
-		Content:     strings.Join(encryptedContent, ""),
-		Passphrase:  hashedPassphrase,
+		MessageID:  messageID,
+		Content:    strings.Join(encryptedContent, ""),
+		Passphrase: hashedPassphrase,
 	}
 
 	err = s.storageService.StoreMessage(ctx, storeReq)
@@ -95,12 +95,12 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	// Send notification if requested
 	if req.SendNotification && strings.TrimSpace(req.RecipientEmail) != "" {
 		notificationReq := MessageNotificationRequest{
-			SenderName:      req.SenderName,
-			SenderEmail:     req.SenderEmail,
-			RecipientName:   req.RecipientName,
-			RecipientEmail:  req.RecipientEmail,
-			MessageURL:      decryptURL,
-			AdditionalInfo:  req.AdditionalInfo,
+			SenderName:     req.SenderName,
+			SenderEmail:    req.SenderEmail,
+			RecipientName:  req.RecipientName,
+			RecipientEmail: req.RecipientEmail,
+			MessageURL:     decryptURL,
+			AdditionalInfo: req.AdditionalInfo,
 		}
 
 		err = s.notificationService.SendMessageNotification(ctx, notificationReq)
@@ -111,9 +111,9 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	}
 
 	response := &MessageSubmissionResponse{
-		MessageID:    messageID,
-		DecryptURL:   decryptURL,
-		Success:      true,
+		MessageID:  messageID,
+		DecryptURL: decryptURL,
+		Success:    true,
 	}
 
 	log.Info().Str("messageId", messageID).Str("url", decryptURL).Msg("Message submitted successfully")
@@ -185,16 +185,16 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 		MessageID: messageID,
 	}
 
-	storedMessage, err := s.storageService.RetrieveMessage(ctx, storageReq)
+	storedMessage, err := s.storageService.GetMessage(ctx, storageReq)
 	if err != nil {
 		log.Error().Err(err).Str("messageId", messageID).Msg("Failed to check message access")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
 	accessInfo := &MessageAccessInfo{
-		MessageID:       messageID,
+		MessageID:          messageID,
 		RequiresPassphrase: storedMessage.HasPassphrase,
-		Exists:          true,
+		Exists:             true,
 	}
 
 	log.Debug().Str("messageId", messageID).Bool("requiresPassphrase", accessInfo.RequiresPassphrase).Msg("Message access checked")
@@ -212,11 +212,11 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		if strings.TrimSpace(req.SenderName) == "" {
 			return fmt.Errorf("sender name is required")
 		}
-		
+
 		if strings.TrimSpace(req.SenderEmail) == "" {
 			return fmt.Errorf("sender email is required")
 		}
-		
+
 		// Basic email validation for sender
 		if !strings.Contains(req.SenderEmail, "@") {
 			return ErrInvalidEmailAddress
@@ -231,7 +231,7 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		if strings.TrimSpace(req.RecipientName) == "" {
 			return fmt.Errorf("recipient name is required when sending notifications")
 		}
-		
+
 		// Basic email validation for recipient
 		if !strings.Contains(req.RecipientEmail, "@") {
 			return ErrInvalidEmailAddress

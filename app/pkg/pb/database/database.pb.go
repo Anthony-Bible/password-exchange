@@ -215,10 +215,12 @@ const file_database_proto_rawDesc = "" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
 	"\n" +
 	"passphrase\x18\x03 \x01(\tR\n" +
-	"passphrase2\x8d\x01\n" +
+	"passphrase2\xd4\x01\n" +
 	"\tdbService\x12A\n" +
 	"\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n" +
-	"\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00B;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3"
+	"\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12E\n" +
+	"\n" +
+	"GetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00B;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3"
 
 var (
 	file_database_proto_rawDescOnce sync.Once
@@ -242,10 +244,12 @@ var file_database_proto_goTypes = []any{
 var file_database_proto_depIdxs = []int32{
 	0, // 0: databasepb.dbService.Select:input_type -> databasepb.SelectRequest
 	2, // 1: databasepb.dbService.Insert:input_type -> databasepb.InsertRequest
-	1, // 2: databasepb.dbService.Select:output_type -> databasepb.SelectResponse
-	3, // 3: databasepb.dbService.Insert:output_type -> google.protobuf.Empty
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	0, // 2: databasepb.dbService.GetMessage:input_type -> databasepb.SelectRequest
+	1, // 3: databasepb.dbService.Select:output_type -> databasepb.SelectResponse
+	3, // 4: databasepb.dbService.Insert:output_type -> google.protobuf.Empty
+	1, // 5: databasepb.dbService.GetMessage:output_type -> databasepb.SelectResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

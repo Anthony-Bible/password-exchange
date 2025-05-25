@@ -23,6 +23,10 @@ class dbServiceBase(abc.ABC):
     async def Insert(self, stream: 'grpclib.server.Stream[database_pb2.InsertRequest, google.protobuf.empty_pb2.Empty]') -> None:
         pass
 
+    @abc.abstractmethod
+    async def GetMessage(self, stream: 'grpclib.server.Stream[database_pb2.SelectRequest, database_pb2.SelectResponse]') -> None:
+        pass
+
     def __mapping__(self) -> typing.Dict[str, grpclib.const.Handler]:
         return {
             '/databasepb.dbService/Select': grpclib.const.Handler(
@@ -36,6 +40,12 @@ class dbServiceBase(abc.ABC):
                 grpclib.const.Cardinality.UNARY_UNARY,
                 database_pb2.InsertRequest,
                 google.protobuf.empty_pb2.Empty,
+            ),
+            '/databasepb.dbService/GetMessage': grpclib.const.Handler(
+                self.GetMessage,
+                grpclib.const.Cardinality.UNARY_UNARY,
+                database_pb2.SelectRequest,
+                database_pb2.SelectResponse,
             ),
         }
 
@@ -54,4 +64,10 @@ class dbServiceStub:
             '/databasepb.dbService/Insert',
             database_pb2.InsertRequest,
             google.protobuf.empty_pb2.Empty,
+        )
+        self.GetMessage = grpclib.client.UnaryUnaryMethod(
+            channel,
+            '/databasepb.dbService/GetMessage',
+            database_pb2.SelectRequest,
+            database_pb2.SelectResponse,
         )

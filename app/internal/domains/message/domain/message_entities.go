@@ -6,31 +6,31 @@ import (
 
 // MessageSubmissionRequest represents a request to submit a new message
 type MessageSubmissionRequest struct {
-	Content           string
-	SenderName        string
-	SenderEmail       string
-	RecipientName     string
-	RecipientEmail    string
-	Passphrase        string
-	AdditionalInfo    string
-	Captcha           string
-	SendNotification  bool
+	Content          string
+	SenderName       string
+	SenderEmail      string
+	RecipientName    string
+	RecipientEmail   string
+	Passphrase       string
+	AdditionalInfo   string
+	Captcha          string
+	SendNotification bool
 	SkipEmail        bool
 }
 
 // MessageSubmissionResponse represents the response to a message submission
 type MessageSubmissionResponse struct {
-	MessageID    string
-	DecryptURL   string
-	Success      bool
-	Error        error
+	MessageID  string
+	DecryptURL string
+	Success    bool
+	Error      error
 }
 
 // MessageRetrievalRequest represents a request to retrieve and decrypt a message
 type MessageRetrievalRequest struct {
-	MessageID      string
-	DecryptionKey  []byte
-	Passphrase     string
+	MessageID     string
+	DecryptionKey []byte
+	Passphrase    string
 }
 
 // MessageRetrievalResponse represents the response to a message retrieval
@@ -51,9 +51,9 @@ type MessageAccessInfo struct {
 
 // MessageStorageRequest represents a request to store an encrypted message
 type MessageStorageRequest struct {
-	MessageID   string
-	Content     string
-	Passphrase  string
+	MessageID  string
+	Content    string
+	Passphrase string
 }
 
 // MessageRetrievalStorageRequest represents a request to retrieve a stored message
@@ -63,11 +63,11 @@ type MessageRetrievalStorageRequest struct {
 
 // MessageStorageResponse represents a stored message from storage
 type MessageStorageResponse struct {
-	MessageID         string
-	EncryptedContent  string
-	HashedPassphrase  string
-	HasPassphrase     bool
-	ViewCount         int
+	MessageID        string
+	EncryptedContent string
+	HashedPassphrase string
+	HasPassphrase    bool
+	ViewCount        int
 }
 
 // MessageNotificationRequest represents a request to send a message notification
@@ -92,6 +92,7 @@ type EncryptionService interface {
 type StorageService interface {
 	StoreMessage(ctx context.Context, req MessageStorageRequest) error
 	RetrieveMessage(ctx context.Context, req MessageRetrievalStorageRequest) (*MessageStorageResponse, error)
+	GetMessage(ctx context.Context, req MessageRetrievalStorageRequest) (*MessageStorageResponse, error)
 }
 
 // NotificationService defines the interface for notification operations
