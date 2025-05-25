@@ -761,3 +761,38 @@ h2 {
 .fas {
     font-size: 1em;
 }
+
+/* Enhanced Bootstrap tooltip styling */
+.tooltip {
+    z-index: 10000 !important;
+}
+
+.tooltip .tooltip-inner {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+    color: #ffffff !important;
+    border: 2px solid #333333 !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    max-width: 300px !important;
+    text-align: left !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #333333 !important;
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #333333 !important;
+}
+
+.tooltip.bs-tooltip-start .tooltip-arrow::before {
+    border-left-color: #333333 !important;
+}
+
+.tooltip.bs-tooltip-end .tooltip-arrow::before {
+    border-right-color: #333333 !important;
+}
