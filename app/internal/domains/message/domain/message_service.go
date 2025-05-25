@@ -124,18 +124,18 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetrievalRequest) (*MessageRetrievalResponse, error) {
 	log.Debug().Str("messageId", req.MessageID).Msg("Processing message retrieval")
 
-	// Retrieve stored message
+	// First, get message without incrementing view count to check passphrase
 	storageReq := MessageRetrievalStorageRequest{
 		MessageID: req.MessageID,
 	}
 
-	storedMessage, err := s.storageService.RetrieveMessage(ctx, storageReq)
+	storedMessage, err := s.storageService.GetMessage(ctx, storageReq)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve stored message")
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to get stored message")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
-	// Verify passphrase if required
+	// Verify passphrase if required BEFORE incrementing view count
 	if storedMessage.HasPassphrase {
 		valid, err := s.passwordHasher.Verify(ctx, req.Passphrase, storedMessage.HashedPassphrase)
 		if err != nil {
@@ -146,6 +146,13 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 			log.Warn().Str("messageId", req.MessageID).Msg("Invalid passphrase provided")
 			return nil, ErrInvalidPassphrase
 		}
+	}
+
+	// Now that passphrase is validated, retrieve message and increment view count
+	storedMessage, err = s.storageService.RetrieveMessage(ctx, storageReq)
+	if err != nil {
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve stored message")
+		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
 	// Decrypt the message content
