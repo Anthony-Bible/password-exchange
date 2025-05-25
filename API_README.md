@@ -4,11 +4,11 @@ Secure password sharing service with REST API endpoints.
 
 ## Documentation
 
-📖 **Complete API Documentation**: Visit `/api/v1/docs` for interactive Swagger documentation
+📖 **Complete API Documentation**: Visit `/api/v1/docs/index.html` for interactive Swagger documentation
 
 🔗 **Live Documentation**: 
-- Production: https://password.exchange/api/v1/docs
-- Development: http://localhost:8080/api/v1/docs
+- Production: https://password.exchange/api/v1/docs/index.html
+- Development: http://localhost:8080/api/v1/docs/index.html
 
 ## Quick Start
 
@@ -38,6 +38,6 @@ See the interactive documentation for complete migration details.
 
 ## Resources
 
-- **OpenAPI Spec**: `/api/v1/docs/swagger.json`
+- **OpenAPI Spec**: `/api/v1/docs/doc.json`
 - **Health Check**: `/api/v1/health` 
 - **API Info**: `/api/v1/info`
