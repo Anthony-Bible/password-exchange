@@ -4,6 +4,7 @@ import (
 	"html/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -12,6 +13,7 @@ import (
 // WebServer handles HTTP requests for the message service
 type WebServer struct {
 	messageHandler *MessageHandler
+	messageService primary.MessageServicePort
 	apiServer      *api.Server
 	router         *gin.Engine
 }
@@ -37,6 +39,7 @@ func NewWebServer(messageService primary.MessageServicePort) *WebServer {
 	
 	return &WebServer{
 		messageHandler: messageHandler,
+		messageService: messageService,
 		apiServer:      apiServer,
 		router:         router,
 	}
@@ -65,20 +68,42 @@ func (s *WebServer) SetupRoutes() {
 
 // setupAPIRoutes adds API routes to the main router
 func (s *WebServer) setupAPIRoutes() {
-	// Get the configured API router and mount its handlers
-	apiRouter := s.apiServer.GetRouter()
+	// Create API handler directly with the message service
+	apiHandler := api.NewMessageAPIHandler(s.messageService)
 	
-	// Mount the entire API router under /api prefix
-	s.router.Any("/api/*path", func(c *gin.Context) {
-		// Update the path to remove the /api prefix for the API router
-		c.Request.URL.Path = c.Param("path")
-		if c.Request.URL.Path == "" {
-			c.Request.URL.Path = "/"
+	// Add API middleware
+	apiGroup := s.router.Group("/api")
+	apiGroup.Use(func(c *gin.Context) {
+		// Add CORS headers
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID")
+		
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
 		}
-		apiRouter.ServeHTTP(c.Writer, c.Request)
+		c.Next()
 	})
 	
-	log.Info().Msg("API routes mounted on main router")
+	// Add correlation ID and error handling middleware
+	apiGroup.Use(middleware.CorrelationID())
+	apiGroup.Use(middleware.ErrorHandler())
+	
+	// API v1 routes
+	v1 := apiGroup.Group("/v1")
+	{
+		// Message endpoints
+		v1.POST("/messages", apiHandler.SubmitMessage)
+		v1.GET("/messages/:id", apiHandler.GetMessageInfo)
+		v1.POST("/messages/:id/decrypt", apiHandler.DecryptMessage)
+		
+		// Utility endpoints
+		v1.GET("/health", apiHandler.HealthCheck)
+		v1.GET("/info", apiHandler.APIInfo)
+	}
+	
+	log.Info().Msg("API routes configured directly on main router")
 }
 
 // Start starts the web server
