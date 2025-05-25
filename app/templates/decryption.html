@@ -2,7 +2,16 @@
 
 <div class="back min-vh-100">
     <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
-        {{if not .DecryptedMessage}}
+        <!-- Loading state -->
+        <div id="loading-state" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Checking message availability...</p>
+        </div>
+
+        <!-- Access form state -->
+        <div id="access-form" style="display: none;">
             <h2 class="mb-4">Access Secure Message</h2>
             
             <div class="section-group">
@@ -14,20 +23,21 @@
                     </div>
                 </div>
                 
-                {{if .HasPassword}}
                 <div class="d-grid gap-3">
                     <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#loginModal">
                         <i class="fas fa-unlock me-2"></i>
                         Enter Passphrase
                     </button>
-                    <button formmethod="post" id="nopassphrase" type="button" class="btn btn-outline-secondary">
+                    <button id="nopassphrase" type="button" class="btn btn-outline-secondary">
                         <i class="fas fa-eye me-2"></i>
                         Try Without Passphrase
                     </button>
                 </div>
-                {{end}}
             </div>
-        {{else}}
+        </div>
+
+        <!-- Decrypted message state -->
+        <div id="decrypted-message" style="display: none;">
             <h2 class="mb-4">Decrypted Message</h2>
             
             <div class="section-group">
@@ -35,31 +45,41 @@
                     <i class="fas fa-check-circle me-3 fs-5"></i>
                     <div>
                         <strong>Message Successfully Decrypted</strong><br>
-                        <small>This message has been viewed {{.ViewCount}} time(s). It will be deleted after 5 views.</small>
+                        <small id="view-count-text"></small>
                     </div>
                 </div>
                 
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
                     <div class="decrypted-message-box">
-                        <pre class="mb-0">{{.DecryptedMessage}}</pre>
+                        <pre class="mb-0" id="message-content"></pre>
                     </div>
                 </div>
                 
                 <div class="mt-4">
                     <div class="alert alert-info d-flex align-items-center" role="alert">
                         <i class="fas fa-info-circle me-3"></i>
-                        <small>
-                            <strong>Important:</strong> {{if ge .ViewCount 5}}This message has been permanently deleted from our servers after reaching the 5-view limit.{{else}}This message will be automatically deleted after {{sub 5 .ViewCount}} more view(s).{{end}}
+                        <small id="expiry-info">
+                            <strong>Important:</strong> This message will be automatically deleted after additional views.
                         </small>
                     </div>
                 </div>
             </div>
-        {{end}}
+        </div>
+
+        <!-- Error state -->
+        <div id="error-state" style="display: none;">
+            <h2 class="mb-4">Error</h2>
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="fas fa-exclamation-triangle me-3 fs-5"></i>
+                <div id="error-message">
+                    An error occurred while processing your request.
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-{{if .HasPassword}}
 <!-- Passphrase Modal -->
 <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
@@ -71,45 +91,50 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="loginForm" method="POST">
-                <div class="modal-body">
-                    <div class="form-group mb-3">
-                        <label for="passphrase" class="form-label">
-                            Passphrase
-                            <button type="button" 
-                                    class="btn btn-link btn-sm p-0 ms-1" 
-                                    data-bs-toggle="tooltip" 
-                                    title="Enter the passphrase provided by the sender to decrypt this message"
-                                    aria-label="Help about passphrase">
-                                <i class="fas fa-lightbulb"></i>
-                            </button>
-                        </label>
-                        <input type="password" 
-                               name="passphrase" 
-                               class="form-control" 
-                               id="passphrase" 
-                               placeholder="Enter passphrase..."
-                               autocomplete="current-password">
-                        <div class="form-text">
-                            This passphrase was set by the person who shared this message with you
-                        </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label for="passphrase" class="form-label">
+                        Passphrase
+                        <button type="button" 
+                                class="btn btn-link btn-sm p-0 ms-1" 
+                                data-bs-toggle="tooltip" 
+                                title="Enter the passphrase provided by the sender to decrypt this message"
+                                aria-label="Help about passphrase">
+                            <i class="fas fa-lightbulb"></i>
+                        </button>
+                    </label>
+                    <input type="password" 
+                           class="form-control" 
+                           id="passphrase" 
+                           placeholder="Enter passphrase..."
+                           autocomplete="current-password">
+                    <div class="form-text">
+                        This passphrase was set by the person who shared this message with you
                     </div>
+                    <div id="passphrase-error" class="text-danger mt-2" style="display: none;"></div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancel
+                </button>
+                <button type="button" id="decrypt-btn" class="btn btn-primary">
+                    <span id="decrypt-btn-text">
                         <i class="fas fa-unlock me-2"></i>
                         Decrypt Message
-                    </button>
-                </div>
-            </form>
+                    </span>
+                    <span id="decrypt-btn-spinner" style="display: none;">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Decrypting...
+                    </span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
-{{end}}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -119,15 +144,44 @@ document.addEventListener('DOMContentLoaded', function() {
         new bootstrap.Tooltip(element);
     });
     
+    // Parse URL to extract messageId and key
+    const pathParts = window.location.pathname.split('/');
+    const messageId = pathParts[pathParts.length - 2]; // Second to last part
+    const key = pathParts[pathParts.length - 1]; // Last part
+    
+    if (!messageId || !key) {
+        showError('Invalid URL format. Please check the link and try again.');
+        return;
+    }
+    
+    // Check message access on page load
+    checkMessageAccess(messageId, key);
+    
     // Handle "No Passphrase" button
     const noPassphraseButton = document.getElementById('nopassphrase');
     if (noPassphraseButton) {
         noPassphraseButton.addEventListener('click', function() {
-            const passphraseField = document.getElementById('passphrase');
-            if (passphraseField) {
-                passphraseField.value = "";
+            decryptMessage(messageId, key, '');
+        });
+    }
+    
+    // Handle modal decrypt button
+    const decryptBtn = document.getElementById('decrypt-btn');
+    if (decryptBtn) {
+        decryptBtn.addEventListener('click', function() {
+            const passphrase = document.getElementById('passphrase').value;
+            decryptMessage(messageId, key, passphrase);
+        });
+    }
+    
+    // Handle Enter key in passphrase field
+    const passphraseField = document.getElementById('passphrase');
+    if (passphraseField) {
+        passphraseField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const passphrase = this.value;
+                decryptMessage(messageId, key, passphrase);
             }
-            document.getElementById("loginForm").submit();
         });
     }
     
@@ -142,6 +196,146 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// API Functions
+async function checkMessageAccess(messageId, key) {
+    try {
+        const response = await fetch(`/api/v1/messages/${messageId}?key=${encodeURIComponent(key)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            handleMessageAccessResponse(data, messageId, key);
+        } else if (response.status === 404) {
+            showError('Message not found or has expired.');
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            showError(errorData.message || 'Failed to check message access.');
+        }
+    } catch (error) {
+        console.error('Error checking message access:', error);
+        showError('Network error. Please check your connection and try again.');
+    }
+}
+
+function handleMessageAccessResponse(data, messageId, key) {
+    hideLoading();
+    
+    if (data.requiresPassphrase) {
+        showAccessForm();
+    } else {
+        // Automatically decrypt if no passphrase required
+        decryptMessage(messageId, key, '');
+    }
+}
+
+async function decryptMessage(messageId, key, passphrase) {
+    showDecryptSpinner(true);
+    hidePassphraseError();
+    
+    try {
+        const response = await fetch(`/api/v1/messages/${messageId}/decrypt`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                decryptionKey: key,
+                passphrase: passphrase || undefined
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            handleDecryptionSuccess(data);
+        } else if (response.status === 401) {
+            showPassphraseError('Invalid passphrase. Please try again.');
+        } else if (response.status === 404) {
+            showError('Message not found or has expired.');
+        } else if (response.status === 410) {
+            showError('This message has already been accessed and deleted.');
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            showError(errorData.message || 'Failed to decrypt message.');
+        }
+    } catch (error) {
+        console.error('Error decrypting message:', error);
+        showError('Network error. Please check your connection and try again.');
+    } finally {
+        showDecryptSpinner(false);
+    }
+}
+
+function handleDecryptionSuccess(data) {
+    // Close modal if open
+    const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Show decrypted message
+    document.getElementById('message-content').textContent = data.content;
+    
+    // Update view count and expiry info (these are not in the API response yet, so we'll use placeholders)
+    document.getElementById('view-count-text').textContent = 'This message has been successfully decrypted.';
+    document.getElementById('expiry-info').innerHTML = '<strong>Important:</strong> This message has been deleted from our servers for security.';
+    
+    hideAll();
+    document.getElementById('decrypted-message').style.display = 'block';
+}
+
+// UI Helper Functions
+function hideLoading() {
+    document.getElementById('loading-state').style.display = 'none';
+}
+
+function hideAll() {
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('access-form').style.display = 'none';
+    document.getElementById('decrypted-message').style.display = 'none';
+    document.getElementById('error-state').style.display = 'none';
+}
+
+function showAccessForm() {
+    hideAll();
+    document.getElementById('access-form').style.display = 'block';
+}
+
+function showError(message) {
+    hideAll();
+    document.getElementById('error-message').textContent = message;
+    document.getElementById('error-state').style.display = 'block';
+}
+
+function showDecryptSpinner(show) {
+    const btnText = document.getElementById('decrypt-btn-text');
+    const btnSpinner = document.getElementById('decrypt-btn-spinner');
+    const decryptBtn = document.getElementById('decrypt-btn');
+    
+    if (show) {
+        btnText.style.display = 'none';
+        btnSpinner.style.display = 'inline-block';
+        decryptBtn.disabled = true;
+    } else {
+        btnText.style.display = 'inline-block';
+        btnSpinner.style.display = 'none';
+        decryptBtn.disabled = false;
+    }
+}
+
+function showPassphraseError(message) {
+    const errorDiv = document.getElementById('passphrase-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+function hidePassphraseError() {
+    document.getElementById('passphrase-error').style.display = 'none';
+}
 </script>
 
 
