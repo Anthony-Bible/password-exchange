@@ -7,24 +7,34 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // Server represents the API server
 type Server struct {
-	handler *MessageAPIHandler
-	router  *gin.Engine
+	handler          *MessageAPIHandler
+	router           *gin.Engine
+	metricsRegistry  *prometheus.Registry
+	prometheusMetrics *middleware.PrometheusMetrics
 }
 
 // NewServer creates a new API server with the given message service
 func NewServer(messageService primary.MessageServicePort) *Server {
 	handler := NewMessageAPIHandler(messageService)
-	router := setupRouter(handler)
+	
+	// Initialize Prometheus metrics
+	metricsRegistry := prometheus.NewRegistry()
+	prometheusMetrics := middleware.NewPrometheusMetrics(metricsRegistry)
+	
+	router := setupRouter(handler, prometheusMetrics, metricsRegistry)
 	
 	return &Server{
-		handler: handler,
-		router:  router,
+		handler:           handler,
+		router:            router,
+		metricsRegistry:   metricsRegistry,
+		prometheusMetrics: prometheusMetrics,
 	}
 }
 
@@ -34,13 +44,15 @@ func (s *Server) GetRouter() *gin.Engine {
 }
 
 // setupRouter configures the API routes and middleware
-func setupRouter(handler *MessageAPIHandler) *gin.Engine {
+func setupRouter(handler *MessageAPIHandler, prometheusMetrics *middleware.PrometheusMetrics, metricsRegistry *prometheus.Registry) *gin.Engine {
 	router := gin.New()
 	
 	// Global middleware
 	router.Use(gin.Logger())
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.CorrelationID())
+	router.Use(middleware.PrometheusMiddleware(prometheusMetrics)) // Add Prometheus metrics collection
+	router.Use(middleware.CustomRateLimitErrorHandler())
 	router.Use(middleware.ValidationMiddleware())
 	router.Use(middleware.RequestTimeoutMiddleware(30 * time.Second))
 	
@@ -58,21 +70,27 @@ func setupRouter(handler *MessageAPIHandler) *gin.Engine {
 		c.Next()
 	})
 	
-	// API routes
+	// API routes with rate limiting
 	v1 := router.Group("/api/v1")
 	{
-		// Message endpoints
-		v1.POST("/messages", handler.SubmitMessage)
-		v1.GET("/messages/:id", handler.GetMessageInfo)
-		v1.POST("/messages/:id/decrypt", handler.DecryptMessage)
+		// Message endpoints with specific rate limits
+		messages := v1.Group("/messages")
+		{
+			messages.POST("", middleware.MessageSubmissionRateLimit(), handler.SubmitMessage)
+			messages.GET("/:id", middleware.MessageAccessRateLimit(), handler.GetMessageInfo)
+			messages.POST("/:id/decrypt", middleware.MessageDecryptRateLimit(), handler.DecryptMessage)
+		}
 		
-		// Utility endpoints
-		v1.GET("/health", handler.HealthCheck)
-		v1.GET("/info", handler.APIInfo)
+		// Utility endpoints with lenient rate limits
+		v1.GET("/health", middleware.HealthCheckRateLimit(), handler.HealthCheck)
+		v1.GET("/info", middleware.MessageAccessRateLimit(), handler.APIInfo)
 		
-		// Documentation endpoints
-		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		// Documentation endpoints with lenient rate limits
+		v1.GET("/docs/*any", middleware.HealthCheckRateLimit(), ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+	
+	// Metrics endpoint (outside rate limiting to avoid interfering with monitoring)
+	router.GET("/metrics", middleware.PrometheusHandler(metricsRegistry))
 	
 	return router
 }

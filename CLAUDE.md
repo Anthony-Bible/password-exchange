@@ -126,6 +126,7 @@ go test ./... -v  # Must remain green
 ```
 
 **Testing Requirements:**
+- Always use test driven development
 - All new functionality MUST have tests written before implementation
 - Tests must initially fail to prove they test the right behavior
 - No code should be written without corresponding tests
@@ -152,3 +153,4 @@ Run `./test-build.sh` to verify:
 ```
 
 Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+```
