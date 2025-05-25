@@ -108,3 +108,17 @@ Run `./test-build.sh` to verify:
 - Go compilation
 - Docker image builds for both main app and slackbot
 - Kubernetes manifest generation with proper variable substitution
+- the master branch is hosted at https://dev.password.exchange but you MUST confirm with the user that it's been deployed manually. 
+
+## Commit Standards
+
+**MUST use conventional commits** for all commits to this repository. Format:
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
