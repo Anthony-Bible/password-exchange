@@ -125,20 +125,20 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetrievalRequest) (*MessageRetrievalResponse, error) {
 	log.Debug().Str("messageId", req.MessageID).Msg("Processing message retrieval")
 
-	// First, get message without incrementing view count to check passphrase
+	// First, get message metadata without incrementing view count to check passphrase
 	storageReq := MessageRetrievalStorageRequest{
 		MessageID: req.MessageID,
 	}
 
-	storedMessage, err := s.storageService.GetMessage(ctx, storageReq)
+	storedMessageMeta, err := s.storageService.GetMessage(ctx, storageReq)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to get stored message")
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to get stored message metadata")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
-	// Verify passphrase if required BEFORE incrementing view count
-	if storedMessage.HasPassphrase {
-		valid, err := s.passwordHasher.Verify(ctx, req.Passphrase, storedMessage.HashedPassphrase)
+	// Verify passphrase if required BEFORE retrieving full message and incrementing view count
+	if storedMessageMeta.HasPassphrase {
+		valid, err := s.passwordHasher.Verify(ctx, req.Passphrase, storedMessageMeta.HashedPassphrase)
 		if err != nil {
 			log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to verify passphrase")
 			return nil, fmt.Errorf("%w: %v", ErrPasswordVerificationFailed, err)
@@ -149,7 +149,14 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 		}
 	}
 
-	// Decrypt the message content before incrementing view count to ensure decryption works
+	// Only after successful passphrase validation, retrieve full message and increment view count
+	storedMessage, err := s.storageService.RetrieveMessage(ctx, storageReq)
+	if err != nil {
+		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve stored message")
+		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
+	}
+
+	// Decrypt the message content
 	decryptedContent, err := s.encryptionService.Decrypt(ctx, []string{storedMessage.EncryptedContent}, req.DecryptionKey)
 	if err != nil {
 		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decrypt message content")
@@ -167,21 +174,14 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 		finalContent = string(decodedBytes)
 	}
 
-	// Only after successful passphrase validation and decryption, increment view count
-	storedMessageWithIncrement, err := s.storageService.RetrieveMessage(ctx, storageReq)
-	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to increment view count for message")
-		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
-	}
-
 	response := &MessageRetrievalResponse{
 		MessageID: req.MessageID,
 		Content:   finalContent,
-		ViewCount: storedMessageWithIncrement.ViewCount,
+		ViewCount: storedMessage.ViewCount,
 		Success:   true,
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Int("viewCount", storedMessageWithIncrement.ViewCount).Msg("Message retrieved successfully")
+	log.Debug().Str("messageId", req.MessageID).Int("viewCount", storedMessage.ViewCount).Msg("Message retrieved successfully")
 	return response, nil
 }
 

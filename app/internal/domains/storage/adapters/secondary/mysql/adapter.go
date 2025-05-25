@@ -97,11 +97,11 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 	}
 
-	query := "SELECT uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.UniqueID, &message.Passphrase, &message.ViewCount)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
