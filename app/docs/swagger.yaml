@@ -87,6 +87,8 @@ definitions:
         type: string
       expiresAt:
         type: string
+      key:
+        type: string
       messageId:
         type: string
       notificationSent:

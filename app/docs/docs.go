@@ -373,6 +373,9 @@ const docTemplate = `{
                 "expiresAt": {
                     "type": "string"
                 },
+                "key": {
+                    "type": "string"
+                },
                 "messageId": {
                     "type": "string"
                 },
