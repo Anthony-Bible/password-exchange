@@ -1,152 +1,272 @@
-<!DOCTYPE html>
-<html lang="en">
+{{ template "header.html" }}
 
-<head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+<div class="back min-vh-100">
+    <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
+        <div class="error-container text-center">
+            <div class="error-code mb-4">
+                <h1 class="display-1 gradient-text">404</h1>
+            </div>
+            
+            <div class="error-message mb-5">
+                <h2 class="h3 mb-3">Page Not Found</h2>
+                <p class="text-muted lead">
+                    The page you're looking for doesn't exist or has been moved.
+                </p>
+            </div>
+            
+            <div class="error-actions">
+                <a href="/" class="btn btn-success btn-lg me-3">
+                    <i class="fas fa-home me-2"></i>
+                    Go to Homepage
+                </a>
+                <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-	<title>404 HTML Template by Colorlib</title>
-
-	<!-- Google font -->
-	<link href="https://fonts.googleapis.com/css?family=Montserrat:200,400,700" rel="stylesheet">
-
-	<!-- Custom stlylesheet -->
-	<link type="text/css" rel="stylesheet" href="css/style.css" />
-
-	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-	<!--[if lt IE 9]>
-		  <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
-		  <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-		<![endif]-->
-        <!-- There's gotta be a better way with go to embed css -->
-<style>* {
-    -webkit-box-sizing: border-box;
-            box-sizing: border-box;
-  }
-  
-  body {
-    padding: 0;
-    margin: 0;
-  }
-  
-  #notfound {
+<style>
+/* Modern gradient background */
+.back {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-attachment: fixed;
     position: relative;
-    height: 100vh;
-  }
-  
-  #notfound .notfound {
+    z-index: 0;
+}
+
+.back::before {
+    content: '';
     position: absolute;
-    left: 50%;
-    top: 50%;
-    -webkit-transform: translate(-50%, -50%);
-        -ms-transform: translate(-50%, -50%);
-            transform: translate(-50%, -50%);
-  }
-  
-  .notfound {
-    max-width: 520px;
-    width: 100%;
-    line-height: 1.4;
-    text-align: center;
-  }
-  
-  .notfound .notfound-404 {
-    position: relative;
-    height: 200px;
-    margin: 0px auto 20px;
-    z-index: -1;
-  }
-  
-  .notfound .notfound-404 h1 {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 236px;
-    font-weight: 200;
-    margin: 0px;
-    color: #211b19;
-    text-transform: uppercase;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    -webkit-transform: translate(-50%, -50%);
-        -ms-transform: translate(-50%, -50%);
-            transform: translate(-50%, -50%);
-  }
-  
-  .notfound .notfound-404 h2 {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 28px;
-    font-weight: 400;
-    text-transform: uppercase;
-    color: #211b19;
-    background: #fff;
-    padding: 10px 5px;
-    margin: auto;
-    display: inline-block;
-    position: absolute;
-    bottom: 0px;
+    top: 0;
     left: 0;
     right: 0;
-  }
-  
-  .notfound a {
-    font-family: 'Montserrat', sans-serif;
-    display: inline-block;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Enhanced container */
+.container-main {
+    max-width: 700px;
+    border-radius: 24px !important;
+    backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 32px 64px rgba(0, 0, 0, 0.15), 
+                0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* Error container */
+.error-container {
+    padding: 2rem 0;
+}
+
+/* Large 404 text with gradient */
+.error-code h1 {
+    font-size: 8rem;
     font-weight: 700;
-    text-decoration: none;
-    color: #fff;
+    margin: 0;
+    line-height: 0.8;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+}
+
+.error-code h1::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 4px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 2px;
+}
+
+/* Error message styling */
+.error-message h2 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.error-message p {
+    font-size: 1.1rem;
+    color: #6c757d;
+}
+
+/* Enhanced button styling */
+.btn-success {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    font-size: 1.1rem;
     text-transform: uppercase;
-    padding: 13px 23px;
-    background: #ff6300;
-    font-size: 18px;
-    -webkit-transition: 0.2s all;
-    transition: 0.2s all;
-  }
-  
-  .notfound a:hover {
-    color: #ff6300;
-    background: #211b19;
-  }
-  
-  @media only screen and (max-width: 767px) {
-    .notfound .notfound-404 h1 {
-      font-size: 148px;
-    }
-  }
-  
-  @media only screen and (max-width: 480px) {
-    .notfound .notfound-404 {
-      height: 148px;
-      margin: 0px auto 10px;
-    }
-    .notfound .notfound-404 h1 {
-      font-size: 86px;
-    }
-    .notfound .notfound-404 h2 {
-      font-size: 16px;
-    }
-    .notfound a {
-      padding: 7px 15px;
-      font-size: 14px;
-    }
-  }
-  </style>
-</head>
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
 
-<body>
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+}
 
-	<div id="notfound">
-		<div class="notfound">
-			<div class="notfound-404">
-				<h1>Oops!</h1>
-				<h2>404 - The Page can't be found</h2>
-			</div>
-			<a href="/">Go TO Homepage</a>
-		</div>
-	</div>
+.btn-outline-secondary {
+    border: 2px solid #6c757d;
+    border-radius: 16px;
+    padding: 1rem 2rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    color: #6c757d;
+}
 
-</body><!-- This templates was made by Colorlib (https://colorlib.com) -->
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(108, 117, 125, 0.3);
+}
 
+/* 4K and ultra-wide display optimization */
+@media (min-width: 1920px) {
+    .container-main {
+        max-width: 900px;
+        padding: 4rem 5rem !important;
+        margin: 4rem auto !important;
+    }
+    
+    .error-code h1 {
+        font-size: 12rem;
+    }
+    
+    .error-message h2 {
+        font-size: 2.5rem;
+    }
+    
+    .error-message p {
+        font-size: 1.5rem;
+    }
+    
+    .btn {
+        padding: 1.5rem 3rem;
+        font-size: 1.4rem;
+    }
+}
+
+@media (min-width: 3000px) {
+    .container-main {
+        max-width: 1100px;
+        padding: 5rem 6rem !important;
+    }
+    
+    .error-code h1 {
+        font-size: 14rem;
+    }
+    
+    .error-message h2 {
+        font-size: 3rem;
+    }
+    
+    .error-message p {
+        font-size: 1.75rem;
+    }
+    
+    .btn {
+        padding: 2rem 4rem;
+        font-size: 1.6rem;
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container-main {
+        margin: 1rem !important;
+        padding: 2rem !important;
+        border-radius: 16px !important;
+    }
+    
+    .error-code h1 {
+        font-size: 6rem;
+    }
+    
+    .error-message h2 {
+        font-size: 1.5rem;
+    }
+    
+    .error-message p {
+        font-size: 1rem;
+    }
+    
+    .btn {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .error-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn.me-3 {
+        margin-right: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .container-main {
+        margin: 0.5rem !important;
+        padding: 1.5rem !important;
+    }
+    
+    .error-code h1 {
+        font-size: 4rem;
+    }
+    
+    .error-container {
+        padding: 1rem 0;
+    }
+}
+
+/* Animation for page load */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container-main {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* Icon styling */
+.fas {
+    font-size: 1em;
+}
+</style>
+
+</body>
 </html>
