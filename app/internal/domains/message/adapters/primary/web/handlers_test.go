@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,15 +67,18 @@ func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 			// Create a test context directly without routing
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
-			c, _ := gin.CreateTestContext(w)
+			
+			// Create gin engine with mock templates
+			gin.SetMode(gin.TestMode)
+			engine := gin.New()
+			engine.SetHTMLTemplate(createMockTemplate())
+			
+			c := gin.CreateTestContextOnly(w, engine)
 			c.Request = req
 			c.Params = gin.Params{
 				{Key: "uuid", Value: messageID},
 				{Key: "key", Value: "/somekey"},
 			}
-
-			// Mock the HTML method to prevent template loading
-			c.Header("Content-Type", "text/html; charset=utf-8")
 			
 			// Call the handler directly
 			handler.DisplayDecrypted(c)
@@ -104,7 +108,13 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 	// Create a test context directly
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
-	c, _ := gin.CreateTestContext(w)
+	
+	// Create gin engine with mock templates
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.SetHTMLTemplate(createMockTemplate())
+	
+	c := gin.CreateTestContextOnly(w, engine)
 	c.Request = req
 	c.Params = gin.Params{
 		{Key: "uuid", Value: messageID},
@@ -120,4 +130,12 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 	mockService.AssertNotCalled(t, "RetrieveMessage", mock.Anything, mock.Anything)
 	
 	mockService.AssertExpectations(t)
+}
+
+// createMockTemplate creates a simple mock template for testing
+func createMockTemplate() *template.Template {
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("decryption.html").Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
+	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
+	return tmpl
 }
