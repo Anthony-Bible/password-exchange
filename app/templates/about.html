@@ -1,13 +1,123 @@
 {{ template "header.html" }}
-        <div class="card bg-light rounded m-auto shadow-lg w-75">
 
-        <div class="card-body">
-        <h5 class="text-decoration-underline text-center py-1 card-title">About Password Exchange</h5>
-        <p class="card-text">The goal of Password Exchange is to create an easy and secure way to share passwords and other sensitive text. You can use our form or our slackbot with more ways to share coming soon. We understand that transparency is the key to trust which is why we're completly open source. This means you can take a look at the code or even run your own instance.</p>
+<div class="back min-vh-100">
+    <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
+        <h2 class="mb-4 text-center">
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            About Password Exchange
+        </h2>
+        
+        <div class="section-group">
+            <h5 class="section-title">Our Mission</h5>
+            <p class="lead">
+                The goal of Password Exchange is to create an easy and secure way to share passwords and other sensitive text. 
+                You can use our web form or our Slackbot with more ways to share coming soon.
+            </p>
+        </div>
+
+        <div class="section-group">
+            <h5 class="section-title">
+                <i class="fas fa-shield-alt text-success me-2"></i>
+                Security Features
+            </h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-lock text-primary me-2"></i>
+                            End-to-end encryption
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-eye-slash text-primary me-2"></i>
+                            One-time access only
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            Automatic expiration
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-trash text-primary me-2"></i>
+                            Secure deletion
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-user-shield text-primary me-2"></i>
+                            No data retention
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-key text-primary me-2"></i>
+                            Optional passphrase protection
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-group">
+            <h5 class="section-title">
+                <i class="fas fa-code text-info me-2"></i>
+                Open Source & Transparent
+            </h5>
+            <p>
+                We understand that transparency is the key to trust, which is why we're completely open source. 
+                This means you can take a look at the code or even run your own instance.
+            </p>
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-github me-2"></i>
+                <strong>Source Code:</strong> Available on GitHub for complete transparency and security auditing.
+            </div>
+        </div>
+
+        <div class="section-group">
+            <h5 class="section-title">
+                <i class="fas fa-tools text-warning me-2"></i>
+                How to Use
+            </h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-globe text-primary me-2"></i>
+                                Web Interface
+                            </h6>
+                            <p class="card-text">
+                                Use our secure web form to create encrypted messages that can be shared via a unique link.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fab fa-slack text-success me-2"></i>
+                                Slack Integration
+                            </h6>
+                            <p class="card-text">
+                                Use our Slackbot directly within your workspace for seamless secure password sharing.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="/" class="btn btn-success btn-lg">
+                        <i class="fas fa-lock me-2"></i>
+                        Start Sharing Securely
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+</div>
 
 </body>
 </html>
