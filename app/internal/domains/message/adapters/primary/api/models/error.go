@@ -43,11 +43,12 @@ func NewValidationError(path string, details map[string]interface{}) *StandardEr
 
 // Common error codes
 const (
-	ErrorCodeValidationFailed  = "validation_failed"
-	ErrorCodeMessageNotFound   = "message_not_found"
-	ErrorCodeInvalidPassphrase = "invalid_passphrase"
-	ErrorCodeMessageConsumed   = "message_consumed"
-	ErrorCodeRateLimitExceeded = "rate_limit_exceeded"
-	ErrorCodeInternalError     = "internal_error"
+	ErrorCodeValidationFailed   = "validation_failed"
+	ErrorCodeMessageNotFound    = "message_not_found"
+	ErrorCodeInvalidPassphrase  = "invalid_passphrase"
+	ErrorCodeMessageConsumed    = "message_consumed"
+	ErrorCodeRateLimitExceeded  = "rate_limit_exceeded"
+	ErrorCodeInternalError      = "internal_error"
 	ErrorCodeServiceUnavailable = "service_unavailable"
+	ErrorCodeTimeout            = "request_timeout"
 )

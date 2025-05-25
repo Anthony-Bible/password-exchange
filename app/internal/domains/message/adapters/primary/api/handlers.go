@@ -26,6 +26,17 @@ func NewMessageAPIHandler(messageService primary.MessageServicePort) *MessageAPI
 }
 
 // SubmitMessage handles POST /api/v1/messages
+// @Summary Submit a new message
+// @Description Creates a new encrypted message that can be accessed via a unique URL. Optionally sends email notifications to the recipient.
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Param request body models.MessageSubmissionRequest true "Message submission request"
+// @Success 201 {object} models.MessageSubmissionResponse "Message successfully created"
+// @Failure 400 {object} models.StandardErrorResponse "Validation error"
+// @Failure 422 {object} models.StandardErrorResponse "Anti-spam verification failed"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /messages [post]
 func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
@@ -43,11 +54,9 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		return
 	}
 
-	// Validate conditional requirements
-	if err := h.validateSubmissionRequest(&req); err != nil {
-		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Request validation failed", map[string]interface{}{
-			"validation_errors": err,
-		})
+	// Validate request using enhanced validation middleware
+	if validationErrors := middleware.ValidateMessageSubmission(&req); validationErrors != nil {
+		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Request validation failed", validationErrors)
 		return
 	}
 
@@ -100,6 +109,17 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 }
 
 // GetMessageInfo handles GET /api/v1/messages/{id}
+// @Summary Get message access information
+// @Description Retrieves information about a message including whether it exists, requires a passphrase, and has been accessed.
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Param id path string true "Message ID" format(uuid)
+// @Param key query string true "Base64-encoded decryption key" format(byte)
+// @Success 200 {object} models.MessageAccessInfoResponse "Message information retrieved"
+// @Failure 404 {object} models.StandardErrorResponse "Message not found or expired"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /messages/{id} [get]
 func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
@@ -141,6 +161,19 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 }
 
 // DecryptMessage handles POST /api/v1/messages/{id}/decrypt
+// @Summary Decrypt a message
+// @Description Decrypts and retrieves the message content. This is a one-time operation that will delete the message after successful decryption.
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Param id path string true "Message ID" format(uuid)
+// @Param request body models.MessageDecryptRequest true "Decryption request"
+// @Success 200 {object} models.MessageDecryptResponse "Message successfully decrypted"
+// @Failure 401 {object} models.StandardErrorResponse "Invalid passphrase"
+// @Failure 404 {object} models.StandardErrorResponse "Message not found or expired"
+// @Failure 410 {object} models.StandardErrorResponse "Message already consumed"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /messages/{id}/decrypt [post]
 func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
@@ -210,6 +243,13 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 }
 
 // HealthCheck handles GET /api/v1/health
+// @Summary Health check
+// @Description Returns the health status of the API and its dependencies
+// @Tags Utility
+// @Accept json
+// @Produce json
+// @Success 200 {object} models.HealthCheckResponse "Service health status"
+// @Router /health [get]
 func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
@@ -233,6 +273,13 @@ func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 }
 
 // APIInfo handles GET /api/v1/info
+// @Summary API information
+// @Description Returns information about the API including available endpoints and features
+// @Tags Utility
+// @Accept json
+// @Produce json
+// @Success 200 {object} models.APIInfoResponse "API information"
+// @Router /info [get]
 func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
@@ -260,42 +307,3 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// validateSubmissionRequest validates the message submission request
-func (h *MessageAPIHandler) validateSubmissionRequest(req *models.MessageSubmissionRequest) map[string]string {
-	errors := make(map[string]string)
-
-	// If notifications are enabled, sender and recipient info is required
-	if req.SendNotification {
-		if req.Sender == nil {
-			errors["sender"] = "Sender information is required when notifications are enabled"
-		} else {
-			if req.Sender.Name == "" {
-				errors["sender.name"] = "Sender name is required when notifications are enabled"
-			}
-			if req.Sender.Email == "" {
-				errors["sender.email"] = "Sender email is required when notifications are enabled"
-			}
-		}
-
-		if req.Recipient == nil {
-			errors["recipient"] = "Recipient information is required when notifications are enabled"
-		} else {
-			if req.Recipient.Name == "" {
-				errors["recipient.name"] = "Recipient name is required when notifications are enabled"
-			}
-			if req.Recipient.Email == "" {
-				errors["recipient.email"] = "Recipient email is required when notifications are enabled"
-			}
-		}
-
-		// Anti-spam validation
-		if req.AntiSpamAnswer != "blue" {
-			errors["antiSpamAnswer"] = "Anti-spam answer must be 'blue'"
-		}
-	}
-
-	if len(errors) > 0 {
-		return errors
-	}
-	return nil
-}

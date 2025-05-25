@@ -1,0 +1,591 @@
+openapi: 3.0.3
+info:
+  title: Password Exchange API
+  description: |
+    Secure password sharing service that allows users to submit encrypted messages 
+    and share them through unique, one-time access URLs. The service provides 
+    optional email notifications and passphrase protection for enhanced security.
+  version: 1.0.0
+  contact:
+    name: Password Exchange Support
+    url: https://github.com/Anthony-Bible/password-exchange
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.password.exchange/api/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+security:
+  - {}  # No authentication required for public endpoints
+
+paths:
+  /messages:
+    post:
+      summary: Submit a new message
+      description: |
+        Creates a new encrypted message that can be accessed via a unique URL.
+        Optionally sends email notifications to the recipient.
+      operationId: submitMessage
+      tags:
+        - Messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageSubmissionRequest'
+            examples:
+              basic_message:
+                summary: Basic message without notifications
+                value:
+                  content: "This is a secret message"
+                  passphrase: "optional-passphrase"
+                  sendNotification: false
+              message_with_notification:
+                summary: Message with email notification
+                value:
+                  content: "Important credentials for the project"
+                  sender:
+                    name: "John Doe"
+                    email: "john@example.com"
+                  recipient:
+                    name: "Jane Smith"
+                    email: "jane@example.com"
+                  passphrase: "secure-passphrase"
+                  additionalInfo: "Please access this within 24 hours"
+                  sendNotification: true
+                  antiSpamAnswer: "blue"
+      responses:
+        '201':
+          description: Message successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageSubmissionResponse'
+              examples:
+                success_response:
+                  summary: Successful message submission
+                  value:
+                    messageId: "123e4567-e89b-12d3-a456-426614174000"
+                    decryptUrl: "https://api.password.exchange/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt?key=YWJjZGVmZ2hpams="
+                    webUrl: "https://password.exchange/decrypt/123e4567-e89b-12d3-a456-426614174000/YWJjZGVmZ2hpams="
+                    expiresAt: "2024-01-02T12:00:00Z"
+                    notificationSent: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                validation_error:
+                  summary: Missing required fields for notification
+                  value:
+                    error: "validation_failed"
+                    message: "Request validation failed"
+                    details:
+                      sender.email: "Sender email is required when notifications are enabled"
+                      antiSpamAnswer: "Invalid anti-spam answer"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    path: "/api/v1/messages"
+        '422':
+          description: Anti-spam verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+
+  /messages/{messageId}:
+    get:
+      summary: Get message access information
+      description: |
+        Retrieves information about a message including whether it exists,
+        requires a passphrase, and has been accessed.
+      operationId: getMessageInfo
+      tags:
+        - Messages
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          description: Unique identifier for the message
+          schema:
+            type: string
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
+        - name: key
+          in: query
+          required: true
+          description: Base64-encoded decryption key
+          schema:
+            type: string
+            format: byte
+            example: "YWJjZGVmZ2hpams="
+      responses:
+        '200':
+          description: Message information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageAccessInfoResponse'
+              examples:
+                message_exists:
+                  summary: Message exists and requires passphrase
+                  value:
+                    messageId: "123e4567-e89b-12d3-a456-426614174000"
+                    exists: true
+                    requiresPassphrase: true
+                    hasBeenAccessed: false
+                    expiresAt: "2024-01-02T12:00:00Z"
+        '404':
+          description: Message not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+              examples:
+                not_found:
+                  summary: Message not found
+                  value:
+                    error: "message_not_found"
+                    message: "Message not found or has expired"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    path: "/api/v1/messages/123e4567-e89b-12d3-a456-426614174000"
+
+  /messages/{messageId}/decrypt:
+    post:
+      summary: Decrypt a message
+      description: |
+        Decrypts and retrieves the message content. This is a one-time operation
+        that will delete the message after successful decryption.
+      operationId: decryptMessage
+      tags:
+        - Messages
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          description: Unique identifier for the message
+          schema:
+            type: string
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageDecryptRequest'
+            examples:
+              with_passphrase:
+                summary: Decrypt with passphrase
+                value:
+                  decryptionKey: "YWJjZGVmZ2hpams="
+                  passphrase: "secure-passphrase"
+              without_passphrase:
+                summary: Decrypt without passphrase
+                value:
+                  decryptionKey: "YWJjZGVmZ2hpams="
+      responses:
+        '200':
+          description: Message successfully decrypted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageDecryptResponse'
+              examples:
+                decrypted_message:
+                  summary: Successfully decrypted message
+                  value:
+                    messageId: "123e4567-e89b-12d3-a456-426614174000"
+                    content: "This is the secret message content"
+                    decryptedAt: "2024-01-01T12:30:00Z"
+        '401':
+          description: Invalid passphrase
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+              examples:
+                invalid_passphrase:
+                  summary: Wrong passphrase provided
+                  value:
+                    error: "invalid_passphrase"
+                    message: "Invalid passphrase provided"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    path: "/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt"
+        '404':
+          description: Message not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+        '410':
+          description: Message already consumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardErrorResponse'
+              examples:
+                message_consumed:
+                  summary: Message already accessed
+                  value:
+                    error: "message_consumed"
+                    message: "Message has already been accessed and deleted"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    path: "/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt"
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the API and its dependencies
+      operationId: healthCheck
+      tags:
+        - Utility
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              examples:
+                healthy:
+                  summary: All services healthy
+                  value:
+                    status: "healthy"
+                    version: "1.0.0"
+                    timestamp: "2024-01-01T12:00:00Z"
+                    services:
+                      database: "healthy"
+                      encryption: "healthy"
+                      email: "healthy"
+
+  /info:
+    get:
+      summary: API information
+      description: Returns information about the API including available endpoints and features
+      operationId: getAPIInfo
+      tags:
+        - Utility
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIInfoResponse'
+              examples:
+                api_info:
+                  summary: API information response
+                  value:
+                    version: "1.0.0"
+                    documentation: "/api/v1/docs"
+                    endpoints:
+                      submit: "POST /api/v1/messages"
+                      access: "GET /api/v1/messages/{id}"
+                      decrypt: "POST /api/v1/messages/{id}/decrypt"
+                      health: "GET /api/v1/health"
+                      info: "GET /api/v1/info"
+                    features:
+                      emailNotifications: true
+                      passphraseProtection: true
+                      antiSpamProtection: true
+
+components:
+  schemas:
+    MessageSubmissionRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: The message content to encrypt and store
+          example: "This is a secret message"
+        sender:
+          $ref: '#/components/schemas/Sender'
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        passphrase:
+          type: string
+          maxLength: 500
+          description: Optional passphrase for additional security
+          example: "secure-passphrase"
+        additionalInfo:
+          type: string
+          description: Additional information or instructions for the recipient
+          example: "Please access this within 24 hours"
+        sendNotification:
+          type: boolean
+          default: false
+          description: Whether to send email notification to recipient
+        antiSpamAnswer:
+          type: string
+          description: Anti-spam verification (required when sendNotification is true)
+          example: "blue"
+      description: |
+        Request to submit a new encrypted message. When sendNotification is true,
+        sender, recipient, and antiSpamAnswer fields become required.
+
+    Sender:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Name of the message sender
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: Email address of the sender
+          example: "john@example.com"
+
+    Recipient:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Name of the message recipient
+          example: "Jane Smith"
+        email:
+          type: string
+          format: email
+          description: Email address of the recipient
+          example: "jane@example.com"
+
+    MessageSubmissionResponse:
+      type: object
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Unique identifier for the submitted message
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        decryptUrl:
+          type: string
+          format: uri
+          description: API URL to decrypt the message
+          example: "https://api.password.exchange/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt?key=YWJjZGVmZ2hpams="
+        webUrl:
+          type: string
+          format: uri
+          description: Web interface URL to access the message
+          example: "https://password.exchange/decrypt/123e4567-e89b-12d3-a456-426614174000/YWJjZGVmZ2hpams="
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the message will expire
+          example: "2024-01-02T12:00:00Z"
+        notificationSent:
+          type: boolean
+          description: Whether email notification was sent successfully
+          example: true
+
+    MessageAccessInfoResponse:
+      type: object
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        exists:
+          type: boolean
+          description: Whether the message exists and is accessible
+          example: true
+        requiresPassphrase:
+          type: boolean
+          description: Whether the message requires a passphrase to decrypt
+          example: true
+        hasBeenAccessed:
+          type: boolean
+          description: Whether the message has already been accessed
+          example: false
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the message will expire
+          example: "2024-01-02T12:00:00Z"
+
+    MessageDecryptRequest:
+      type: object
+      required:
+        - decryptionKey
+      properties:
+        decryptionKey:
+          type: string
+          format: byte
+          description: Base64-encoded decryption key
+          example: "YWJjZGVmZ2hpams="
+        passphrase:
+          type: string
+          description: Passphrase if the message is passphrase-protected
+          example: "secure-passphrase"
+
+    MessageDecryptResponse:
+      type: object
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: Unique identifier for the message
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        content:
+          type: string
+          description: The decrypted message content
+          example: "This is the secret message content"
+        decryptedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the message was decrypted
+          example: "2024-01-01T12:30:00Z"
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Overall system health status
+          example: "healthy"
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of the health check
+          example: "2024-01-01T12:00:00Z"
+        services:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [healthy, unhealthy]
+          description: Health status of individual services
+          example:
+            database: "healthy"
+            encryption: "healthy"
+            email: "healthy"
+
+    APIInfoResponse:
+      type: object
+      properties:
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
+        documentation:
+          type: string
+          description: URL to API documentation
+          example: "/api/v1/docs"
+        endpoints:
+          type: object
+          additionalProperties:
+            type: string
+          description: Available API endpoints
+          example:
+            submit: "POST /api/v1/messages"
+            access: "GET /api/v1/messages/{id}"
+            decrypt: "POST /api/v1/messages/{id}/decrypt"
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Available API features
+          example:
+            emailNotifications: true
+            passphraseProtection: true
+            antiSpamProtection: true
+
+    StandardErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code identifier
+          example: "message_not_found"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Message not found or has expired"
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the error occurred
+          example: "2024-01-01T12:00:00Z"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/messages/123e4567-e89b-12d3-a456-426614174000"
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/StandardErrorResponse'
+        - type: object
+          properties:
+            details:
+              type: object
+              additionalProperties: true
+              description: Detailed validation error information
+              example:
+                sender.email: "Sender email is required when notifications are enabled"
+                antiSpamAnswer: "Invalid anti-spam answer"
+
+  responses:
+    BadRequest:
+      description: The request was malformed or contained invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+    Unauthorized:
+      description: Authentication credentials were missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+
+    InternalServerError:
+      description: An unexpected error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardErrorResponse'
+
+tags:
+  - name: Messages
+    description: Operations for submitting, accessing, and decrypting messages
+  - name: Utility
+    description: Utility endpoints for health checks and API information

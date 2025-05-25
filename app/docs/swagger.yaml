@@ -1,0 +1,300 @@
+basePath: /api/v1
+definitions:
+  models.APIInfoResponse:
+    properties:
+      documentation:
+        type: string
+      endpoints:
+        additionalProperties:
+          type: string
+        type: object
+      features:
+        additionalProperties:
+          type: boolean
+        type: object
+      version:
+        type: string
+    type: object
+  models.HealthCheckResponse:
+    properties:
+      services:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
+  models.MessageAccessInfoResponse:
+    properties:
+      exists:
+        type: boolean
+      expiresAt:
+        type: string
+      hasBeenAccessed:
+        type: boolean
+      messageId:
+        type: string
+      requiresPassphrase:
+        type: boolean
+    type: object
+  models.MessageDecryptRequest:
+    properties:
+      decryptionKey:
+        type: string
+      passphrase:
+        type: string
+    required:
+    - decryptionKey
+    type: object
+  models.MessageDecryptResponse:
+    properties:
+      content:
+        type: string
+      decryptedAt:
+        type: string
+      messageId:
+        type: string
+    type: object
+  models.MessageSubmissionRequest:
+    properties:
+      additionalInfo:
+        type: string
+      antiSpamAnswer:
+        type: string
+      content:
+        maxLength: 10000
+        minLength: 1
+        type: string
+      passphrase:
+        maxLength: 500
+        type: string
+      recipient:
+        $ref: '#/definitions/models.Recipient'
+      sendNotification:
+        type: boolean
+      sender:
+        $ref: '#/definitions/models.Sender'
+    required:
+    - content
+    type: object
+  models.MessageSubmissionResponse:
+    properties:
+      decryptUrl:
+        type: string
+      expiresAt:
+        type: string
+      messageId:
+        type: string
+      notificationSent:
+        type: boolean
+      webUrl:
+        type: string
+    type: object
+  models.Recipient:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - email
+    - name
+    type: object
+  models.Sender:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - email
+    - name
+    type: object
+  models.StandardErrorResponse:
+    properties:
+      details:
+        additionalProperties: true
+        type: object
+      error:
+        type: string
+      message:
+        type: string
+      path:
+        type: string
+      timestamp:
+        type: string
+    type: object
+host: password.exchange
+info:
+  contact:
+    name: Password Exchange Support
+    url: https://github.com/Anthony-Bible/password-exchange
+  description: |-
+    Secure password sharing service that allows users to submit encrypted messages and share them through unique, one-time access URLs.
+    The service provides optional email notifications and passphrase protection for enhanced security.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Password Exchange API
+  version: 1.0.0
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns the health status of the API and its dependencies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service health status
+          schema:
+            $ref: '#/definitions/models.HealthCheckResponse'
+      summary: Health check
+      tags:
+      - Utility
+  /info:
+    get:
+      consumes:
+      - application/json
+      description: Returns information about the API including available endpoints
+        and features
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API information
+          schema:
+            $ref: '#/definitions/models.APIInfoResponse'
+      summary: API information
+      tags:
+      - Utility
+  /messages:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new encrypted message that can be accessed via a unique
+        URL. Optionally sends email notifications to the recipient.
+      parameters:
+      - description: Message submission request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.MessageSubmissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Message successfully created
+          schema:
+            $ref: '#/definitions/models.MessageSubmissionResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "422":
+          description: Anti-spam verification failed
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Submit a new message
+      tags:
+      - Messages
+  /messages/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves information about a message including whether it exists,
+        requires a passphrase, and has been accessed.
+      parameters:
+      - description: Message ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Base64-encoded decryption key
+        format: byte
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message information retrieved
+          schema:
+            $ref: '#/definitions/models.MessageAccessInfoResponse'
+        "404":
+          description: Message not found or expired
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Get message access information
+      tags:
+      - Messages
+  /messages/{id}/decrypt:
+    post:
+      consumes:
+      - application/json
+      description: Decrypts and retrieves the message content. This is a one-time
+        operation that will delete the message after successful decryption.
+      parameters:
+      - description: Message ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Decryption request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.MessageDecryptRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Message successfully decrypted
+          schema:
+            $ref: '#/definitions/models.MessageDecryptResponse'
+        "401":
+          description: Invalid passphrase
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "404":
+          description: Message not found or expired
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "410":
+          description: Message already consumed
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Decrypt a message
+      tags:
+      - Messages
+schemes:
+- https
+- http
+swagger: "2.0"

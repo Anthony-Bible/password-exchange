@@ -128,7 +128,8 @@ func TestSubmitMessage_ValidationError(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
 	assert.NoError(t, err)
 	assert.Equal(t, models.ErrorCodeValidationFailed, errorResponse.Error)
-	assert.Contains(t, errorResponse.Details, "validation_errors")
+	assert.Contains(t, errorResponse.Details, "sender")
+	assert.Contains(t, errorResponse.Details, "recipient")
 }
 
 func TestGetMessageInfo_Success(t *testing.T) {

@@ -46,6 +46,45 @@ else
   exit 1
 fi
 
+echo "Generating Swagger documentation..."
+# Check if swag is installed, install if needed
+if ! command -v swag &> /dev/null; then
+  echo "Installing swag CLI tool..."
+  go install github.com/swaggo/swag/cmd/swag@latest
+fi
+
+# Generate swagger docs
+swag init -g internal/domains/message/adapters/primary/api/docs.go -o docs --parseDependency
+if [ $? -eq 0 ]; then
+  echo "Swagger documentation generation successful!"
+  
+  # Fix swagger generation issue with LeftDelim/RightDelim fields
+  if grep -q "LeftDelim\|RightDelim" docs/docs.go; then
+    echo "Fixing swagger generation compatibility issue..."
+    sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+    # Fix any trailing comma issues
+    sed -i 's/SwaggerTemplate:  docTemplate,$/SwaggerTemplate:  docTemplate,/' docs/docs.go
+  fi
+  
+  # Verify generated files contain expected content
+  if [ -f "docs/swagger.json" ] && [ -f "docs/swagger.yaml" ] && [ -f "docs/docs.go" ]; then
+    if grep -q "Password Exchange API" docs/swagger.json; then
+      echo "✅ Swagger files generated and validated successfully!"
+    else
+      echo "❌ Generated swagger files appear to be incomplete"
+      exit 1
+    fi
+  else
+    echo "❌ Required swagger files were not generated"
+    exit 1
+  fi
+  
+  echo "Documentation available at /api/v1/docs when server is running"
+else
+  echo "Swagger documentation generation failed!"
+  exit 1
+fi
+
 echo "Testing Docker build for main application..."
 cd ..
 docker build -t passwordexchange-test .

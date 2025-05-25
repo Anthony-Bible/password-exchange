@@ -103,6 +103,36 @@ protoc --proto_path=protos \
 
 ## Testing
 
+### Test-Driven Development (TDD)
+
+**MUST follow strict Test-Driven Development practices** for all code changes:
+
+1. **Red Phase**: Write failing tests first that describe the expected behavior
+2. **Green Phase**: Write minimal code to make tests pass
+3. **Refactor Phase**: Improve code while keeping tests green
+4. **Iterate**: Repeat cycle for each feature/requirement
+
+**TDD Workflow:**
+```bash
+# 1. Write failing test
+go test ./... -v  # Expect failures
+
+# 2. Write minimal implementation
+# 3. Run tests again
+go test ./... -v  # Expect success
+
+# 4. Refactor and verify tests still pass
+go test ./... -v  # Must remain green
+```
+
+**Testing Requirements:**
+- All new functionality MUST have tests written before implementation
+- Tests must initially fail to prove they test the right behavior
+- No code should be written without corresponding tests
+- All tests must pass before code is considered complete
+
+### Build Verification
+
 Run `./test-build.sh` to verify:
 - Protobuf generation
 - Go compilation

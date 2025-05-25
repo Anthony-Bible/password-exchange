@@ -1,9 +1,14 @@
 package api
 
 import (
+	"time"
+
+	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // Server represents the API server
@@ -36,6 +41,8 @@ func setupRouter(handler *MessageAPIHandler) *gin.Engine {
 	router.Use(gin.Logger())
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.CorrelationID())
+	router.Use(middleware.ValidationMiddleware())
+	router.Use(middleware.RequestTimeoutMiddleware(30 * time.Second))
 	
 	// CORS middleware - allow all origins for now
 	router.Use(func(c *gin.Context) {
@@ -62,6 +69,9 @@ func setupRouter(handler *MessageAPIHandler) *gin.Engine {
 		// Utility endpoints
 		v1.GET("/health", handler.HealthCheck)
 		v1.GET("/info", handler.APIInfo)
+		
+		// Documentation endpoints
+		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 	
 	return router
