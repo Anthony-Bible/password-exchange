@@ -1,57 +1,149 @@
 {{ template "header.html" }}
-<div class="container">
-  <h3>Here is the decrypted message:</h3>
-  <p style="white-space: pre-wrap">{{if not .DecryptedMessage}} Passphrase is required!! </p>
-  {{if .HasPassword}}
-  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
-    Enter Passphrase
-  </button>
-  <button formmethod="post" id="nopassphrase" type="button" class="btn btn-primary" >
-    No Passphrase
-  </button>
-  <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="loginModalLabel">View Decrypted Message</h5>
-          <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-        </div>
-        <form id="loginForm" method="POST">
-        <div class="modal-body"> 
-            <div class="form-group">
-              <label for="passphrase" class="col-form-label"><a href="#" data-bs-toggle="tooltip" title="This is used as a passphrase to verify you're allowed to access it, it's possible to be empty" >Your Last Name or Passphrase: </a></label>
-              <input type="password" name="passphrase" class="form-control" id="passphrase">
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Login</button>
-        </div>
-        </form>
-      </div>
-    </div>
-  </div>
-<script  >
-  $(document).ready(function(e) {
-  //handle the form's "submit" events
-  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
-});
-</script>
-<script>
-  const button = document.getElementById('nopassphrase');
 
-button.addEventListener('click', async _ => {
-    document.getElementById('passphrase').value = "";
-     document.getElementById("loginForm").submit();
+<div class="back min-vh-100">
+    <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
+        {{if not .DecryptedMessage}}
+            <h2 class="mb-4">Access Secure Message</h2>
+            
+            <div class="section-group">
+                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <i class="fas fa-key me-3 fs-5"></i>
+                    <div>
+                        <strong>Passphrase Required</strong><br>
+                        <small>This message requires a passphrase to view its contents.</small>
+                    </div>
+                </div>
+                
+                {{if .HasPassword}}
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#loginModal">
+                        <i class="fas fa-unlock me-2"></i>
+                        Enter Passphrase
+                    </button>
+                    <button formmethod="post" id="nopassphrase" type="button" class="btn btn-outline-secondary">
+                        <i class="fas fa-eye me-2"></i>
+                        Try Without Passphrase
+                    </button>
+                </div>
+                {{end}}
+            </div>
+        {{else}}
+            <h2 class="mb-4">Decrypted Message</h2>
+            
+            <div class="section-group">
+                <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                    <i class="fas fa-check-circle me-3 fs-5"></i>
+                    <div>
+                        <strong>Message Successfully Decrypted</strong><br>
+                        <small>This message has been retrieved and will be deleted after viewing.</small>
+                    </div>
+                </div>
+                
+                <div class="message-content">
+                    <h5 class="section-title">Your Secure Message:</h5>
+                    <div class="decrypted-message-box">
+                        <pre class="mb-0">{{.DecryptedMessage}}</pre>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="fas fa-info-circle me-3"></i>
+                        <small>
+                            <strong>Important:</strong> This message has been permanently deleted from our servers for your security.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        {{end}}
+    </div>
+</div>
+
+{{if .HasPassword}}
+<!-- Passphrase Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content modern-modal">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="loginModalLabel">
+                    <i class="fas fa-key me-2"></i>
+                    Enter Passphrase
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="loginForm" method="POST">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label for="passphrase" class="form-label">
+                            Passphrase
+                            <button type="button" 
+                                    class="btn btn-link btn-sm p-0 ms-1" 
+                                    data-bs-toggle="tooltip" 
+                                    title="Enter the passphrase provided by the sender to decrypt this message"
+                                    aria-label="Help about passphrase">
+                                <i class="fas fa-lightbulb"></i>
+                            </button>
+                        </label>
+                        <input type="password" 
+                               name="passphrase" 
+                               class="form-control" 
+                               id="passphrase" 
+                               placeholder="Enter passphrase..."
+                               autocomplete="current-password">
+                        <div class="form-text">
+                            This passphrase was set by the person who shared this message with you
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-unlock me-2"></i>
+                        Decrypt Message
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipElements.forEach(element => {
+        new bootstrap.Tooltip(element);
+    });
+    
+    // Handle "No Passphrase" button
+    const noPassphraseButton = document.getElementById('nopassphrase');
+    if (noPassphraseButton) {
+        noPassphraseButton.addEventListener('click', function() {
+            const passphraseField = document.getElementById('passphrase');
+            if (passphraseField) {
+                passphraseField.value = "";
+            }
+            document.getElementById("loginForm").submit();
+        });
+    }
+    
+    // Focus passphrase field when modal opens
+    const loginModal = document.getElementById('loginModal');
+    if (loginModal) {
+        loginModal.addEventListener('shown.bs.modal', function() {
+            const passphraseField = document.getElementById('passphrase');
+            if (passphraseField) {
+                passphraseField.focus();
+            }
+        });
+    }
 });
 </script>
-{{end}}
-{{else}}
-<p style="white-space: pre-wrap">{{.DecryptedMessage}} </p>
-{{end}}
-</div>
+
+
 </body>
 </html>
