@@ -4,7 +4,7 @@
     <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
         <h2 class="mb-4">Share Secure Password</h2>
         
-        <form id="password-form" method="post" action="/" role="form" novalidate>
+        <form id="password-form" role="form" novalidate>
             <div class="messages"></div>
 
             <!-- Error Display -->
@@ -241,8 +241,6 @@
                 </div>
             </div>
 
-            <!-- Hidden field for backend compatibility -->
-            <input type="hidden" name="skipEmail" id="skipEmailHidden" value="true">
         </form>
 
         <div class="row mt-4">
@@ -259,7 +257,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('password-form');
     const emailToggle = document.getElementById('enableEmail');
-    const skipEmailHidden = document.getElementById('skipEmailHidden');
     const senderSection = document.getElementById('sender-section');
     const recipientSection = document.getElementById('recipient-section');
     const verificationSection = document.getElementById('verification-section');
@@ -285,9 +282,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle email toggle
     function updateEmailDependentFields() {
         const emailEnabled = emailToggle.checked;
-        
-        // Update hidden field for backend (send empty string when email enabled, "true" when disabled)
-        skipEmailHidden.value = emailEnabled ? '' : 'true';
         
         // Show/hide email-dependent sections
         emailDependentElements.forEach(element => {
@@ -320,14 +314,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize on page load
     updateEmailDependentFields();
     
-    // Form validation
-    form.addEventListener('submit', function(event) {
+    // Form validation and API submission
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
         let isValid = true;
         
-        // Clear previous validation states
+        // Clear previous validation states and messages
         form.querySelectorAll('.is-invalid').forEach(field => {
             field.classList.remove('is-invalid');
         });
+        document.querySelector('.messages').innerHTML = '';
+        document.getElementById('success').innerHTML = '';
         
         // Validate required fields
         const requiredFields = form.querySelectorAll('[required]');
@@ -358,18 +357,164 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (!isValid) {
-            event.preventDefault();
-            event.stopPropagation();
-            
             // Focus first invalid field
             const firstInvalid = form.querySelector('.is-invalid');
             if (firstInvalid) {
                 firstInvalid.focus();
             }
+            form.classList.add('was-validated');
+            return;
+        }
+        
+        // Disable submit button and show loading state
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Secure Link...';
+        
+        try {
+            // Build API request payload
+            const emailEnabled = emailToggle.checked;
+            const payload = {
+                content: document.getElementById('form_message').value.trim(),
+                sendNotification: emailEnabled
+            };
+            
+            // Add passphrase if provided
+            const passphrase = document.getElementById('other_lastname').value.trim();
+            if (passphrase) {
+                payload.passphrase = passphrase;
+            }
+            
+            // Add sender and recipient info if email enabled
+            if (emailEnabled) {
+                payload.sender = {
+                    name: document.getElementById('firstname').value.trim(),
+                    email: document.getElementById('email').value.trim()
+                };
+                payload.recipient = {
+                    name: document.getElementById('other_firstname').value.trim(),
+                    email: document.getElementById('other_email').value.trim()
+                };
+                payload.antiSpamAnswer = document.getElementById('color').value.trim();
+            }
+            
+            // Make API call
+            const response = await fetch('/api/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                // Success - show the secure link
+                const successDiv = document.getElementById('success');
+                successDiv.innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Secure Link Created Successfully!
+                        </h5>
+                        <hr>
+                        <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control font-monospace" 
+                                   value="${result.webUrl}" 
+                                   id="secure-url" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        ${result.notificationSent ? 
+                            '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' : 
+                            ''}
+                        <p class="mb-0 text-muted small">
+                            <i class="fas fa-clock me-1"></i>
+                            Expires: ${new Date(result.expiresAt).toLocaleString()}
+                        </p>
+                    </div>
+                `;
+                
+                // Reset form
+                form.reset();
+                updateEmailDependentFields();
+                form.classList.remove('was-validated');
+                
+                // Scroll to success message
+                successDiv.scrollIntoView({ behavior: 'smooth' });
+                
+            } else {
+                // Error handling
+                let errorMessage = 'An error occurred while creating the secure link.';
+                
+                if (result.details) {
+                    // Validation errors
+                    const errorList = Object.values(result.details).join('<br>');
+                    errorMessage = `<strong>Validation Error:</strong><br>${errorList}`;
+                } else if (result.message) {
+                    errorMessage = result.message;
+                }
+                
+                document.querySelector('.messages').innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${errorMessage}
+                    </div>
+                `;
+                
+                // Scroll to error message
+                document.querySelector('.messages').scrollIntoView({ behavior: 'smooth' });
+            }
+            
+        } catch (error) {
+            console.error('Network error:', error);
+            document.querySelector('.messages').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Network error: Unable to connect to the server. Please try again.
+                </div>
+            `;
+            document.querySelector('.messages').scrollIntoView({ behavior: 'smooth' });
+        } finally {
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
         }
         
         form.classList.add('was-validated');
     });
+    
+    // Add copy to clipboard functionality
+    window.copyToClipboard = function() {
+        const urlInput = document.getElementById('secure-url');
+        urlInput.select();
+        urlInput.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            document.execCommand('copy');
+            
+            // Show feedback
+            const copyButton = event.target.closest('button');
+            const originalText = copyButton.innerHTML;
+            copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            copyButton.classList.remove('btn-outline-secondary');
+            copyButton.classList.add('btn-success');
+            
+            setTimeout(() => {
+                copyButton.innerHTML = originalText;
+                copyButton.classList.remove('btn-success');
+                copyButton.classList.add('btn-outline-secondary');
+            }, 2000);
+            
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy URL to clipboard');
+        }
+    };
 });
 </script>
 
