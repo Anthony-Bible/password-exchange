@@ -37,6 +37,7 @@ type MessageRetrievalRequest struct {
 type MessageRetrievalResponse struct {
 	MessageID string
 	Content   string
+	ViewCount int
 	Success   bool
 	Error     error
 }
@@ -66,6 +67,7 @@ type MessageStorageResponse struct {
 	EncryptedContent  string
 	HashedPassphrase  string
 	HasPassphrase     bool
+	ViewCount         int
 }
 
 // MessageNotificationRequest represents a request to send a message notification

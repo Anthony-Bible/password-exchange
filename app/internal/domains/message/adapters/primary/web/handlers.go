@@ -154,6 +154,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	data := gin.H{
 		"Title":            "passwordExchange Decrypted",
 		"DecryptedMessage": response.Content,
+		"ViewCount":        response.ViewCount,
 	}
 
 	c.HTML(http.StatusOK, "decryption.html", data)

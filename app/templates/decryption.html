@@ -35,7 +35,7 @@
                     <i class="fas fa-check-circle me-3 fs-5"></i>
                     <div>
                         <strong>Message Successfully Decrypted</strong><br>
-                        <small>This message has been retrieved and will be deleted after viewing.</small>
+                        <small>This message has been viewed {{.ViewCount}} time(s). It will be deleted after 5 views.</small>
                     </div>
                 </div>
                 
@@ -50,7 +50,7 @@
                     <div class="alert alert-info d-flex align-items-center" role="alert">
                         <i class="fas fa-info-circle me-3"></i>
                         <small>
-                            <strong>Important:</strong> This message has been permanently deleted from our servers for your security.
+                            <strong>Important:</strong> {{if ge .ViewCount 5}}This message has been permanently deleted from our servers after reaching the 5-view limit.{{else}}This message will be automatically deleted after {{sub 5 .ViewCount}} more view(s).{{end}}
                         </small>
                     </div>
                 </div>

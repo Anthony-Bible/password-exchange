@@ -1,6 +1,8 @@
 package web
 
 import (
+	"html/template"
+
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -18,7 +20,15 @@ func NewWebServer(messageService primary.MessageServicePort) *WebServer {
 	
 	router := gin.Default()
 	
-	// Load HTML templates
+	// Create template functions
+	funcMap := template.FuncMap{
+		"sub": func(a, b int) int {
+			return a - b
+		},
+	}
+	
+	// Load HTML templates with custom functions
+	router.SetFuncMap(funcMap)
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
 	

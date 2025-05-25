@@ -69,6 +69,7 @@ func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageR
 		EncryptedContent: resp.GetContent(),
 		HashedPassphrase: resp.GetPassphrase(),
 		HasPassphrase:    hasPassphrase,
+		ViewCount:        int(resp.GetViewCount()),
 	}
 
 	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message successfully")

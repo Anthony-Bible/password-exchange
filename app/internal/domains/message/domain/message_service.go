@@ -169,6 +169,7 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 	response := &MessageRetrievalResponse{
 		MessageID: req.MessageID,
 		Content:   finalContent,
+		ViewCount: storedMessage.ViewCount,
 		Success:   true,
 	}
 

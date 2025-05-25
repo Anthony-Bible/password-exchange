@@ -52,7 +52,7 @@ func (m *MySQLAdapter) InsertMessage(content, uniqueID, passphrase string) error
 		}
 	}
 	
-	query := "INSERT INTO messages (message, uniqueid, other_lastname) VALUES (?, ?, ?)"
+	query := "INSERT INTO messages (message, uniqueid, other_lastname, view_count) VALUES (?, ?, ?, 0)"
 	_, err := m.db.Exec(query, content, uniqueID, passphrase)
 	if err != nil {
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to insert message")
@@ -71,11 +71,11 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 	}
 	
-	query := "SELECT message, uniqueid, other_lastname FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 	
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -86,6 +86,78 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 	}
 	
 	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
+	return &message, nil
+}
+
+// IncrementViewCountAndGet atomically increments the view count and returns the message
+// If the view count reaches 5, the message is deleted
+func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Message, error) {
+	if m.db == nil {
+		if err := m.Connect(); err != nil {
+			return nil, err
+		}
+	}
+	
+	// Start a transaction to ensure atomicity
+	tx, err := m.db.Begin()
+	if err != nil {
+		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to begin transaction")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	defer tx.Rollback() // Will be ignored if transaction is committed
+	
+	// First, increment the view count
+	updateQuery := "UPDATE messages SET view_count = view_count + 1 WHERE uniqueid = ?"
+	result, err := tx.Exec(updateQuery, uniqueID)
+	if err != nil {
+		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	
+	// Check if the message exists
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to get rows affected")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	if rowsAffected == 0 {
+		log.Debug().Str("uniqueID", uniqueID).Msg("Message not found for view count increment")
+		return nil, domain.ErrMessageNotFound
+	}
+	
+	// Get the updated message with the new view count
+	selectQuery := "SELECT message, uniqueid, other_lastname, view_count FROM messages WHERE uniqueid = ?"
+	row := tx.QueryRow(selectQuery, uniqueID)
+	
+	var message domain.Message
+	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
+			return nil, domain.ErrMessageNotFound
+		}
+		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message after increment")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	
+	// If view count has reached 5, delete the message
+	if message.ViewCount >= 5 {
+		deleteQuery := "DELETE FROM messages WHERE uniqueid = ?"
+		_, err = tx.Exec(deleteQuery, uniqueID)
+		if err != nil {
+			log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to delete message after reaching view limit")
+			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+		}
+		log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message deleted after reaching view limit")
+	}
+	
+	// Commit the transaction
+	if err = tx.Commit(); err != nil {
+		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to commit transaction")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	
+	log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("View count incremented successfully")
 	return &message, nil
 }
 

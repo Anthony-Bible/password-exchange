@@ -12,7 +12,7 @@ message SelectResponse
     string uuid = 1;
     string content = 2;
     string passphrase = 3;
-   
+    int32 view_count = 4;
 }
 message InsertRequest
 {
