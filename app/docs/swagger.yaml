@@ -58,6 +58,8 @@ definitions:
         type: string
       messageId:
         type: string
+      viewCount:
+        type: integer
     type: object
   models.MessageSubmissionRequest:
     properties:

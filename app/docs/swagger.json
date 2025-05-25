@@ -327,6 +327,9 @@
                 },
                 "messageId": {
                     "type": "string"
+                },
+                "viewCount": {
+                    "type": "integer"
                 }
             }
         },

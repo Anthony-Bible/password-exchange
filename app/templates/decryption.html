@@ -280,9 +280,21 @@ function handleDecryptionSuccess(data) {
     // Show decrypted message
     document.getElementById('message-content').textContent = data.content;
     
-    // Update view count and expiry info (these are not in the API response yet, so we'll use placeholders)
-    document.getElementById('view-count-text').textContent = 'This message has been successfully decrypted.';
-    document.getElementById('expiry-info').innerHTML = '<strong>Important:</strong> This message has been deleted from our servers for security.';
+    // Update view count information
+    const viewCount = data.viewCount || 1;
+    const remainingViews = Math.max(0, 5 - viewCount);
+    
+    if (remainingViews > 0) {
+        document.getElementById('view-count-text').textContent = 
+            `This message has been viewed ${viewCount} time(s). It will be deleted after 5 views.`;
+        document.getElementById('expiry-info').innerHTML = 
+            `<strong>Important:</strong> This message will be automatically deleted after ${remainingViews} more view(s).`;
+    } else {
+        document.getElementById('view-count-text').textContent = 
+            'This message has reached the maximum view count and has been deleted.';
+        document.getElementById('expiry-info').innerHTML = 
+            '<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the 5-view limit.';
+    }
     
     hideAll();
     document.getElementById('decrypted-message').style.display = 'block';

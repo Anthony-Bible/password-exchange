@@ -232,6 +232,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	apiResponse := models.MessageDecryptResponse{
 		MessageID:   messageID,
 		Content:     response.Content,
+		ViewCount:   response.ViewCount,
 		DecryptedAt: time.Now(),
 	}
 

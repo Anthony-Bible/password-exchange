@@ -329,6 +329,9 @@ const docTemplate = `{
                 },
                 "messageId": {
                     "type": "string"
+                },
+                "viewCount": {
+                    "type": "integer"
                 }
             }
         },

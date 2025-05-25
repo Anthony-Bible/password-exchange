@@ -209,6 +209,7 @@ paths:
                   value:
                     messageId: "123e4567-e89b-12d3-a456-426614174000"
                     content: "This is the secret message content"
+                    viewCount: 1
                     decryptedAt: "2024-01-01T12:30:00Z"
         '401':
           description: Invalid passphrase

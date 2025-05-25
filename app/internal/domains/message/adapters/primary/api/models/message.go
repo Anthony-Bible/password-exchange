@@ -56,6 +56,7 @@ type MessageDecryptRequest struct {
 type MessageDecryptResponse struct {
 	MessageID   string    `json:"messageId"`
 	Content     string    `json:"content"`
+	ViewCount   int       `json:"viewCount"`
 	DecryptedAt time.Time `json:"decryptedAt"`
 }
 
