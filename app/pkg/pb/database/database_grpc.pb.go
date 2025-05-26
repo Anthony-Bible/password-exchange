@@ -26,6 +26,9 @@ type DbServiceClient interface {
 	Select(ctx context.Context, in *SelectRequest, opts ...grpc.CallOption) (*SelectResponse, error)
 	Insert(ctx context.Context, in *InsertRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetMessage(ctx context.Context, in *SelectRequest, opts ...grpc.CallOption) (*SelectResponse, error)
+	GetUnviewedMessagesForReminders(ctx context.Context, in *GetUnviewedMessagesRequest, opts ...grpc.CallOption) (*GetUnviewedMessagesResponse, error)
+	LogReminderSent(ctx context.Context, in *LogReminderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetReminderHistory(ctx context.Context, in *GetReminderHistoryRequest, opts ...grpc.CallOption) (*GetReminderHistoryResponse, error)
 }
 
 type dbServiceClient struct {
@@ -63,6 +66,33 @@ func (c *dbServiceClient) GetMessage(ctx context.Context, in *SelectRequest, opt
 	return out, nil
 }
 
+func (c *dbServiceClient) GetUnviewedMessagesForReminders(ctx context.Context, in *GetUnviewedMessagesRequest, opts ...grpc.CallOption) (*GetUnviewedMessagesResponse, error) {
+	out := new(GetUnviewedMessagesResponse)
+	err := c.cc.Invoke(ctx, "/databasepb.dbService/GetUnviewedMessagesForReminders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dbServiceClient) LogReminderSent(ctx context.Context, in *LogReminderRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/databasepb.dbService/LogReminderSent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dbServiceClient) GetReminderHistory(ctx context.Context, in *GetReminderHistoryRequest, opts ...grpc.CallOption) (*GetReminderHistoryResponse, error) {
+	out := new(GetReminderHistoryResponse)
+	err := c.cc.Invoke(ctx, "/databasepb.dbService/GetReminderHistory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DbServiceServer is the server API for DbService service.
 // All implementations must embed UnimplementedDbServiceServer
 // for forward compatibility
@@ -70,6 +100,9 @@ type DbServiceServer interface {
 	Select(context.Context, *SelectRequest) (*SelectResponse, error)
 	Insert(context.Context, *InsertRequest) (*emptypb.Empty, error)
 	GetMessage(context.Context, *SelectRequest) (*SelectResponse, error)
+	GetUnviewedMessagesForReminders(context.Context, *GetUnviewedMessagesRequest) (*GetUnviewedMessagesResponse, error)
+	LogReminderSent(context.Context, *LogReminderRequest) (*emptypb.Empty, error)
+	GetReminderHistory(context.Context, *GetReminderHistoryRequest) (*GetReminderHistoryResponse, error)
 	mustEmbedUnimplementedDbServiceServer()
 }
 
@@ -85,6 +118,15 @@ func (UnimplementedDbServiceServer) Insert(context.Context, *InsertRequest) (*em
 }
 func (UnimplementedDbServiceServer) GetMessage(context.Context, *SelectRequest) (*SelectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMessage not implemented")
+}
+func (UnimplementedDbServiceServer) GetUnviewedMessagesForReminders(context.Context, *GetUnviewedMessagesRequest) (*GetUnviewedMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUnviewedMessagesForReminders not implemented")
+}
+func (UnimplementedDbServiceServer) LogReminderSent(context.Context, *LogReminderRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LogReminderSent not implemented")
+}
+func (UnimplementedDbServiceServer) GetReminderHistory(context.Context, *GetReminderHistoryRequest) (*GetReminderHistoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReminderHistory not implemented")
 }
 func (UnimplementedDbServiceServer) mustEmbedUnimplementedDbServiceServer() {}
 
@@ -153,6 +195,60 @@ func _DbService_GetMessage_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DbService_GetUnviewedMessagesForReminders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUnviewedMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DbServiceServer).GetUnviewedMessagesForReminders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/databasepb.dbService/GetUnviewedMessagesForReminders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DbServiceServer).GetUnviewedMessagesForReminders(ctx, req.(*GetUnviewedMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DbService_LogReminderSent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LogReminderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DbServiceServer).LogReminderSent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/databasepb.dbService/LogReminderSent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DbServiceServer).LogReminderSent(ctx, req.(*LogReminderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DbService_GetReminderHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReminderHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DbServiceServer).GetReminderHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/databasepb.dbService/GetReminderHistory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DbServiceServer).GetReminderHistory(ctx, req.(*GetReminderHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DbService_ServiceDesc is the grpc.ServiceDesc for DbService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -171,6 +267,18 @@ var DbService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMessage",
 			Handler:    _DbService_GetMessage_Handler,
+		},
+		{
+			MethodName: "GetUnviewedMessagesForReminders",
+			Handler:    _DbService_GetUnviewedMessagesForReminders_Handler,
+		},
+		{
+			MethodName: "LogReminderSent",
+			Handler:    _DbService_LogReminderSent_Handler,
+		},
+		{
+			MethodName: "GetReminderHistory",
+			Handler:    _DbService_GetReminderHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

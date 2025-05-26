@@ -83,7 +83,7 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	// Determine max view count (use request value or default from config)
 	maxViewCount := req.MaxViewCount
 	if maxViewCount <= 0 {
-		maxViewCount = config.Config.DefaultMaxViewCount
+		maxViewCount = config.AppConfig.DefaultMaxViewCount
 		if maxViewCount <= 0 {
 			maxViewCount = 5 // Fallback default
 		}

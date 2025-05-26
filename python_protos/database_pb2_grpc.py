@@ -50,6 +50,21 @@ class dbServiceStub(object):
                 request_serializer=database__pb2.SelectRequest.SerializeToString,
                 response_deserializer=database__pb2.SelectResponse.FromString,
                 _registered_method=True)
+        self.GetUnviewedMessagesForReminders = channel.unary_unary(
+                '/databasepb.dbService/GetUnviewedMessagesForReminders',
+                request_serializer=database__pb2.GetUnviewedMessagesRequest.SerializeToString,
+                response_deserializer=database__pb2.GetUnviewedMessagesResponse.FromString,
+                _registered_method=True)
+        self.LogReminderSent = channel.unary_unary(
+                '/databasepb.dbService/LogReminderSent',
+                request_serializer=database__pb2.LogReminderRequest.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                _registered_method=True)
+        self.GetReminderHistory = channel.unary_unary(
+                '/databasepb.dbService/GetReminderHistory',
+                request_serializer=database__pb2.GetReminderHistoryRequest.SerializeToString,
+                response_deserializer=database__pb2.GetReminderHistoryResponse.FromString,
+                _registered_method=True)
 
 
 class dbServiceServicer(object):
@@ -73,6 +88,24 @@ class dbServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetUnviewedMessagesForReminders(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def LogReminderSent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetReminderHistory(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_dbServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -90,6 +123,21 @@ def add_dbServiceServicer_to_server(servicer, server):
                     servicer.GetMessage,
                     request_deserializer=database__pb2.SelectRequest.FromString,
                     response_serializer=database__pb2.SelectResponse.SerializeToString,
+            ),
+            'GetUnviewedMessagesForReminders': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetUnviewedMessagesForReminders,
+                    request_deserializer=database__pb2.GetUnviewedMessagesRequest.FromString,
+                    response_serializer=database__pb2.GetUnviewedMessagesResponse.SerializeToString,
+            ),
+            'LogReminderSent': grpc.unary_unary_rpc_method_handler(
+                    servicer.LogReminderSent,
+                    request_deserializer=database__pb2.LogReminderRequest.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
+            'GetReminderHistory': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetReminderHistory,
+                    request_deserializer=database__pb2.GetReminderHistoryRequest.FromString,
+                    response_serializer=database__pb2.GetReminderHistoryResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -173,6 +221,87 @@ class dbService(object):
             '/databasepb.dbService/GetMessage',
             database__pb2.SelectRequest.SerializeToString,
             database__pb2.SelectResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetUnviewedMessagesForReminders(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/databasepb.dbService/GetUnviewedMessagesForReminders',
+            database__pb2.GetUnviewedMessagesRequest.SerializeToString,
+            database__pb2.GetUnviewedMessagesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def LogReminderSent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/databasepb.dbService/LogReminderSent',
+            database__pb2.LogReminderRequest.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetReminderHistory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/databasepb.dbService/GetReminderHistory',
+            database__pb2.GetReminderHistoryRequest.SerializeToString,
+            database__pb2.GetReminderHistoryResponse.FromString,
             options,
             channel_credentials,
             insecure,

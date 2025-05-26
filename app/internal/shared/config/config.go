@@ -4,7 +4,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 )
 
-var Config PassConfig
+var AppConfig PassConfig
 
 // Config represents the complete application configuration
 type Config struct {
