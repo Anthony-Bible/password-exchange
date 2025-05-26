@@ -37,22 +37,22 @@ class databaseServiceClient(object):
         """calls grpc function Insert and inserts UUID content
 
         Arguments:
-           request (dict): {'uuid', 'content'}
-           may have to extract using for loop
+           request (dict): {'uuid', 'content', 'passphrase', 'max_view_count'}
+           All fields are required for InsertRequest
         
         Returns:
            None
         """
-        required_fields = {'uuid', 'content'}
+        required_fields = {'uuid', 'content', 'passphrase', 'max_view_count'}
         
         
-        if required_fields <= request.keys() <= required_fields:
+        if required_fields <= request.keys():
           try:
-             request_serialized = database_pb2.SelectResponse()
+             request_serialized = database_pb2.InsertRequest()
              json_format.Parse(json.dumps(request), request_serialized)
              self.stub.Insert(request_serialized)  
           except grpc.RpcError as err:
             print(err.details()) #pylint: disable=no-member
             print('{}, {}'.format(err.code().name, err.code().value)) #pylint: disable=no-member
         else:
-            raise Exception("Request isn't right, it should have both a UUID and Content fields")
+            raise Exception("Request isn't right, it should have uuid, content, passphrase, and max_view_count fields")
