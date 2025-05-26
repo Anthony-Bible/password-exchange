@@ -412,6 +412,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 sendNotification: emailEnabled
             };
             
+            // Add max view count if provided
+            const maxViewCount = document.getElementById('max_view_count').value.trim();
+            if (maxViewCount) {
+                payload.maxViewCount = parseInt(maxViewCount, 10);
+            }
+
             // Add passphrase if provided
             const passphrase = document.getElementById('other_lastname').value.trim();
             if (passphrase) {
