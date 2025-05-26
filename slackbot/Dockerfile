@@ -38,11 +38,11 @@ WORKDIR /app
 COPY slackbot/requirements.txt .
 RUN . /opt/venv/bin/activate && pip3 install --no-cache-dir -r requirements.txt
 
-# Copy the protos directory from the repository root (build context) to /app/protos
-COPY python_protos ./protos
-
 # Copy the slackbot application code from the 'slackbot' directory in the build context to /app/slackbot
 COPY slackbot ./slackbot
+
+# Copy the protos directory from the repository root (build context) to /app/slackbot/protos
+COPY python_protos ./slackbot/protos
 
 # Command to run the application using the virtual environment's Python
 # The main script is program.py inside the /app/slackbot directory
