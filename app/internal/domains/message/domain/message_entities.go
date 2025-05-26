@@ -16,6 +16,7 @@ type MessageSubmissionRequest struct {
 	Captcha          string
 	SendNotification bool
 	SkipEmail        bool
+	MaxViewCount     int
 }
 
 // MessageSubmissionResponse represents the response to a message submission
@@ -52,9 +53,10 @@ type MessageAccessInfo struct {
 
 // MessageStorageRequest represents a request to store an encrypted message
 type MessageStorageRequest struct {
-	MessageID  string
-	Content    string
-	Passphrase string
+	MessageID    string
+	Content      string
+	Passphrase   string
+	MaxViewCount int
 }
 
 // MessageRetrievalStorageRequest represents a request to retrieve a stored message
@@ -69,6 +71,7 @@ type MessageStorageResponse struct {
 	HashedPassphrase string
 	HasPassphrase    bool
 	ViewCount        int
+	MaxViewCount     int
 }
 
 // MessageNotificationRequest represents a request to send a message notification

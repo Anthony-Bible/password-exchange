@@ -65,8 +65,10 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		Content:          req.Content,
 		Passphrase:       req.Passphrase,
 		AdditionalInfo:   req.AdditionalInfo,
+		Captcha:          req.AntiSpamAnswer,
 		SendNotification: req.SendNotification,
 		SkipEmail:        !req.SendNotification,
+		MaxViewCount:     req.MaxViewCount,
 	}
 
 	if req.Sender != nil {

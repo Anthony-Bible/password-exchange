@@ -13,6 +13,7 @@ type MessageSubmissionRequest struct {
 	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
 	SendNotification bool       `json:"sendNotification"`
 	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
+	MaxViewCount     int        `json:"maxViewCount,omitempty" validate:"min=0,max=100"`
 }
 
 // Sender represents sender information for message submission

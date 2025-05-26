@@ -29,13 +29,13 @@ func NewGRPCServer(storageService primary.StorageServicePort, address string) *G
 
 // Insert handles gRPC insert requests by delegating to the storage service
 func (s *GRPCServer) Insert(ctx context.Context, request *db.InsertRequest) (*emptypb.Empty, error) {
-	err := s.storageService.StoreMessage(ctx, request.GetContent(), request.GetUuid(), request.GetPassphrase())
+	err := s.storageService.StoreMessage(ctx, request.GetContent(), request.GetUuid(), request.GetPassphrase(), int(request.GetMaxViewCount()))
 	if err != nil {
 		log.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to insert message via gRPC")
 		return nil, err
 	}
 
-	log.Info().Str("uuid", request.GetUuid()).Msg("Message inserted successfully via gRPC")
+	log.Info().Str("uuid", request.GetUuid()).Int32("maxViewCount", request.GetMaxViewCount()).Msg("Message inserted successfully via gRPC")
 	return &emptypb.Empty{}, nil
 }
 
@@ -48,9 +48,10 @@ func (s *GRPCServer) Select(ctx context.Context, request *db.SelectRequest) (*db
 	}
 
 	response := &db.SelectResponse{
-		Content:    message.Content,
-		Passphrase: message.Passphrase,
-		ViewCount:  int32(message.ViewCount),
+		Content:      message.Content,
+		Passphrase:   message.Passphrase,
+		ViewCount:    int32(message.ViewCount),
+		MaxViewCount: int32(message.MaxViewCount),
 	}
 
 	log.Info().Str("uuid", request.GetUuid()).Int("viewCount", message.ViewCount).Msg("Message selected successfully via gRPC")
@@ -66,9 +67,10 @@ func (s *GRPCServer) GetMessage(ctx context.Context, request *db.SelectRequest) 
 	}
 
 	response := &db.SelectResponse{
-		Content:    message.Content,
-		Passphrase: message.Passphrase,
-		ViewCount:  int32(message.ViewCount),
+		Content:      message.Content,
+		Passphrase:   message.Passphrase,
+		ViewCount:    int32(message.ViewCount),
+		MaxViewCount: int32(message.MaxViewCount),
 	}
 
 	log.Info().Str("uuid", request.GetUuid()).Int("viewCount", message.ViewCount).Msg("Message selected successfully without incrementing view count via gRPC")

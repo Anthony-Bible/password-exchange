@@ -13,12 +13,14 @@ message SelectResponse
     string content = 2;
     string passphrase = 3;
     int32 view_count = 4;
+    int32 max_view_count = 5;
 }
 message InsertRequest
 {
     string uuid = 1;
     string content = 2;
     string passphrase = 3;
+    int32 max_view_count = 4;
 }
 
 service dbService{

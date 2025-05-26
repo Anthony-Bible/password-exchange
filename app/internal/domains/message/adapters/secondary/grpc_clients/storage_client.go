@@ -35,9 +35,10 @@ func NewStorageClient(endpoint string) (*StorageClient, error) {
 // StoreMessage stores an encrypted message
 func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStorageRequest) error {
 	grpcReq := &db.InsertRequest{
-		Uuid:       req.MessageID,
-		Content:    req.Content,
-		Passphrase: req.Passphrase,
+		Uuid:         req.MessageID,
+		Content:      req.Content,
+		Passphrase:   req.Passphrase,
+		MaxViewCount: int32(req.MaxViewCount),
 	}
 
 	_, err := c.client.Insert(ctx, grpcReq)
@@ -46,7 +47,7 @@ func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStor
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Msg("Stored message successfully")
+	log.Debug().Str("messageId", req.MessageID).Int("maxViewCount", req.MaxViewCount).Msg("Stored message successfully")
 	return nil
 }
 
@@ -70,6 +71,7 @@ func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageR
 		HashedPassphrase: resp.GetPassphrase(),
 		HasPassphrase:    hasPassphrase,
 		ViewCount:        int(resp.GetViewCount()),
+		MaxViewCount:     int(resp.GetMaxViewCount()),
 	}
 
 	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message successfully")
@@ -96,6 +98,7 @@ func (c *StorageClient) GetMessage(ctx context.Context, req domain.MessageRetrie
 		HashedPassphrase: resp.GetPassphrase(),
 		HasPassphrase:    hasPassphrase,
 		ViewCount:        int(resp.GetViewCount()),
+		MaxViewCount:     int(resp.GetMaxViewCount()),
 	}
 
 	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message without incrementing view count successfully")

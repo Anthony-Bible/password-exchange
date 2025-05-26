@@ -71,6 +71,10 @@ definitions:
         maxLength: 10000
         minLength: 1
         type: string
+      maxViewCount:
+        maximum: 100
+        minimum: 0
+        type: integer
       passphrase:
         maxLength: 500
         type: string
