@@ -37,14 +37,19 @@ class databaseServiceClient(object):
         """calls grpc function Insert and inserts UUID content
 
         Arguments:
-           request (dict): {'uuid', 'content', 'passphrase', 'max_view_count'}
-           All fields are required for InsertRequest
+           request (dict): {'uuid', 'content'} required, 'passphrase' and 'max_view_count' optional
+           Missing fields will use default values for Slack usage
         
         Returns:
            None
         """
-        required_fields = {'uuid', 'content', 'passphrase', 'max_view_count'}
+        required_fields = {'uuid', 'content'}
         
+        # Set defaults for Slack usage
+        if 'passphrase' not in request:
+            request['passphrase'] = ""  # Empty passphrase for Slack
+        if 'max_view_count' not in request:
+            request['max_view_count'] = 5  # Default view count for Slack messages
         
         if required_fields <= request.keys():
           try:
@@ -55,4 +60,4 @@ class databaseServiceClient(object):
             print(err.details()) #pylint: disable=no-member
             print('{}, {}'.format(err.code().name, err.code().value)) #pylint: disable=no-member
         else:
-            raise Exception("Request isn't right, it should have uuid, content, passphrase, and max_view_count fields")
+            raise Exception("Request isn't right, it should have uuid and content fields")
