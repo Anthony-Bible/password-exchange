@@ -44,6 +44,9 @@ COPY slackbot ./slackbot
 # Copy the protos directory from the repository root (build context) to /app/slackbot/protos
 COPY python_protos ./slackbot/protos
 
+# Set PYTHONPATH to include the protos directory for protobuf imports
+ENV PYTHONPATH="/app/slackbot/protos:$PYTHONPATH"
+
 # Command to run the application using the virtual environment's Python
 # The main script is program.py inside the /app/slackbot directory
 CMD ["/opt/venv/bin/python3", "slackbot/program.py"]

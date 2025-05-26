@@ -24,9 +24,9 @@ mv ./app/messagepb/* ./app/pkg/pb/message/ 2>/dev/null || true
 rmdir ./app/databasepb ./app/encryptionpb ./app/messagepb 2>/dev/null || true
 
 # Generate Python protobuf files for slackbot
-protoc --proto_path=protos \
+python3 -m grpc_tools.protoc --proto_path=protos \
        --python_out=./python_protos \
-       --python_grpc_out=./python_protos \
+       --grpc_python_out=./python_protos \
        protos/database.proto protos/encryption.proto protos/message.proto
 
 if [ $? -ne 0 ]; then
