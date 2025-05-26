@@ -186,10 +186,11 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 	}
 
 	response := &MessageRetrievalResponse{
-		MessageID: req.MessageID,
-		Content:   finalContent,
-		ViewCount: storedMessage.ViewCount,
-		Success:   true,
+		MessageID:    req.MessageID,
+		Content:      finalContent,
+		ViewCount:    storedMessage.ViewCount,
+		MaxViewCount: storedMessage.MaxViewCount,
+		Success:      true,
 	}
 
 	log.Debug().Str("messageId", req.MessageID).Int("viewCount", storedMessage.ViewCount).Msg("Message retrieved successfully")

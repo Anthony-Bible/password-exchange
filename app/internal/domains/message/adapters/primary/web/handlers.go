@@ -158,6 +158,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		"Title":            "passwordExchange Decrypted",
 		"DecryptedMessage": response.Content,
 		"ViewCount":        response.ViewCount,
+		"MaxViewCount":     response.MaxViewCount,
 	}
 
 	c.HTML(http.StatusOK, "decryption.html", data)

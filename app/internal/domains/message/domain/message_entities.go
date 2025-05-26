@@ -37,11 +37,12 @@ type MessageRetrievalRequest struct {
 
 // MessageRetrievalResponse represents the response to a message retrieval
 type MessageRetrievalResponse struct {
-	MessageID string
-	Content   string
-	ViewCount int
-	Success   bool
-	Error     error
+	MessageID    string
+	Content      string
+	ViewCount    int
+	MaxViewCount int
+	Success      bool
+	Error        error
 }
 
 // MessageAccessInfo provides information about message access requirements
