@@ -15,7 +15,7 @@ jobs:
       version: ${{ steps.vars.outputs.VERSION }}
       phase: ${{ steps.vars.outputs.PHASE }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Required for git history based versioning
       - name: Set version and phase
@@ -46,7 +46,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PUSH_SECRET }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push main Docker image
@@ -76,7 +76,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.PUSH_SECRET }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push slackbot Docker image
@@ -101,7 +101,7 @@ jobs:
       MAIN_IMAGE_DIGEST: ${{ needs.build_main_image.outputs.main_image_digest }}
       SLACKBOT_IMAGE_DIGEST: ${{ needs.build_slackbot_image.outputs.slackbot_image_digest }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Render manifests
         run: |
           mkdir -p build
