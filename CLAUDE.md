@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-Password Exchange is a microservices-based secure password sharing platform consisting of:
+Password Exchange is a microservices-based secure password sharing platform using **hexagonal architecture** (ports and adapters pattern) with:
 
 ### Core Services
 - **Web Service** (`app web`): Gin-based HTTP server serving frontend and REST API
@@ -13,8 +13,26 @@ Password Exchange is a microservices-based secure password sharing platform cons
 - **Email Service** (`app email`): RabbitMQ consumer for sending notification emails
 - **Slackbot**: Python Flask app with Slack Bolt framework for Slack integration
 
+### Hexagonal Architecture Structure
+```
+internal/domains/{domain}/
+├── domain/           # Business logic (entities, services, errors)
+├── ports/
+│   ├── primary/      # Inbound interfaces (REST API, gRPC, web handlers)
+│   └── secondary/    # Outbound interfaces (databases, external services)
+└── adapters/
+    ├── primary/      # Inbound implementations (API handlers, gRPC servers)
+    └── secondary/    # Outbound implementations (MySQL, RabbitMQ, SMTP)
+```
+
+**Key Domains:**
+- `message/`: Core password sharing logic with submission, retrieval, encryption
+- `storage/`: Database operations via gRPC
+- `encryption/`: Key generation and cryptographic operations via gRPC
+- `notification/`: Email notifications via RabbitMQ
+
 ### Key Technologies
-- **Go**: Main application with Cobra CLI, Gin web framework, gRPC services
+- **Go 1.23+**: Main application with Cobra CLI, Gin web framework, gRPC services
 - **Python**: Slackbot using Flask, Slack Bolt, SQLAlchemy
 - **Protocol Buffers**: Service definitions in `protos/` generate Go and Python clients
 - **RabbitMQ**: Message queue for email notifications
@@ -30,13 +48,43 @@ Password Exchange is a microservices-based secure password sharing platform cons
 
 ## Development Commands
 
-### Building and Testing
+### Primary Build Script
 ```bash
-# Generate protobuf files and test all builds
+# Complete build verification (ALWAYS run before commits)
 ./test-build.sh
+```
+This script performs:
+- Protobuf generation for Go and Python
+- Go build compilation
+- Swagger documentation generation
+- Docker image builds (main app + slackbot)
+- Kubernetes manifest generation with variable substitution
 
+### Testing
+```bash
+# Run all Go tests
+cd app && go test ./... -v
+
+# Run specific domain tests
+cd app && go test ./internal/domains/message/... -v
+
+# Run tests with coverage
+cd app && go test ./... -cover
+
+# Run single test file
+cd app && go test ./internal/domains/message/adapters/primary/api -v
+```
+
+### Building Individual Components
+```bash
 # Build Go application only
 cd app && go mod tidy && go build -o app
+
+# Generate protobuf files manually
+protoc --proto_path=protos --go_out=./app --go_opt=module=github.com/Anthony-Bible/password-exchange/app --go-grpc_out=./app --go-grpc_opt=module=github.com/Anthony-Bible/password-exchange/app protos/*.proto
+
+# Generate Swagger docs
+cd app && swag init -g internal/domains/message/adapters/primary/api/docs.go -o docs --parseDependency
 
 # Build Docker images
 docker build -t passwordexchange-test .
@@ -92,14 +140,39 @@ protoc --proto_path=protos \
 - Kubernetes secrets in `kubernetes/secrets.encrypted.yaml` (SOPS encrypted)
 - Environment variables documented in project wiki
 
-## Important Patterns
+## Hexagonal Architecture Patterns
 
+### Domain Layer (`domain/`)
+- **Entities**: Core business objects (`entities.go`, `message_entities.go`)
+- **Services**: Business logic implementations (`message_service.go`)
+- **Errors**: Domain-specific error types (`message_errors.go`)
+- NO external dependencies - only standard library and other domain objects
+
+### Ports (`ports/`)
+- **Primary ports**: Inbound interfaces defining what the domain offers
+- **Secondary ports**: Outbound interfaces defining what the domain needs
+- Define contracts WITHOUT implementations
+
+### Adapters (`adapters/`)
+- **Primary adapters**: Handle inbound requests (REST API, gRPC servers, web handlers)
+- **Secondary adapters**: Implement outbound calls (databases, message queues, external APIs)
+
+### Key Implementation Patterns
 - All inter-service communication uses gRPC with protobuf definitions
+- Dependency injection: Domain services receive ports, adapters implement ports
 - Web templates in `app/templates/` with assets in `app/assets/`
-- Database operations centralized in database service
-- Encryption/decryption handled by dedicated encryption service
+- Database operations centralized in database service via gRPC
+- Encryption/decryption handled by dedicated encryption service via gRPC
 - Email notifications use RabbitMQ message queue pattern
+- Testing uses mocks for ports to isolate domain logic
 - Slackbot OAuth tokens stored in separate database tables via SQLAlchemy
+
+### Adding New Features
+1. Define business logic in `domain/` layer
+2. Create ports for external dependencies
+3. Implement primary adapters for inbound requests
+4. Implement secondary adapters for outbound calls
+5. Wire dependencies in main application
 
 ## Testing
 
@@ -134,12 +207,18 @@ go test ./... -v  # Must remain green
 
 ### Build Verification
 
-Run `./test-build.sh` to verify:
-- Protobuf generation
-- Go compilation
+**ALWAYS run `./test-build.sh` before commits** to verify:
+- Protobuf generation for Go and Python
+- Go compilation without errors
+- Swagger documentation generation with validation
 - Docker image builds for both main app and slackbot
 - Kubernetes manifest generation with proper variable substitution
-- the master branch is hosted at https://dev.password.exchange but you MUST confirm with the user that it's been deployed manually. 
+
+### Deployment Information
+- **Dev environment**: https://dev.password.exchange
+- **Production**: https://password.exchange  
+- Deployment is manual - **MUST confirm with user before assuming deployment**
+- Generated `combined.yaml` contains all Kubernetes manifests with substituted variables 
 
 ## Commit Standards
 
