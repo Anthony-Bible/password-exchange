@@ -1,6 +1,25 @@
 package config
 
+import (
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+)
+
 var Config PassConfig
+
+// Config represents the complete application configuration
+type Config struct {
+	PassConfig `mapstructure:",squash"`
+	Database   domain.DatabaseConfig `mapstructure:"database"`
+	Reminder   ReminderConfig        `mapstructure:"reminder"`
+}
+
+// ReminderConfig contains configuration for the reminder email system
+type ReminderConfig struct {
+	Enabled           bool `mapstructure:"enabled"`
+	CheckAfterHours   int  `mapstructure:"checkafterhours"`   // Default: 24
+	MaxReminders      int  `mapstructure:"maxreminders"`      // Default: 3
+	ReminderInterval  int  `mapstructure:"reminderinterval"`  // Default: 24 hours
+}
 
 type PassConfig struct {
 	EmailHost             string `mapstructure:"emailhost"`

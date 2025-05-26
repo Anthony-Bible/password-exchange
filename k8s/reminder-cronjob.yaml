@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: password-exchange-reminder
+  namespace: default
+  labels:
+    app: password-exchange
+    component: reminder
+spec:
+  # Run daily at 9:00 AM UTC
+  schedule: "0 9 * * *"
+  # Alternatively, run every 24 hours from first execution: "@every 24h"
+  concurrencyPolicy: Forbid  # Don't allow overlapping jobs
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 1
+  startingDeadlineSeconds: 300  # Job must start within 5 minutes of scheduled time
+  jobTemplate:
+    spec:
+      # Clean up completed jobs after 6 hours
+      ttlSecondsAfterFinished: 21600
+      template:
+        metadata:
+          labels:
+            app: password-exchange
+            component: reminder
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: reminder
+            image: ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+            imagePullPolicy: Always
+            command: ["/app/app"]
+            args: ["reminder", "--config=/config/config.yaml"]
+            env:
+            # Database configuration
+            - name: PASSWORDEXCHANGE_DBHOST
+              valueFrom:
+                secretKeyRef:
+                  name: password-exchange-secrets
+                  key: db-host
+            - name: PASSWORDEXCHANGE_DBUSER
+              valueFrom:
+                secretKeyRef:
+                  name: password-exchange-secrets
+                  key: db-user
+            - name: PASSWORDEXCHANGE_DBPASS
+              valueFrom:
+                secretKeyRef:
+                  name: password-exchange-secrets
+                  key: db-password
+            - name: PASSWORDEXCHANGE_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: password-exchange-secrets
+                  key: db-name
+            # Reminder configuration
+            - name: PASSWORDEXCHANGE_REMINDER_ENABLED
+              value: "true"
+            - name: PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS
+              value: "24"
+            - name: PASSWORDEXCHANGE_REMINDER_MAXREMINDERS
+              value: "3"
+            - name: PASSWORDEXCHANGE_REMINDER_INTERVAL
+              value: "24"
+            # Logging
+            - name: PASSWORDEXCHANGE_LOGLEVEL
+              value: "info"
+            volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+              limits:
+                memory: "128Mi"
+                cpu: "100m"
+          volumes:
+          - name: config
+            configMap:
+              name: password-exchange-config
+          # Use a service account with appropriate permissions
+          serviceAccountName: password-exchange
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: password-exchange-config
+  namespace: default
+  labels:
+    app: password-exchange
+data:
+  config.yaml: |
+    # Minimal config for reminder service
+    loglevel: info
+    reminder:
+      enabled: true
+      checkafterhours: 24
+      maxreminders: 3
+      reminderinterval: 24

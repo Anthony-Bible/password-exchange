@@ -19,23 +19,27 @@ func NewStorageService(repository MessageRepository) *StorageService {
 }
 
 // StoreMessage stores a new encrypted message with validation
-func (s *StorageService) StoreMessage(ctx context.Context, content, uniqueID, passphrase string, maxViewCount int) error {
+func (s *StorageService) StoreMessage(ctx context.Context, message *Message) error {
 	// Business rule validation
-	if content == "" {
+	if message.Content == "" {
 		log.Warn().Msg("Attempted to store message with empty content")
 		return ErrEmptyContent
 	}
-	if uniqueID == "" {
+	if message.UniqueID == "" {
 		log.Warn().Msg("Attempted to store message with empty unique ID")
 		return ErrEmptyUniqueID
 	}
-	if maxViewCount < 1 {
-		log.Warn().Int("maxViewCount", maxViewCount).Msg("Attempted to store message with invalid max view count")
+	if message.MaxViewCount < 1 {
+		log.Warn().Int("maxViewCount", message.MaxViewCount).Msg("Attempted to store message with invalid max view count")
 		return ErrInvalidMaxViewCount
+	}
+	if message.RecipientEmail == "" {
+		log.Warn().Msg("Attempted to store message with empty recipient email")
+		return ErrEmptyRecipientEmail
 	}
 
 	// Delegate to repository
-	return s.repository.InsertMessage(content, uniqueID, passphrase, maxViewCount)
+	return s.repository.InsertMessage(message)
 }
 
 // RetrieveMessage retrieves a message by its unique ID with validation and increments view count
@@ -80,6 +84,71 @@ func (s *StorageService) GetMessage(ctx context.Context, uniqueID string) (*Mess
 func (s *StorageService) CleanupExpiredMessages(ctx context.Context) error {
 	log.Info().Msg("Starting cleanup of expired messages")
 	return s.repository.DeleteExpiredMessages()
+}
+
+// GetUnviewedMessagesForReminders retrieves messages eligible for reminder emails
+func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders int) ([]*UnviewedMessage, error) {
+	// Business rule validation
+	if olderThanHours < 1 {
+		log.Warn().Int("olderThanHours", olderThanHours).Msg("Invalid olderThanHours parameter")
+		return nil, ErrInvalidParameter
+	}
+	if maxReminders < 1 {
+		log.Warn().Int("maxReminders", maxReminders).Msg("Invalid maxReminders parameter")
+		return nil, ErrInvalidParameter
+	}
+
+	// Delegate to repository
+	messages, err := s.repository.GetUnviewedMessagesForReminders(olderThanHours, maxReminders)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to retrieve unviewed messages for reminders")
+		return nil, err
+	}
+
+	log.Info().Int("count", len(messages)).Int("olderThanHours", olderThanHours).Int("maxReminders", maxReminders).Msg("Retrieved unviewed messages for reminders")
+	return messages, nil
+}
+
+// LogReminderSent records that a reminder email was sent for a message
+func (s *StorageService) LogReminderSent(ctx context.Context, messageID int, emailAddress string) error {
+	// Business rule validation
+	if messageID < 1 {
+		log.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
+		return ErrInvalidParameter
+	}
+	if emailAddress == "" {
+		log.Warn().Msg("Attempted to log reminder with empty email address")
+		return ErrEmptyEmailAddress
+	}
+
+	// Delegate to repository
+	err := s.repository.LogReminderSent(messageID, emailAddress)
+	if err != nil {
+		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Failed to log reminder sent")
+		return err
+	}
+
+	log.Info().Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Reminder sent logged successfully")
+	return nil
+}
+
+// GetReminderHistory retrieves the reminder history for a specific message
+func (s *StorageService) GetReminderHistory(ctx context.Context, messageID int) ([]*ReminderLogEntry, error) {
+	// Business rule validation
+	if messageID < 1 {
+		log.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
+		return nil, ErrInvalidParameter
+	}
+
+	// Delegate to repository
+	history, err := s.repository.GetReminderHistory(messageID)
+	if err != nil {
+		log.Error().Err(err).Int("messageID", messageID).Msg("Failed to retrieve reminder history")
+		return nil, err
+	}
+
+	log.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
+	return history, nil
 }
 
 // HealthCheck verifies the storage service is healthy

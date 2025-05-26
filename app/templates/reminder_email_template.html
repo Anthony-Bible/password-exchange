@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Exchange - Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+        }
+        .reminder-badge {
+            background-color: #ff6b35;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .message-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #ff6b35;
+            margin: 20px 0;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #0056b3;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #666;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Password Exchange</h1>
+            <div class="reminder-badge">
+                📬 Reminder #{{.ReminderCount}}
+            </div>
+        </div>
+
+        <h2>You have an unviewed secure message!</h2>
+        
+        <p>Hi there,</p>
+        
+        <p>This is a friendly reminder that you have a secure message waiting for you that hasn't been viewed yet.</p>
+
+        <div class="message-info">
+            <h3>📋 Message Details</h3>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-number">{{.DaysOld}}</span>
+                    <span class="stat-label">Days Old</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{.MaxViews}}</span>
+                    <span class="stat-label">Max Views</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{.ReminderCount}}</span>
+                    <span class="stat-label">Reminders Sent</span>
+                </div>
+            </div>
+            {{if .SenderName}}
+            <p><strong>From:</strong> {{.SenderName}}</p>
+            {{end}}
+            {{if .RecipientName}}
+            <p><strong>To:</strong> {{.RecipientName}}</p>
+            {{end}}
+        </div>
+
+        <div style="text-align: center;">
+            <a href="{{.Message}}" class="action-button">
+                🔓 View Your Secure Message
+            </a>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Important Security Information:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>This message can only be viewed <strong>{{.MaxViews}} time(s)</strong> total</li>
+                <li>The message will be permanently deleted after viewing</li>
+                <li>For security, the link will expire if not accessed</li>
+                <li>Never share this link with anyone else</li>
+            </ul>
+        </div>
+
+        {{if .Body}}
+        <div style="margin: 20px 0; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
+            <strong>Additional Message:</strong>
+            <p style="margin: 10px 0;">{{.Body}}</p>
+        </div>
+        {{end}}
+
+        <div class="footer">
+            <p style="margin: 0;">
+                <strong>Password Exchange</strong> - Secure message sharing platform
+            </p>
+            <p style="margin: 5px 0; font-size: 12px;">
+                This is an automated reminder. This message was sent because you have an unviewed secure message.
+            </p>
+            <p style="margin: 5px 0; font-size: 12px;">
+                If you no longer wish to receive reminders, simply view the message using the link above.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

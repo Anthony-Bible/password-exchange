@@ -21,10 +21,51 @@ message InsertRequest
     string content = 2;
     string passphrase = 3;
     int32 max_view_count = 4;
+    string recipient_email = 5;
+}
+
+message GetUnviewedMessagesRequest {
+    int32 older_than_hours = 1;
+    int32 max_reminders = 2;
+}
+
+message UnviewedMessage {
+    int32 message_id = 1;
+    string unique_id = 2;
+    string recipient_email = 3;
+    string created = 4;
+    int32 days_old = 5;
+}
+
+message GetUnviewedMessagesResponse {
+    repeated UnviewedMessage messages = 1;
+}
+
+message LogReminderRequest {
+    int32 message_id = 1;
+    string email_address = 2;
+}
+
+message GetReminderHistoryRequest {
+    int32 message_id = 1;
+}
+
+message ReminderLogEntry {
+    int32 message_id = 1;
+    string email_address = 2;
+    int32 reminder_count = 3;
+    string last_reminder_sent = 4;
+}
+
+message GetReminderHistoryResponse {
+    repeated ReminderLogEntry entries = 1;
 }
 
 service dbService{
     rpc Select(SelectRequest) returns (SelectResponse) {}
     rpc Insert(InsertRequest) returns (google.protobuf.Empty) {}
     rpc GetMessage(SelectRequest) returns (SelectResponse) {}
+    rpc GetUnviewedMessagesForReminders(GetUnviewedMessagesRequest) returns (GetUnviewedMessagesResponse) {}
+    rpc LogReminderSent(LogReminderRequest) returns (google.protobuf.Empty) {}
+    rpc GetReminderHistory(GetReminderHistoryRequest) returns (GetReminderHistoryResponse) {}
   }

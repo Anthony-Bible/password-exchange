@@ -45,21 +45,22 @@ func (m *MySQLAdapter) Connect() error {
 }
 
 // InsertMessage stores a new encrypted message in the database
-func (m *MySQLAdapter) InsertMessage(content, uniqueID, passphrase string, maxViewCount int) error {
+func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 	if m.db == nil {
 		if err := m.Connect(); err != nil {
 			return err
 		}
 	}
 
-	query := "INSERT INTO messages (message, uniqueid, other_lastname, view_count, max_view_count) VALUES (?, ?, ?, 0, ?)"
-	_, err := m.db.Exec(query, content, uniqueID, passphrase, maxViewCount)
+	// FIXED: Store recipient email in other_email field and passphrase in other_lastname field
+	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count) VALUES (?, ?, ?, ?, 0, ?)"
+	_, err := m.db.Exec(query, message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount)
 	if err != nil {
-		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to insert message")
+		log.Error().Err(err).Str("uniqueID", message.UniqueID).Msg("Failed to insert message")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Str("uniqueID", uniqueID).Int("maxViewCount", maxViewCount).Msg("Message stored successfully")
+	log.Info().Str("uniqueID", message.UniqueID).Int("maxViewCount", message.MaxViewCount).Str("recipientEmail", message.RecipientEmail).Msg("Message stored successfully")
 	return nil
 }
 
@@ -71,11 +72,11 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -97,11 +98,11 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
+	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -152,11 +153,11 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	}
 
 	// Get the updated message with the new view count
-	selectQuery := "SELECT message, uniqueid, other_lastname, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	selectQuery := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
 	row := tx.QueryRow(selectQuery, uniqueID)
 
 	var message domain.Message
-	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.ViewCount, &message.MaxViewCount)
+	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
@@ -209,6 +210,123 @@ func (m *MySQLAdapter) DeleteExpiredMessages() error {
 	rowsAffected, _ := result.RowsAffected()
 	log.Info().Int64("rowsDeleted", rowsAffected).Msg("Expired messages cleaned up")
 	return nil
+}
+
+// GetUnviewedMessagesForReminders retrieves messages that are unviewed and eligible for reminder emails
+func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxReminders int) ([]*domain.UnviewedMessage, error) {
+	if m.db == nil {
+		if err := m.Connect(); err != nil {
+			return nil, err
+		}
+	}
+
+	query := `SELECT m.messageid, m.uniqueid, m.other_email, m.created,
+         TIMESTAMPDIFF(DAY, m.created, NOW()) as days_old
+  FROM messages m 
+  LEFT JOIN email_reminders er ON m.messageid = er.message_id
+  WHERE m.view_count = 0 
+    AND m.created < NOW() - INTERVAL ? HOUR
+    AND m.other_email IS NOT NULL
+    AND m.other_email != ''
+    AND (er.reminder_count IS NULL OR er.reminder_count < ?)`
+
+	rows, err := m.db.Query(query, olderThanHours, maxReminders)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to query unviewed messages for reminders")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	defer rows.Close()
+
+	var messages []*domain.UnviewedMessage
+	for rows.Next() {
+		var msg domain.UnviewedMessage
+		var createdStr string
+		err := rows.Scan(&msg.MessageID, &msg.UniqueID, &msg.RecipientEmail, &createdStr, &msg.DaysOld)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to scan unviewed message")
+			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+		}
+
+		// Parse the created time
+		created, err := time.Parse("2006-01-02 15:04:05", createdStr)
+		if err != nil {
+			log.Error().Err(err).Str("createdStr", createdStr).Msg("Failed to parse created time")
+			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+		}
+		msg.Created = created
+
+		messages = append(messages, &msg)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Error().Err(err).Msg("Error iterating over unviewed messages")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+
+	log.Info().Int("count", len(messages)).Msg("Retrieved unviewed messages for reminders")
+	return messages, nil
+}
+
+// LogReminderSent records that a reminder email was sent for a message
+func (m *MySQLAdapter) LogReminderSent(messageID int, emailAddress string) error {
+	if m.db == nil {
+		if err := m.Connect(); err != nil {
+			return err
+		}
+	}
+
+	query := `INSERT INTO email_reminders (message_id, email_address, reminder_count, last_reminder_sent)
+		VALUES (?, ?, 1, NOW())
+		ON DUPLICATE KEY UPDATE 
+		reminder_count = reminder_count + 1,
+		last_reminder_sent = NOW()`
+
+	_, err := m.db.Exec(query, messageID, emailAddress)
+	if err != nil {
+		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Failed to log reminder sent")
+		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+
+	log.Info().Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Reminder sent logged successfully")
+	return nil
+}
+
+// GetReminderHistory retrieves the reminder history for a specific message
+func (m *MySQLAdapter) GetReminderHistory(messageID int) ([]*domain.ReminderLogEntry, error) {
+	if m.db == nil {
+		if err := m.Connect(); err != nil {
+			return nil, err
+		}
+	}
+
+	query := `SELECT message_id, email_address, reminder_count, last_reminder_sent 
+		FROM email_reminders WHERE message_id = ?`
+
+	rows, err := m.db.Query(query, messageID)
+	if err != nil {
+		log.Error().Err(err).Int("messageID", messageID).Msg("Failed to query reminder history")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	defer rows.Close()
+
+	var history []*domain.ReminderLogEntry
+	for rows.Next() {
+		var entry domain.ReminderLogEntry
+		err := rows.Scan(&entry.MessageID, &entry.EmailAddress, &entry.ReminderCount, &entry.LastReminderSent)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to scan reminder history entry")
+			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+		}
+		history = append(history, &entry)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Error().Err(err).Msg("Error iterating over reminder history")
+		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+
+	log.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
+	return history, nil
 }
 
 // Close closes the database connection
