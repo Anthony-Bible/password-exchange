@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
@@ -132,10 +134,144 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	
+	testCases := []struct {
+		name                string
+		maxViewCountValue   string
+		expectedStatusCode  int
+		expectServiceCall   bool
+		expectedErrorField  string
+	}{
+		{
+			name:               "ValidMaxViewCount",
+			maxViewCountValue:  "5",
+			expectedStatusCode: http.StatusOK, // gin doesn't properly redirect in test mode
+			expectServiceCall:  true,
+		},
+		{
+			name:               "ValidMaxViewCountMinimum",
+			maxViewCountValue:  "1",
+			expectedStatusCode: http.StatusOK,
+			expectServiceCall:  true,
+		},
+		{
+			name:               "ValidMaxViewCountMaximum",
+			maxViewCountValue:  "100",
+			expectedStatusCode: http.StatusOK,
+			expectServiceCall:  true,
+		},
+		{
+			name:               "EmptyMaxViewCount",
+			maxViewCountValue:  "",
+			expectedStatusCode: http.StatusOK,
+			expectServiceCall:  true,
+		},
+		{
+			name:               "InvalidNonNumericMaxViewCount",
+			maxViewCountValue:  "abc",
+			expectedStatusCode: http.StatusBadRequest,
+			expectServiceCall:  false,
+			expectedErrorField: "max_view_count",
+		},
+		{
+			name:               "InvalidZeroMaxViewCount",
+			maxViewCountValue:  "0",
+			expectedStatusCode: http.StatusBadRequest,
+			expectServiceCall:  false,
+			expectedErrorField: "max_view_count",
+		},
+		{
+			name:               "InvalidNegativeMaxViewCount",
+			maxViewCountValue:  "-1",
+			expectedStatusCode: http.StatusBadRequest,
+			expectServiceCall:  false,
+			expectedErrorField: "max_view_count",
+		},
+		{
+			name:               "InvalidTooLargeMaxViewCount",
+			maxViewCountValue:  "101",
+			expectedStatusCode: http.StatusBadRequest,
+			expectServiceCall:  false,
+			expectedErrorField: "max_view_count",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockService := new(MockMessageService)
+			handler := NewMessageHandler(mockService)
+
+			if tc.expectServiceCall {
+				expectedMaxViewCount := 0
+				if tc.maxViewCountValue != "" {
+					switch tc.maxViewCountValue {
+					case "1":
+						expectedMaxViewCount = 1
+					case "5":
+						expectedMaxViewCount = 5
+					case "100":
+						expectedMaxViewCount = 100
+					}
+				}
+				
+				mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
+					return req.MaxViewCount == expectedMaxViewCount
+				})).Return(&domain.MessageSubmissionResponse{
+					MessageID:  "test-id",
+					DecryptURL: "http://example.com/decrypt/test-id/key",
+				}, nil)
+			}
+
+			// Create form data
+			formData := url.Values{}
+			formData.Set("content", "test message")
+			if tc.maxViewCountValue != "" {
+				formData.Set("max_view_count", tc.maxViewCountValue)
+			}
+
+			// Create request
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/submit", strings.NewReader(formData.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			// Create gin engine with mock templates
+			engine := gin.New()
+			engine.SetHTMLTemplate(createMockTemplate())
+
+			c := gin.CreateTestContextOnly(w, engine)
+			c.Request = req
+
+			// Call the handler
+			handler.SubmitMessage(c)
+
+			// Verify response
+			assert.Equal(t, tc.expectedStatusCode, w.Code)
+
+			if tc.expectServiceCall {
+				mockService.AssertCalled(t, "SubmitMessage", mock.Anything, mock.Anything)
+			} else {
+				mockService.AssertNotCalled(t, "SubmitMessage", mock.Anything, mock.Anything)
+				
+				// For validation errors, check that the response contains error information
+				if tc.expectedErrorField != "" {
+					responseBody := w.Body.String()
+					assert.Contains(t, responseBody, "view count", "Response should contain view count error message")
+				}
+			}
+
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
 // createMockTemplate creates a simple mock template for testing
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")
 	tmpl, _ = tmpl.New("decryption.html").Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
 	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
+	tmpl, _ = tmpl.New("home.html").Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
+	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p></body></html>`)
 	return tmpl
 }

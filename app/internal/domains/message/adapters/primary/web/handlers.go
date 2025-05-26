@@ -33,9 +33,18 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	// Parse max view count
 	maxViewCount := 0
 	if maxViewCountStr := c.PostForm("max_view_count"); maxViewCountStr != "" {
-		if parsed, err := strconv.Atoi(maxViewCountStr); err == nil && parsed >= 1 && parsed <= 100 {
-			maxViewCount = parsed
+		parsed, err := strconv.Atoi(maxViewCountStr)
+		if err != nil {
+			log.Error().Err(err).Str("value", maxViewCountStr).Msg("Invalid max view count format")
+			h.renderErrorWithField(c, "Invalid max view count: must be a number", "max_view_count")
+			return
 		}
+		if parsed < 1 || parsed > 100 {
+			log.Error().Int("value", parsed).Msg("Max view count out of range")
+			h.renderErrorWithField(c, "Max view count must be between 1 and 100", "max_view_count")
+			return
+		}
+		maxViewCount = parsed
 	}
 
 	// Extract form data
@@ -190,6 +199,17 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 	}
 	
 	c.HTML(http.StatusInternalServerError, "home.html", data)
+}
+
+func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
+	log.Error().Str("message", message).Str("field", field).Msg("Rendering validation error page")
+	
+	data := gin.H{
+		"Title":  "Password Exchange",
+		"Errors": map[string]string{field: message},
+	}
+	
+	c.HTML(http.StatusBadRequest, "home.html", data)
 }
 
 func (h *MessageHandler) render404(c *gin.Context) {
