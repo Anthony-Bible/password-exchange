@@ -8,7 +8,7 @@ import grpc
 #gazelle:resolve py database_pb2_grpc //protos:encryption_pb2_grpc
 #gazelle:resolve py protos //protos:encryption_pb2_grpc
 from protos import encryption_pb2
-from protos import encryption_grpc
+from protos import encryption_pb2_grpc
 #gazelle:ignore database
 import database
 SERVER_ADDRESS = os.environ['PASSWORDEXCHANGE_ENCRYPTIONSERVICE']
@@ -27,7 +27,7 @@ class EncryptionServiceClient(object):
             None.
         """
         self.channel = grpc.insecure_channel(f'{SERVER_ADDRESS}:{PORT}')
-        self.stub = encryption_grpc.messageServiceStub(self.channel)
+        self.stub = encryption_pb2_grpc.messageServiceStub(self.channel)
     def generate_random_strng(self, length):
         """Generates a cryptographically random string from the given length
 

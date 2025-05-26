@@ -327,6 +327,9 @@ const docTemplate = `{
                 "decryptedAt": {
                     "type": "string"
                 },
+                "maxViewCount": {
+                    "type": "integer"
+                },
                 "messageId": {
                     "type": "string"
                 },

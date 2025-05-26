@@ -6,7 +6,7 @@ import re
 #gazelle:resolve py database_pb2 //protos:database_pb2
 #gazelle:resolve py database_pb2_grpc //protos:database_pb2_grpc
 from protos import database_pb2
-from protos import database_grpc
+from protos import database_pb2_grpc
 from google.protobuf import empty_pb2
 from google.protobuf import json_format
 from google.protobuf.json_format import MessageToJson
@@ -32,7 +32,7 @@ class databaseServiceClient(object):
             None.
         """
         self.channel = grpc.insecure_channel(f'{SERVER_ADDRESS}')
-        self.stub = database_grpc.dbServiceStub(self.channel)
+        self.stub = database_pb2_grpc.dbServiceStub(self.channel)
     def insert_message(self, request):
         """calls grpc function Insert and inserts UUID content
 
