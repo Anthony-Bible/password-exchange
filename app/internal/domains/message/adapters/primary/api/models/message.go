@@ -55,10 +55,11 @@ type MessageDecryptRequest struct {
 
 // MessageDecryptResponse represents the response to a message decryption
 type MessageDecryptResponse struct {
-	MessageID   string    `json:"messageId"`
-	Content     string    `json:"content"`
-	ViewCount   int       `json:"viewCount"`
-	DecryptedAt time.Time `json:"decryptedAt"`
+	MessageID    string    `json:"messageId"`
+	Content      string    `json:"content"`
+	ViewCount    int       `json:"viewCount"`
+	MaxViewCount int       `json:"maxViewCount"`
+	DecryptedAt  time.Time `json:"decryptedAt"`
 }
 
 // HealthCheckResponse represents the response to a health check

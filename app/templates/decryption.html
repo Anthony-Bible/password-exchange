@@ -255,18 +255,19 @@ function handleDecryptionSuccess(data) {
     
     // Update view count information
     const viewCount = data.viewCount || 1;
-    const remainingViews = Math.max(0, 100 - viewCount);
+    const maxViewCount = data.maxViewCount || 5; // Default to 5 if not provided
+    const remainingViews = Math.max(0, maxViewCount - viewCount);
     
     if (remainingViews > 0) {
         document.getElementById('view-count-text').textContent = 
-            `This message has been viewed ${viewCount} time(s). It will be deleted after 5 views.`;
+            `This message has been viewed ${viewCount} time(s). It will be deleted after ${maxViewCount} views.`;
         document.getElementById('expiry-info').innerHTML = 
             `<strong>Important:</strong> This message will be automatically deleted after ${remainingViews} more view(s).`;
     } else {
         document.getElementById('view-count-text').textContent = 
             'This message has reached the maximum view count and has been deleted.';
         document.getElementById('expiry-info').innerHTML = 
-            '<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the ${viewCount}-view limit.';
+            `<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the ${maxViewCount}-view limit.`;
     }
     
     hideAll();
