@@ -57,7 +57,10 @@ func bindenvs(iface interface{}, parts ...string) {
 		case reflect.Struct:
 			bindenvs(v.Interface(), append(parts, tv)...)
 		default:
-			viper.BindEnv(strings.Join(append(parts, tv), "."))
+			key := strings.Join(append(parts, tv), ".")
+			// Build environment variable name from key
+			envKey := "PASSWORDEXCHANGE_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+			viper.BindEnv(key, envKey)
 		}
 	}
 }
@@ -79,7 +82,7 @@ PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, def
 PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var cfg Config
-		bindenvs(cfg)
+		bindenvs(&cfg)
 		viper.Unmarshal(&cfg)
 
 		// Apply CLI flag overrides with validation

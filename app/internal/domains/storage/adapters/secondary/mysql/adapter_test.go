@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 

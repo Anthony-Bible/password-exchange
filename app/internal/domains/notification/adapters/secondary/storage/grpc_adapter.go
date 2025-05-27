@@ -2,11 +2,9 @@ package storage
 
 import (
 	"context"
-	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	storagePorts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/primary"
-	storageEntities "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 )
 
 // GRPCStorageAdapter adapts the storage service gRPC client for reminder operations
@@ -55,9 +53,9 @@ func (a *GRPCStorageAdapter) GetReminderHistory(ctx context.Context, messageID i
 	for i, sh := range storageHistory {
 		history[i] = &domain.ReminderLogEntry{
 			MessageID:      sh.MessageID,
-			RecipientEmail: sh.RecipientEmail,
+			RecipientEmail: sh.EmailAddress,
 			ReminderCount:  sh.ReminderCount,
-			SentAt:         sh.SentAt,
+			SentAt:         sh.LastReminderSent,
 		}
 	}
 
