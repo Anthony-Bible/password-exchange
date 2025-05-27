@@ -6,7 +6,9 @@ package reminder
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
@@ -29,6 +31,37 @@ const (
 	MaxReminderInterval  = 720   // Maximum 30 days (30 * 24)
 )
 
+// Config represents the reminder command configuration
+type Config struct {
+	config.Config `mapstructure:",squash"`
+}
+
+// bindenvs is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
+func bindenvs(iface interface{}, parts ...string) {
+	ifv := reflect.ValueOf(iface)
+	if ifv.Kind() == reflect.Ptr {
+		ifv = ifv.Elem()
+	}
+	for i := 0; i < ifv.NumField(); i++ {
+		v := ifv.Field(i)
+		t := ifv.Type().Field(i)
+		tv, ok := t.Tag.Lookup("mapstructure")
+		if !ok {
+			continue
+		}
+		if tv == ",squash" {
+			bindenvs(v.Interface(), parts...)
+			continue
+		}
+		switch v.Kind() {
+		case reflect.Struct:
+			bindenvs(v.Interface(), append(parts, tv)...)
+		default:
+			viper.BindEnv(strings.Join(append(parts, tv), "."))
+		}
+	}
+}
+
 // reminderCmd represents the reminder command
 var reminderCmd = &cobra.Command{
 	Use:   "reminder",
@@ -45,9 +78,13 @@ PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS: Hours to wait before first reminder (
 PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, default: 3)
 PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg, err := loadConfig()
-		if err != nil {
-			log.Error().Err(err).Str("operation", "load_config").Msg("Failed to load configuration")
+		var cfg Config
+		bindenvs(cfg)
+		viper.Unmarshal(&cfg)
+
+		// Apply CLI flag overrides with validation
+		if err := applyFlagOverrides(&cfg); err != nil {
+			log.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
 			return
 		}
 
@@ -105,45 +142,26 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 	},
 }
 
-// loadConfig loads configuration from viper with defaults
-func loadConfig() (*config.Config, error) {
-	cfg := &config.Config{}
-	
-	// Set defaults for reminder configuration
-	viper.SetDefault("reminder.enabled", true)
-	viper.SetDefault("reminder.checkafterhours", 24)
-	viper.SetDefault("reminder.maxreminders", 3)
-	viper.SetDefault("reminder.interval", 24)
-
-	// Bind environment variables
-	viper.BindEnv("reminder.enabled")
-	viper.BindEnv("reminder.checkafterhours")
-	viper.BindEnv("reminder.maxreminders")
-	viper.BindEnv("reminder.interval")
-
-	// Unmarshal into config struct
-	if err := viper.Unmarshal(cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
-	}
-
+// applyFlagOverrides applies command-line flag overrides with validation
+func applyFlagOverrides(cfg *Config) error {
 	// Override with command-line flags if provided
 	if olderThanHours := viper.GetString("older-than-hours"); olderThanHours != "" {
 		hours, err := strconv.Atoi(olderThanHours)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for older-than-hours flag '%s': %w", olderThanHours, err)
+			return fmt.Errorf("invalid value for older-than-hours flag '%s': %w", olderThanHours, err)
 		}
 		if hours < MinCheckAfterHours || hours > MaxCheckAfterHours {
-			return nil, fmt.Errorf("older-than-hours value %d must be between %d and %d", hours, MinCheckAfterHours, MaxCheckAfterHours)
+			return fmt.Errorf("older-than-hours value %d must be between %d and %d", hours, MinCheckAfterHours, MaxCheckAfterHours)
 		}
 		cfg.Reminder.CheckAfterHours = hours
 	}
 	if maxReminders := viper.GetString("max-reminders"); maxReminders != "" {
 		max, err := strconv.Atoi(maxReminders)
 		if err != nil {
-			return nil, fmt.Errorf("invalid value for max-reminders flag '%s': %w", maxReminders, err)
+			return fmt.Errorf("invalid value for max-reminders flag '%s': %w", maxReminders, err)
 		}
 		if max < MinMaxReminders || max > MaxMaxReminders {
-			return nil, fmt.Errorf("max-reminders value %d must be between %d and %d", max, MinMaxReminders, MaxMaxReminders)
+			return fmt.Errorf("max-reminders value %d must be between %d and %d", max, MinMaxReminders, MaxMaxReminders)
 		}
 		cfg.Reminder.MaxReminders = max
 	}
@@ -155,11 +173,17 @@ func loadConfig() (*config.Config, error) {
 		Str("operation", "config_loaded").
 		Msg("Reminder configuration loaded")
 
-	return cfg, nil
+	return nil
 }
 
 func init() {
 	cmd.RootCmd.AddCommand(reminderCmd)
+
+	// Set defaults for reminder configuration
+	viper.SetDefault("reminder.enabled", true)
+	viper.SetDefault("reminder.checkafterhours", 24)
+	viper.SetDefault("reminder.maxreminders", 3)
+	viper.SetDefault("reminder.reminderinterval", 24)
 
 	// Command-line flags
 	reminderCmd.Flags().String("older-than-hours", "", "Hours to wait before sending first reminder (1-8760, default: 24)")
