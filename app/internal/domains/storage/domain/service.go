@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 )
 
@@ -124,11 +125,11 @@ func (s *StorageService) LogReminderSent(ctx context.Context, messageID int, ema
 	// Delegate to repository
 	err := s.repository.LogReminderSent(messageID, emailAddress)
 	if err != nil {
-		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Failed to log reminder sent")
+		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Failed to log reminder sent")
 		return err
 	}
 
-	log.Info().Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Reminder sent logged successfully")
+	log.Info().Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Reminder sent logged successfully")
 	return nil
 }
 

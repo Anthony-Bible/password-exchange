@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,11 +38,11 @@ func (s *NotificationService) SendNotification(ctx context.Context, req Notifica
 
 	response, err := s.emailSender.SendNotification(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Str("to", req.To).Msg("Failed to send notification")
+		log.Error().Err(err).Str("to", validation.SanitizeEmailForLogging(req.To)).Msg("Failed to send notification")
 		return nil, fmt.Errorf("%w: %v", ErrEmailSendFailed, err)
 	}
 
-	log.Info().Str("to", req.To).Str("messageId", response.MessageID).Msg("Notification sent successfully")
+	log.Info().Str("to", validation.SanitizeEmailForLogging(req.To)).Str("messageId", response.MessageID).Msg("Notification sent successfully")
 	return response, nil
 }
 
@@ -60,7 +61,7 @@ func (s *NotificationService) StartMessageProcessing(ctx context.Context, queueC
 
 // HandleMessage implements the MessageHandler interface
 func (s *NotificationService) HandleMessage(ctx context.Context, msg QueueMessage) error {
-	log.Debug().Str("to", msg.OtherEmail).Str("from", msg.FirstName).Msg("Processing notification message")
+	log.Debug().Str("to", validation.SanitizeEmailForLogging(msg.OtherEmail)).Str("from", msg.FirstName).Msg("Processing notification message")
 
 	// Create notification request from queue message
 	notificationReq := s.createNotificationRequest(msg)
@@ -68,11 +69,11 @@ func (s *NotificationService) HandleMessage(ctx context.Context, msg QueueMessag
 	// Send the notification
 	_, err := s.SendNotification(ctx, notificationReq)
 	if err != nil {
-		log.Error().Err(err).Str("to", msg.OtherEmail).Msg("Failed to send notification for queue message")
+		log.Error().Err(err).Str("to", validation.SanitizeEmailForLogging(msg.OtherEmail)).Msg("Failed to send notification for queue message")
 		return err
 	}
 
-	log.Debug().Str("to", msg.OtherEmail).Msg("Successfully processed notification message")
+	log.Debug().Str("to", validation.SanitizeEmailForLogging(msg.OtherEmail)).Msg("Successfully processed notification message")
 	return nil
 }
 
@@ -107,9 +108,12 @@ func (s *NotificationService) validateNotificationRequest(req NotificationReques
 		return fmt.Errorf("subject is required")
 	}
 
-	// Basic email validation
-	if !strings.Contains(req.To, "@") || !strings.Contains(req.From, "@") {
-		return ErrInvalidEmailAddress
+	// Validate email addresses using shared validation package
+	if err := validation.ValidateEmail(req.To); err != nil {
+		return fmt.Errorf("invalid recipient email: %w", err)
+	}
+	if err := validation.ValidateEmail(req.From); err != nil {
+		return fmt.Errorf("invalid sender email: %w", err)
 	}
 
 	return nil

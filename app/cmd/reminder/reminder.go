@@ -5,17 +5,35 @@ package reminder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	storagePorts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/primary"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	// Validation constants for reminder configuration
+	MinCheckAfterHours   = 1     // Minimum 1 hour
+	MaxCheckAfterHours   = 8760  // Maximum 1 year (365 * 24)
+	MinMaxReminders      = 1     // Minimum 1 reminder
+	MaxMaxReminders      = 10    // Maximum 10 reminders
+	MinReminderInterval  = 1     // Minimum 1 hour between reminders
+	MaxReminderInterval  = 720   // Maximum 30 days (30 * 24)
+)
+
+var (
+	ErrInvalidCheckAfterHours  = errors.New("checkAfterHours must be between 1 and 8760 hours")
+	ErrInvalidMaxReminders     = errors.New("maxReminders must be between 1 and 10")
+	ErrInvalidReminderInterval = errors.New("reminderInterval must be between 1 and 720 hours")
 )
 
 // reminderCmd represents the reminder command
@@ -30,13 +48,19 @@ It queries for messages that are:
 
 Configuration via environment variables:
 PASSWORDEXCHANGE_REMINDER_ENABLED: Enable/disable reminder system
-PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS: Hours to wait before first reminder (default: 24)
-PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (default: 3)
-PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (default: 24)`,
+PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS: Hours to wait before first reminder (1-8760, default: 24)
+PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, default: 3)
+PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := loadConfig()
 		if !cfg.Reminder.Enabled {
 			log.Info().Msg("Reminder system is disabled")
+			return
+		}
+
+		// Validate configuration parameters
+		if err := validateReminderConfig(&cfg.Reminder); err != nil {
+			log.Fatal().Err(err).Msg("Invalid reminder configuration")
 			return
 		}
 
@@ -77,12 +101,12 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (default: 24)`,
 
 // ReminderProcessor handles the business logic for sending reminder emails
 type ReminderProcessor struct {
-	storageService domain.StorageServicePort
+	storageService storagePorts.StorageServicePort
 	config         *config.Config
 }
 
 // NewReminderProcessor creates a new reminder processor
-func NewReminderProcessor(storageService domain.StorageServicePort, config *config.Config) *ReminderProcessor {
+func NewReminderProcessor(storageService storagePorts.StorageServicePort, config *config.Config) *ReminderProcessor {
 	return &ReminderProcessor{
 		storageService: storageService,
 		config:         config,
@@ -111,7 +135,7 @@ func (r *ReminderProcessor) ProcessReminders(ctx context.Context) error {
 	// Process each message
 	for _, message := range messages {
 		if err := r.processMessageReminder(ctx, message); err != nil {
-			log.Error().Err(err).Int("messageID", message.MessageID).Str("email", message.RecipientEmail).Msg("Failed to process reminder for message")
+			log.Error().Err(err).Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Msg("Failed to process reminder for message")
 			continue // Continue processing other messages
 		}
 	}
@@ -121,7 +145,12 @@ func (r *ReminderProcessor) ProcessReminders(ctx context.Context) error {
 
 // processMessageReminder sends a reminder email for a specific message
 func (r *ReminderProcessor) processMessageReminder(ctx context.Context, message *domain.UnviewedMessage) error {
-	log.Info().Int("messageID", message.MessageID).Str("email", message.RecipientEmail).Int("daysOld", message.DaysOld).Msg("Processing reminder for message")
+	// Validate email address before processing
+	if err := validation.ValidateEmail(message.RecipientEmail); err != nil {
+		return fmt.Errorf("invalid recipient email address: %w", err)
+	}
+
+	log.Info().Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Int("daysOld", message.DaysOld).Msg("Processing reminder for message")
 
 	// Get reminder history to determine reminder count
 	history, err := r.storageService.GetReminderHistory(ctx, message.MessageID)
@@ -149,7 +178,7 @@ func (r *ReminderProcessor) processMessageReminder(ctx context.Context, message 
 		return fmt.Errorf("failed to log reminder sent: %w", err)
 	}
 
-	log.Info().Int("messageID", message.MessageID).Str("email", message.RecipientEmail).Int("reminderNumber", reminderCount+1).Msg("Reminder email sent successfully")
+	log.Info().Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Int("reminderNumber", reminderCount+1).Msg("Reminder email sent successfully")
 	return nil
 }
 
@@ -158,7 +187,7 @@ func (r *ReminderProcessor) logReminderAttempt(ctx context.Context, message *dom
 	log.Info().
 		Int("messageID", message.MessageID).
 		Str("uniqueID", message.UniqueID).
-		Str("recipientEmail", message.RecipientEmail).
+		Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).
 		Int("daysOld", message.DaysOld).
 		Int("reminderNumber", reminderNumber).
 		Time("created", message.Created).
@@ -196,14 +225,24 @@ func loadConfig() *config.Config {
 
 	// Override with command-line flags if provided
 	if olderThanHours := viper.GetString("older-than-hours"); olderThanHours != "" {
-		if hours, err := strconv.Atoi(olderThanHours); err == nil {
-			cfg.Reminder.CheckAfterHours = hours
+		hours, err := strconv.Atoi(olderThanHours)
+		if err != nil {
+			log.Fatal().Err(err).Str("value", olderThanHours).Msg("Invalid value for older-than-hours flag")
 		}
+		if hours < MinCheckAfterHours || hours > MaxCheckAfterHours {
+			log.Fatal().Int("value", hours).Msgf("older-than-hours must be between %d and %d", MinCheckAfterHours, MaxCheckAfterHours)
+		}
+		cfg.Reminder.CheckAfterHours = hours
 	}
 	if maxReminders := viper.GetString("max-reminders"); maxReminders != "" {
-		if max, err := strconv.Atoi(maxReminders); err == nil {
-			cfg.Reminder.MaxReminders = max
+		max, err := strconv.Atoi(maxReminders)
+		if err != nil {
+			log.Fatal().Err(err).Str("value", maxReminders).Msg("Invalid value for max-reminders flag")
 		}
+		if max < MinMaxReminders || max > MaxMaxReminders {
+			log.Fatal().Int("value", max).Msgf("max-reminders must be between %d and %d", MinMaxReminders, MaxMaxReminders)
+		}
+		cfg.Reminder.MaxReminders = max
 	}
 
 	log.Info().
@@ -215,12 +254,29 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
+// validateReminderConfig validates all reminder configuration parameters
+func validateReminderConfig(cfg *config.ReminderConfig) error {
+	if cfg.CheckAfterHours < MinCheckAfterHours || cfg.CheckAfterHours > MaxCheckAfterHours {
+		return fmt.Errorf("%w: got %d", ErrInvalidCheckAfterHours, cfg.CheckAfterHours)
+	}
+
+	if cfg.MaxReminders < MinMaxReminders || cfg.MaxReminders > MaxMaxReminders {
+		return fmt.Errorf("%w: got %d", ErrInvalidMaxReminders, cfg.MaxReminders)
+	}
+
+	if cfg.ReminderInterval < MinReminderInterval || cfg.ReminderInterval > MaxReminderInterval {
+		return fmt.Errorf("%w: got %d", ErrInvalidReminderInterval, cfg.ReminderInterval)
+	}
+
+	return nil
+}
+
 func init() {
 	cmd.RootCmd.AddCommand(reminderCmd)
 
 	// Command-line flags
-	reminderCmd.Flags().String("older-than-hours", "", "Hours to wait before sending first reminder (default: 24)")
-	reminderCmd.Flags().String("max-reminders", "", "Maximum number of reminders per message (default: 3)")
+	reminderCmd.Flags().String("older-than-hours", "", "Hours to wait before sending first reminder (1-8760, default: 24)")
+	reminderCmd.Flags().String("max-reminders", "", "Maximum number of reminders per message (1-10, default: 3)")
 	reminderCmd.Flags().Bool("dry-run", false, "Show what would be done without actually sending emails")
 
 	// Bind flags to viper

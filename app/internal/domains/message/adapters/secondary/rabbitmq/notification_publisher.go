@@ -7,6 +7,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	messagepb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
@@ -54,7 +55,7 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 
 // SendMessageNotification sends a notification about a new message
 func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req domain.MessageNotificationRequest) error {
-	log.Debug().Str("recipientEmail", req.RecipientEmail).Msg("Sending message notification")
+	log.Debug().Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Msg("Sending message notification")
 
 	// Declare the queue
 	q, err := p.channel.QueueDeclare(
@@ -105,11 +106,11 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 		})
 
 	if err != nil {
-		log.Error().Err(err).Str("recipientEmail", req.RecipientEmail).Msg("Failed to publish notification message")
+		log.Error().Err(err).Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Msg("Failed to publish notification message")
 		return fmt.Errorf("failed to publish notification message: %w", err)
 	}
 
-	log.Info().Str("recipientEmail", req.RecipientEmail).Str("queue", p.queueName).Msg("Notification message published successfully")
+	log.Info().Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Str("queue", p.queueName).Msg("Notification message published successfully")
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/rs/zerolog/log"
 )
@@ -60,7 +61,7 @@ func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Str("uniqueID", message.UniqueID).Int("maxViewCount", message.MaxViewCount).Str("recipientEmail", message.RecipientEmail).Msg("Message stored successfully")
+	log.Info().Str("uniqueID", message.UniqueID).Int("maxViewCount", message.MaxViewCount).Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).Msg("Message stored successfully")
 	return nil
 }
 
@@ -283,11 +284,11 @@ func (m *MySQLAdapter) LogReminderSent(messageID int, emailAddress string) error
 
 	_, err := m.db.Exec(query, messageID, emailAddress)
 	if err != nil {
-		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Failed to log reminder sent")
+		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Failed to log reminder sent")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Int("messageID", messageID).Str("emailAddress", emailAddress).Msg("Reminder sent logged successfully")
+	log.Info().Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Reminder sent logged successfully")
 	return nil
 }
 
