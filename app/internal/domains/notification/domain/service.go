@@ -14,6 +14,7 @@ type NotificationService struct {
 	emailSender      NotificationSender
 	queueConsumer    QueueConsumer
 	templateRenderer TemplateRenderer
+	reminderService  *ReminderService
 }
 
 // NewNotificationService creates a new notification service
@@ -21,11 +22,29 @@ func NewNotificationService(
 	emailSender NotificationSender,
 	queueConsumer QueueConsumer,
 	templateRenderer TemplateRenderer,
+	storageRepo StorageRepository,
+) *NotificationService {
+	reminderService := NewReminderService(storageRepo, emailSender)
+	return &NotificationService{
+		emailSender:      emailSender,
+		queueConsumer:    queueConsumer,
+		templateRenderer: templateRenderer,
+		reminderService:  reminderService,
+	}
+}
+
+// NewNotificationServiceWithReminder creates a new notification service with an existing reminder service
+func NewNotificationServiceWithReminder(
+	emailSender NotificationSender,
+	queueConsumer QueueConsumer,
+	templateRenderer TemplateRenderer,
+	reminderService *ReminderService,
 ) *NotificationService {
 	return &NotificationService{
 		emailSender:      emailSender,
 		queueConsumer:    queueConsumer,
 		templateRenderer: templateRenderer,
+		reminderService:  reminderService,
 	}
 }
 
@@ -117,6 +136,16 @@ func (s *NotificationService) validateNotificationRequest(req NotificationReques
 	}
 
 	return nil
+}
+
+// ProcessReminders finds and processes messages eligible for reminder emails
+func (s *NotificationService) ProcessReminders(ctx context.Context, config ReminderConfig) error {
+	return s.reminderService.ProcessReminders(ctx, config)
+}
+
+// ProcessMessageReminder sends a reminder email for a specific message
+func (s *NotificationService) ProcessMessageReminder(ctx context.Context, req ReminderRequest) error {
+	return s.reminderService.ProcessMessageReminder(ctx, req)
 }
 
 // Close closes the queue consumer connection

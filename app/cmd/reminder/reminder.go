@@ -5,16 +5,15 @@ package reminder
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
+	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
-	storagePorts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/primary"
+	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,12 +27,6 @@ const (
 	MaxMaxReminders      = 10    // Maximum 10 reminders
 	MinReminderInterval  = 1     // Minimum 1 hour between reminders
 	MaxReminderInterval  = 720   // Maximum 30 days (30 * 24)
-)
-
-var (
-	ErrInvalidCheckAfterHours  = errors.New("checkAfterHours must be between 1 and 8760 hours")
-	ErrInvalidMaxReminders     = errors.New("maxReminders must be between 1 and 10")
-	ErrInvalidReminderInterval = errors.New("reminderInterval must be between 1 and 720 hours")
 )
 
 // reminderCmd represents the reminder command
@@ -52,22 +45,22 @@ PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS: Hours to wait before first reminder (
 PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, default: 3)
 PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := loadConfig()
-		if !cfg.Reminder.Enabled {
-			log.Info().Msg("Reminder system is disabled")
+		cfg, err := loadConfig()
+		if err != nil {
+			log.Error().Err(err).Str("operation", "load_config").Msg("Failed to load configuration")
 			return
 		}
 
-		// Validate configuration parameters
-		if err := validateReminderConfig(&cfg.Reminder); err != nil {
-			log.Fatal().Err(err).Msg("Invalid reminder configuration")
-			return
+		// Convert config to notification domain config
+		reminderConfig := notificationDomain.ReminderConfig{
+			Enabled:         cfg.Reminder.Enabled,
+			CheckAfterHours: cfg.Reminder.CheckAfterHours,
+			MaxReminders:    cfg.Reminder.MaxReminders,
+			Interval:        cfg.Reminder.ReminderInterval,
 		}
 
-		log.Info().Msg("Starting reminder email processing")
-		
 		// Initialize storage adapter
-		dbConfig := domain.DatabaseConfig{
+		dbConfig := storageDomain.DatabaseConfig{
 			Host:     cfg.DbHost,
 			User:     cfg.DbUser,
 			Password: cfg.DbPass,
@@ -76,134 +69,44 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		storageAdapter := mysql.NewMySQLAdapter(dbConfig)
 		if mysqlAdapter, ok := storageAdapter.(*mysql.MySQLAdapter); ok {
 			if err := mysqlAdapter.Connect(); err != nil {
-				log.Fatal().Err(err).Msg("Failed to connect to database")
+				log.Error().
+					Err(err).
+					Str("operation", "database_connect").
+					Str("host", cfg.DbHost).
+					Str("database", cfg.DbName).
+					Msg("Failed to connect to database")
 				return
 			}
 			defer mysqlAdapter.Close()
 		}
 
 		// Initialize storage service
-		storageService := domain.NewStorageService(storageAdapter)
+		storageService := storageDomain.NewStorageService(storageAdapter)
 
-		// Create reminder processor
-		processor := NewReminderProcessor(storageService, cfg)
+		// Create notification storage adapter
+		notificationStorageAdapter := storage.NewGRPCStorageAdapter(storageService)
+
+		// Create reminder service (for now using nil for email sender - will be implemented later)
+		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, nil)
 		
 		// Process reminders
 		ctx := context.Background()
-		if err := processor.ProcessReminders(ctx); err != nil {
-			log.Error().Err(err).Msg("Failed to process reminders")
+		if err := reminderService.ProcessReminders(ctx, reminderConfig); err != nil {
+			log.Error().
+				Err(err).
+				Str("operation", "process_reminders").
+				Msg("Failed to process reminders")
 			return
 		}
 
-		log.Info().Msg("Reminder email processing completed")
+		log.Info().
+			Str("operation", "processing_completed").
+			Msg("Reminder email processing completed")
 	},
 }
 
-// ReminderProcessor handles the business logic for sending reminder emails
-type ReminderProcessor struct {
-	storageService storagePorts.StorageServicePort
-	config         *config.Config
-}
-
-// NewReminderProcessor creates a new reminder processor
-func NewReminderProcessor(storageService storagePorts.StorageServicePort, config *config.Config) *ReminderProcessor {
-	return &ReminderProcessor{
-		storageService: storageService,
-		config:         config,
-	}
-}
-
-// ProcessReminders finds and processes messages eligible for reminder emails
-func (r *ReminderProcessor) ProcessReminders(ctx context.Context) error {
-	// Get unviewed messages eligible for reminders
-	messages, err := r.storageService.GetUnviewedMessagesForReminders(
-		ctx,
-		r.config.Reminder.CheckAfterHours,
-		r.config.Reminder.MaxReminders,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to get unviewed messages: %w", err)
-	}
-
-	log.Info().Int("count", len(messages)).Msg("Found messages eligible for reminders")
-
-	if len(messages) == 0 {
-		log.Info().Msg("No messages found requiring reminders")
-		return nil
-	}
-
-	// Process each message
-	for _, message := range messages {
-		if err := r.processMessageReminder(ctx, message); err != nil {
-			log.Error().Err(err).Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Msg("Failed to process reminder for message")
-			continue // Continue processing other messages
-		}
-	}
-
-	return nil
-}
-
-// processMessageReminder sends a reminder email for a specific message
-func (r *ReminderProcessor) processMessageReminder(ctx context.Context, message *domain.UnviewedMessage) error {
-	// Validate email address before processing
-	if err := validation.ValidateEmail(message.RecipientEmail); err != nil {
-		return fmt.Errorf("invalid recipient email address: %w", err)
-	}
-
-	log.Info().Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Int("daysOld", message.DaysOld).Msg("Processing reminder for message")
-
-	// Get reminder history to determine reminder count
-	history, err := r.storageService.GetReminderHistory(ctx, message.MessageID)
-	if err != nil {
-		return fmt.Errorf("failed to get reminder history: %w", err)
-	}
-
-	reminderCount := 0
-	if len(history) > 0 {
-		reminderCount = history[0].ReminderCount
-	}
-
-	// Check if we've already sent the maximum number of reminders
-	if reminderCount >= r.config.Reminder.MaxReminders {
-		log.Debug().Int("messageID", message.MessageID).Int("reminderCount", reminderCount).Msg("Maximum reminders already sent for message")
-		return nil
-	}
-
-	// TODO: Integrate with notification system to send actual email
-	// For now, we'll simulate the email sending and log the reminder
-	r.logReminderAttempt(ctx, message, reminderCount+1)
-
-	// Record that we sent a reminder
-	if err := r.storageService.LogReminderSent(ctx, message.MessageID, message.RecipientEmail); err != nil {
-		return fmt.Errorf("failed to log reminder sent: %w", err)
-	}
-
-	log.Info().Int("messageID", message.MessageID).Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).Int("reminderNumber", reminderCount+1).Msg("Reminder email sent successfully")
-	return nil
-}
-
-// logReminderAttempt logs the details of a reminder attempt (for development/testing)
-func (r *ReminderProcessor) logReminderAttempt(ctx context.Context, message *domain.UnviewedMessage, reminderNumber int) {
-	log.Info().
-		Int("messageID", message.MessageID).
-		Str("uniqueID", message.UniqueID).
-		Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).
-		Int("daysOld", message.DaysOld).
-		Int("reminderNumber", reminderNumber).
-		Time("created", message.Created).
-		Msg("REMINDER EMAIL WOULD BE SENT")
-
-	// Generate the decryption URL (placeholder logic)
-	decryptionURL := fmt.Sprintf("https://password.exchange/decrypt/%s", message.UniqueID)
-	
-	log.Info().
-		Str("decryptionURL", decryptionURL).
-		Str("template", "reminder_email_template.html").
-		Msg("Email template data prepared")
-}
-
 // loadConfig loads configuration from viper with defaults
-func loadConfig() *config.Config {
+func loadConfig() (*config.Config, error) {
 	cfg := &config.Config{}
 	
 	// Set defaults for reminder configuration
@@ -220,27 +123,27 @@ func loadConfig() *config.Config {
 
 	// Unmarshal into config struct
 	if err := viper.Unmarshal(cfg); err != nil {
-		log.Fatal().Err(err).Msg("Failed to unmarshal configuration")
+		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
 	// Override with command-line flags if provided
 	if olderThanHours := viper.GetString("older-than-hours"); olderThanHours != "" {
 		hours, err := strconv.Atoi(olderThanHours)
 		if err != nil {
-			log.Fatal().Err(err).Str("value", olderThanHours).Msg("Invalid value for older-than-hours flag")
+			return nil, fmt.Errorf("invalid value for older-than-hours flag '%s': %w", olderThanHours, err)
 		}
 		if hours < MinCheckAfterHours || hours > MaxCheckAfterHours {
-			log.Fatal().Int("value", hours).Msgf("older-than-hours must be between %d and %d", MinCheckAfterHours, MaxCheckAfterHours)
+			return nil, fmt.Errorf("older-than-hours value %d must be between %d and %d", hours, MinCheckAfterHours, MaxCheckAfterHours)
 		}
 		cfg.Reminder.CheckAfterHours = hours
 	}
 	if maxReminders := viper.GetString("max-reminders"); maxReminders != "" {
 		max, err := strconv.Atoi(maxReminders)
 		if err != nil {
-			log.Fatal().Err(err).Str("value", maxReminders).Msg("Invalid value for max-reminders flag")
+			return nil, fmt.Errorf("invalid value for max-reminders flag '%s': %w", maxReminders, err)
 		}
 		if max < MinMaxReminders || max > MaxMaxReminders {
-			log.Fatal().Int("value", max).Msgf("max-reminders must be between %d and %d", MinMaxReminders, MaxMaxReminders)
+			return nil, fmt.Errorf("max-reminders value %d must be between %d and %d", max, MinMaxReminders, MaxMaxReminders)
 		}
 		cfg.Reminder.MaxReminders = max
 	}
@@ -249,26 +152,10 @@ func loadConfig() *config.Config {
 		Bool("enabled", cfg.Reminder.Enabled).
 		Int("checkAfterHours", cfg.Reminder.CheckAfterHours).
 		Int("maxReminders", cfg.Reminder.MaxReminders).
+		Str("operation", "config_loaded").
 		Msg("Reminder configuration loaded")
 
-	return cfg
-}
-
-// validateReminderConfig validates all reminder configuration parameters
-func validateReminderConfig(cfg *config.ReminderConfig) error {
-	if cfg.CheckAfterHours < MinCheckAfterHours || cfg.CheckAfterHours > MaxCheckAfterHours {
-		return fmt.Errorf("%w: got %d", ErrInvalidCheckAfterHours, cfg.CheckAfterHours)
-	}
-
-	if cfg.MaxReminders < MinMaxReminders || cfg.MaxReminders > MaxMaxReminders {
-		return fmt.Errorf("%w: got %d", ErrInvalidMaxReminders, cfg.MaxReminders)
-	}
-
-	if cfg.ReminderInterval < MinReminderInterval || cfg.ReminderInterval > MaxReminderInterval {
-		return fmt.Errorf("%w: got %d", ErrInvalidReminderInterval, cfg.ReminderInterval)
-	}
-
-	return nil
+	return cfg, nil
 }
 
 func init() {

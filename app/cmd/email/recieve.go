@@ -46,8 +46,8 @@ func (conf Config) startHexagonalProcessing() {
 	emailSender := smtpSender.NewSMTPSender(emailConn)
 	queueConsumer := rabbitMQConsumer.NewRabbitMQConsumer()
 
-	// Create notification service (domain)
-	notificationService := notificationDomain.NewNotificationService(emailSender, queueConsumer, nil)
+	// Create notification service (domain) - using WithReminder constructor with nil reminder service since email command doesn't need reminders
+	notificationService := notificationDomain.NewNotificationServiceWithReminder(emailSender, queueConsumer, nil, nil)
 
 	// Create primary adapter (consumer)
 	consumer := notificationConsumer.NewNotificationConsumer(notificationService, queueConn, 100)
