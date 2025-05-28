@@ -35,10 +35,11 @@ func NewStorageClient(endpoint string) (*StorageClient, error) {
 // StoreMessage stores an encrypted message
 func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStorageRequest) error {
 	grpcReq := &db.InsertRequest{
-		Uuid:         req.MessageID,
-		Content:      req.Content,
-		Passphrase:   req.Passphrase,
-		MaxViewCount: int32(req.MaxViewCount),
+		Uuid:           req.MessageID,
+		Content:        req.Content,
+		Passphrase:     req.Passphrase,
+		MaxViewCount:   int32(req.MaxViewCount),
+		RecipientEmail: req.RecipientEmail,
 	}
 
 	_, err := c.client.Insert(ctx, grpcReq)

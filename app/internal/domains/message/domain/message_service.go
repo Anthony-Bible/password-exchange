@@ -92,10 +92,11 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{
-		MessageID:    messageID,
-		Content:      strings.Join(encryptedContent, ""),
-		Passphrase:   hashedPassphrase,
-		MaxViewCount: maxViewCount,
+		MessageID:      messageID,
+		Content:        strings.Join(encryptedContent, ""),
+		Passphrase:     hashedPassphrase,
+		MaxViewCount:   maxViewCount,
+		RecipientEmail: req.RecipientEmail,
 	}
 
 	err = s.storageService.StoreMessage(ctx, storeReq)

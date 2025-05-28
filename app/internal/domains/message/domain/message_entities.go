@@ -54,10 +54,11 @@ type MessageAccessInfo struct {
 
 // MessageStorageRequest represents a request to store an encrypted message
 type MessageStorageRequest struct {
-	MessageID    string
-	Content      string
-	Passphrase   string
-	MaxViewCount int
+	MessageID      string
+	Content        string
+	Passphrase     string
+	MaxViewCount   int
+	RecipientEmail string // Optional, for notification purposes
 }
 
 // MessageRetrievalStorageRequest represents a request to retrieve a stored message
