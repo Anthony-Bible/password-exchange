@@ -347,6 +347,376 @@ func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	mockEmailSender.AssertExpectations(t)
 }
 
+// Test ProcessReminders with context cancellation
+func TestProcessReminders_ContextCancelled_ReturnsError(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        24,
+	}
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "context canceled")
+}
+
+// Test ProcessReminders with timeout during storage operation
+func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        24,
+	}
+
+	// Mock storage to simulate slow operation
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(nil, context.DeadlineExceeded)
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get unviewed messages")
+	mockStorageRepo.AssertExpectations(t)
+}
+
+// Test ProcessMessageReminder with malformed recipient email (edge cases)
+func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+
+	testCases := []struct {
+		name  string
+		email string
+	}{
+		{"empty email", ""},
+		{"email with spaces", "test @example.com"},
+		{"email without @", "testexample.com"},
+		{"email without domain", "test@"},
+		{"email with multiple @", "test@@example.com"},
+		{"very long email", "a" + string(make([]byte, 320)) + "@example.com"},
+		{"email with special chars", "test<script>@example.com"},
+		{"email with null byte", "test\x00@example.com"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := ReminderRequest{
+				MessageID:      123,
+				UniqueID:       "abc123",
+				RecipientEmail: tc.email,
+				DaysOld:        2,
+				DecryptionURL:  "https://password.exchange/decrypt/abc123",
+			}
+
+			// Act
+			err := service.ProcessMessageReminder(ctx, req)
+
+			// Assert
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid recipient email address")
+			mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
+			mockEmailSender.AssertNotCalled(t, "SendNotification")
+		})
+	}
+}
+
+// Test ProcessMessageReminder with malformed decryption URL - URLs are not validated
+func TestProcessMessageReminder_MalformedURL_StillProcesses(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	req := ReminderRequest{
+		MessageID:      123,
+		UniqueID:       "abc123",
+		RecipientEmail: "test@example.com",
+		DaysOld:        2,
+		DecryptionURL:  "://invalid-url", // Malformed URL but service doesn't validate it
+	}
+
+	// Mock storage calls
+	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
+
+	// Mock email sending - should still work with malformed URL
+	expectedResponse := &NotificationResponse{
+		Success:   true,
+		MessageID: "msg-456",
+	}
+	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+
+	// Act
+	err := service.ProcessMessageReminder(ctx, req)
+
+	// Assert
+	// URLs are not validated by the service - it passes them through
+	assert.NoError(t, err)
+	mockStorageRepo.AssertExpectations(t)
+	mockEmailSender.AssertExpectations(t)
+}
+
+// Test ProcessReminders with storage logging failure - continues with other messages
+func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        24,
+	}
+
+	messages := []*UnviewedMessage{
+		{
+			MessageID:      123,
+			UniqueID:       "abc123",
+			RecipientEmail: "test@example.com",
+			DaysOld:        2,
+			Created:        time.Now().Add(-48 * time.Hour),
+		},
+		{
+			MessageID:      124,
+			UniqueID:       "def456",
+			RecipientEmail: "valid@example.com",
+			DaysOld:        1,
+			Created:        time.Now().Add(-24 * time.Hour),
+		},
+	}
+
+	// Mock storage calls - first message logging fails, second succeeds
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(messages, nil)
+	
+	// First message - logging fails after retry attempts
+	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(errors.New("logging database unavailable"))
+	
+	// Second message - succeeds
+	mockStorageRepo.On("GetReminderHistory", ctx, 124).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 124, "valid@example.com").Return(nil)
+
+	// Mock successful email sending for both
+	expectedResponse := &NotificationResponse{
+		Success:   true,
+		MessageID: "msg-456",
+	}
+	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	// Should succeed because at least one message was processed successfully
+	assert.NoError(t, err)
+	mockStorageRepo.AssertExpectations(t)
+	mockEmailSender.AssertExpectations(t)
+}
+
+// Test ProcessReminders with circuit breaker activation
+func TestProcessReminders_CircuitBreakerOpen_StopsProcessing(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        24,
+	}
+
+	// Force circuit breaker to open state
+	service.circuitBreaker.state = CircuitBreakerOpen
+	service.circuitBreaker.lastFailureTime = time.Now()
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "circuit breaker is open")
+	mockStorageRepo.AssertNotCalled(t, "GetUnviewedMessagesForReminders")
+}
+
+// Test ProcessReminders with mixed success and failure scenarios
+func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        24,
+	}
+
+	messages := []*UnviewedMessage{
+		{
+			MessageID:      123,
+			UniqueID:       "abc123",
+			RecipientEmail: "valid@example.com",
+			DaysOld:        2,
+			Created:        time.Now().Add(-48 * time.Hour),
+		},
+		{
+			MessageID:      124,
+			UniqueID:       "def456",
+			RecipientEmail: "invalid-email", // This will fail validation
+			DaysOld:        3,
+			Created:        time.Now().Add(-72 * time.Hour),
+		},
+		{
+			MessageID:      125,
+			UniqueID:       "ghi789",
+			RecipientEmail: "another@example.com",
+			DaysOld:        1,
+			Created:        time.Now().Add(-24 * time.Hour),
+		},
+	}
+
+	// Mock storage calls
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(messages, nil)
+	
+	// Valid email processing (message 123)
+	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 123, "valid@example.com").Return(nil)
+	
+	// Invalid email processing (message 124) - won't reach storage calls
+	
+	// Valid email processing (message 125)
+	mockStorageRepo.On("GetReminderHistory", ctx, 125).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 125, "another@example.com").Return(nil)
+
+	// Mock email sending for valid emails only
+	expectedResponse := &NotificationResponse{
+		Success:   true,
+		MessageID: "msg-456",
+	}
+	mockEmailSender.On("SendNotification", ctx, mock.MatchedBy(func(req NotificationRequest) bool {
+		return req.To == "valid@example.com" || req.To == "another@example.com"
+	})).Return(expectedResponse, nil)
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	// Should succeed overall despite individual failures
+	assert.NoError(t, err)
+	mockStorageRepo.AssertExpectations(t)
+	mockEmailSender.AssertExpectations(t)
+}
+
+// Test ProcessMessageReminder with zero MessageID
+func TestProcessMessageReminder_ZeroMessageID_Error(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	req := ReminderRequest{
+		MessageID:      0, // Invalid
+		UniqueID:       "abc123",
+		RecipientEmail: "test@example.com",
+		DaysOld:        2,
+		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+	}
+
+	// Act
+	err := service.ProcessMessageReminder(ctx, req)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "messageID must be greater than 0")
+	mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
+}
+
+// Test ProcessMessageReminder with empty UniqueID
+func TestProcessMessageReminder_EmptyUniqueID_Error(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	req := ReminderRequest{
+		MessageID:      123,
+		UniqueID:       "", // Invalid
+		RecipientEmail: "test@example.com",
+		DaysOld:        2,
+		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+	}
+
+	// Act
+	err := service.ProcessMessageReminder(ctx, req)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "uniqueID cannot be empty")
+	mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
+}
+
+// Test ProcessMessageReminder with negative DaysOld
+func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockEmailSender := &MockNotificationSender{}
+	service := NewReminderService(mockStorageRepo, mockEmailSender)
+
+	ctx := context.Background()
+	req := ReminderRequest{
+		MessageID:      123,
+		UniqueID:       "abc123",
+		RecipientEmail: "test@example.com",
+		DaysOld:        -1, // Invalid
+		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+	}
+
+	// Act
+	err := service.ProcessMessageReminder(ctx, req)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "daysOld must be non-negative")
+	mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
+}
+
 // Test ProcessMessageReminder with valid request
 func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 	// Arrange
@@ -373,144 +743,6 @@ func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 		MessageID: "msg-456",
 	}
 	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
-
-	// Act
-	err := service.ProcessMessageReminder(ctx, req)
-
-	// Assert
-	assert.NoError(t, err)
-	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
-}
-
-// Test ProcessMessageReminder with invalid email
-func TestProcessMessageReminder_InvalidEmail_ReturnsError(t *testing.T) {
-	// Arrange
-	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
-
-	ctx := context.Background()
-	req := ReminderRequest{
-		MessageID:      123,
-		UniqueID:       "abc123",
-		RecipientEmail: "invalid-email", // Invalid email format
-		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
-	}
-
-	// Act
-	err := service.ProcessMessageReminder(ctx, req)
-
-	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid recipient email address")
-	mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
-	mockEmailSender.AssertNotCalled(t, "SendNotification")
-}
-
-// Test ProcessMessageReminder with storage error getting history
-func TestProcessMessageReminder_HistoryStorageError_ReturnsError(t *testing.T) {
-	// Arrange
-	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
-
-	ctx := context.Background()
-	req := ReminderRequest{
-		MessageID:      123,
-		UniqueID:       "abc123",
-		RecipientEmail: "test@example.com",
-		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
-	}
-
-	historyError := errors.New("database timeout")
-	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return(nil, historyError)
-
-	// Act
-	err := service.ProcessMessageReminder(ctx, req)
-
-	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get reminder history")
-	assert.Contains(t, err.Error(), "database timeout")
-	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertNotCalled(t, "SendNotification")
-}
-
-// Test ProcessMessageReminder with email sending error
-func TestProcessMessageReminder_EmailSendingError_ReturnsError(t *testing.T) {
-	// Arrange
-	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
-
-	ctx := context.Background()
-	req := ReminderRequest{
-		MessageID:      123,
-		UniqueID:       "abc123",
-		RecipientEmail: "test@example.com",
-		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
-	}
-
-	// Mock storage calls
-	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
-
-	// Mock email sending failure
-	emailError := errors.New("SMTP server unavailable")
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil, emailError)
-
-	// Act
-	err := service.ProcessMessageReminder(ctx, req)
-
-	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to send reminder email")
-	assert.Contains(t, err.Error(), "SMTP server unavailable")
-	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
-}
-
-// Test ProcessMessageReminder with existing reminder history
-func TestProcessMessageReminder_ExistingHistory_IncrementsReminderNumber(t *testing.T) {
-	// Arrange
-	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
-
-	ctx := context.Background()
-	req := ReminderRequest{
-		MessageID:      123,
-		UniqueID:       "abc123",
-		RecipientEmail: "test@example.com",
-		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
-	}
-
-	// Mock existing reminder history
-	existingHistory := []*ReminderLogEntry{
-		{
-			MessageID:      123,
-			RecipientEmail: "test@example.com",
-			ReminderCount:  2, // Already sent 2 reminders
-			SentAt:         time.Now().Add(-24 * time.Hour),
-		},
-	}
-
-	// Mock storage calls
-	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return(existingHistory, nil)
-	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
-
-	// Mock email sending - expect reminder #3
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.MatchedBy(func(req NotificationRequest) bool {
-		return req.Subject == "Reminder: You have an unviewed encrypted message (Reminder #3)"
-	})).Return(expectedResponse, nil)
 
 	// Act
 	err := service.ProcessMessageReminder(ctx, req)

@@ -79,6 +79,11 @@ func NewReminderService(storageRepo StorageRepository, emailSender NotificationS
 
 // ProcessReminders finds and processes messages eligible for reminder emails
 func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderConfig) error {
+	// Check context cancellation early
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	// Validate configuration
 	if err := r.validateReminderConfig(config); err != nil {
 		log.Error().
@@ -189,6 +194,19 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderC
 
 // ProcessMessageReminder sends a reminder email for a specific message
 func (r *ReminderService) ProcessMessageReminder(ctx context.Context, req ReminderRequest) error {
+	// Validate request parameters
+	if req.MessageID <= 0 {
+		return fmt.Errorf("messageID must be greater than 0, got %d", req.MessageID)
+	}
+	
+	if req.UniqueID == "" {
+		return fmt.Errorf("uniqueID cannot be empty")
+	}
+	
+	if req.DaysOld < 0 {
+		return fmt.Errorf("daysOld must be non-negative, got %d", req.DaysOld)
+	}
+
 	// Validate email address before processing
 	if err := validation.ValidateEmail(req.RecipientEmail); err != nil {
 		return fmt.Errorf("invalid recipient email address for messageID %d: %w", req.MessageID, err)
