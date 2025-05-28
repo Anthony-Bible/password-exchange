@@ -175,6 +175,16 @@ func applyFlagOverrides(cfg *Config) error {
 		}
 		cfg.Reminder.MaxReminders = maxRemindersValue
 	}
+	if intervalHoursFlag := viper.GetString("interval-hours"); intervalHoursFlag != "" {
+		intervalValue, err := strconv.Atoi(intervalHoursFlag)
+		if err != nil {
+			return fmt.Errorf("invalid value for interval-hours flag '%s': %w", intervalHoursFlag, err)
+		}
+		if intervalValue < MinReminderInterval || intervalValue > MaxReminderInterval {
+			return fmt.Errorf("interval-hours value %d must be between %d and %d", intervalValue, MinReminderInterval, MaxReminderInterval)
+		}
+		cfg.Reminder.ReminderInterval = intervalValue
+	}
 
 	log.Info().
 		Bool("enabled", cfg.Reminder.Enabled).
@@ -198,10 +208,10 @@ func init() {
 	// Command-line flags
 	reminderCmd.Flags().String("older-than-hours", "", "Hours to wait before sending first reminder (1-8760, default: 24)")
 	reminderCmd.Flags().String("max-reminders", "", "Maximum number of reminders per message (1-10, default: 3)")
-	reminderCmd.Flags().Bool("dry-run", false, "Show what would be done without actually sending emails")
+	reminderCmd.Flags().String("interval-hours", "", "Hours between reminders (1-720, default: 24)")
 
 	// Bind flags to viper
 	viper.BindPFlag("older-than-hours", reminderCmd.Flags().Lookup("older-than-hours"))
 	viper.BindPFlag("max-reminders", reminderCmd.Flags().Lookup("max-reminders"))
-	viper.BindPFlag("dry-run", reminderCmd.Flags().Lookup("dry-run"))
+	viper.BindPFlag("interval-hours", reminderCmd.Flags().Lookup("interval-hours"))
 }

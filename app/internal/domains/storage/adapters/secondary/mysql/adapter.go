@@ -241,20 +241,11 @@ func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxRemind
 	var messages []*domain.UnviewedMessage
 	for rows.Next() {
 		var msg domain.UnviewedMessage
-		var createdStr string
-		err := rows.Scan(&msg.MessageID, &msg.UniqueID, &msg.RecipientEmail, &createdStr, &msg.DaysOld)
+		err := rows.Scan(&msg.MessageID, &msg.UniqueID, &msg.RecipientEmail, &msg.Created, &msg.DaysOld)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan unviewed message")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
-
-		// Parse the created time
-		created, err := time.Parse("2006-01-02 15:04:05", createdStr)
-		if err != nil {
-			log.Error().Err(err).Str("createdStr", createdStr).Msg("Failed to parse created time")
-			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
-		}
-		msg.Created = created
 
 		messages = append(messages, &msg)
 	}
