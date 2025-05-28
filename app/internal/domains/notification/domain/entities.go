@@ -86,12 +86,13 @@ type TemplateRenderer interface {
 	RenderTemplate(ctx context.Context, templateName string, data NotificationTemplateData) (string, error)
 }
 
-// ReminderConfig holds configuration for reminder processing
+// ReminderConfig holds configuration for reminder processing.
+// Defines when and how often reminder emails are sent for unviewed messages.
 type ReminderConfig struct {
-	Enabled         bool
-	CheckAfterHours int
-	MaxReminders    int
-	Interval        int
+	Enabled         bool // Whether reminder system is active
+	CheckAfterHours int  // Hours to wait before first reminder (1-8760)
+	MaxReminders    int  // Maximum reminders per message (1-10)
+	Interval        int  // Hours between subsequent reminders (1-720)
 }
 
 // ReminderRequest represents a request to send a reminder notification

@@ -7,7 +7,9 @@ import (
 	storagePorts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/primary"
 )
 
-// GRPCStorageAdapter adapts the storage service gRPC client for reminder operations
+// GRPCStorageAdapter adapts the storage service gRPC client for reminder operations.
+// This adapter implements the hexagonal architecture pattern by translating between
+// notification domain entities and storage domain entities via the gRPC interface.
 type GRPCStorageAdapter struct {
 	storageService storagePorts.StorageServicePort
 }
@@ -27,6 +29,7 @@ func (a *GRPCStorageAdapter) GetUnviewedMessagesForReminders(ctx context.Context
 	}
 
 	// Convert storage entities to notification domain entities
+	// This translation maintains domain separation and prevents tight coupling
 	messages := make([]*domain.UnviewedMessage, len(storageMessages))
 	for i, sm := range storageMessages {
 		messages[i] = &domain.UnviewedMessage{

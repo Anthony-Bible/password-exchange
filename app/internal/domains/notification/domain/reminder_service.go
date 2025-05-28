@@ -45,11 +45,13 @@ const (
 	CircuitBreakerHalfOpen
 )
 
-// CircuitBreaker implements the circuit breaker pattern for error recovery
+// CircuitBreaker implements the circuit breaker pattern for error recovery.
+// It prevents cascading failures by temporarily blocking requests when error rates are high.
+// States: Closed (normal), Open (blocking), HalfOpen (testing recovery)
 type CircuitBreaker struct {
-	failureCount    int
-	lastFailureTime time.Time
-	state          CircuitBreakerState
+	failureCount    int                 // Number of consecutive failures
+	lastFailureTime time.Time           // Time of the last failure
+	state          CircuitBreakerState // Current state of the circuit breaker
 }
 
 // StorageRepository defines the interface for storage operations
@@ -78,34 +80,34 @@ func NewReminderService(storageRepo StorageRepository, emailSender NotificationS
 }
 
 // ProcessReminders finds and processes messages eligible for reminder emails
-func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderConfig) error {
+func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig ReminderConfig) error {
 	// Check context cancellation early
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 
 	// Validate configuration
-	if err := r.validateReminderConfig(config); err != nil {
+	if err := r.validateReminderConfig(reminderConfig); err != nil {
 		log.Error().
 			Err(err).
 			Str("operation", "validate_config").
-			Int("checkAfterHours", config.CheckAfterHours).
-			Int("maxReminders", config.MaxReminders).
-			Int("reminderInterval", config.Interval).
+			Int("checkAfterHours", reminderConfig.CheckAfterHours).
+			Int("maxReminders", reminderConfig.MaxReminders).
+			Int("reminderInterval", reminderConfig.Interval).
 			Msg("Invalid reminder configuration")
 		return err
 	}
 
-	if !config.Enabled {
+	if !reminderConfig.Enabled {
 		log.Info().Bool("enabled", false).Msg("Reminder system is disabled")
 		return nil
 	}
 
 	log.Info().
 		Str("operation", "start_processing").
-		Bool("enabled", config.Enabled).
-		Int("checkAfterHours", config.CheckAfterHours).
-		Int("maxReminders", config.MaxReminders).
+		Bool("enabled", reminderConfig.Enabled).
+		Int("checkAfterHours", reminderConfig.CheckAfterHours).
+		Int("maxReminders", reminderConfig.MaxReminders).
 		Msg("Starting reminder email processing")
 
 	var messages []*UnviewedMessage
@@ -115,8 +117,8 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderC
 		var err error
 		messages, err = r.storageRepo.GetUnviewedMessagesForReminders(
 			ctx,
-			config.CheckAfterHours,
-			config.MaxReminders,
+			reminderConfig.CheckAfterHours,
+			reminderConfig.MaxReminders,
 		)
 		return err
 	}, "get_unviewed_messages")
@@ -133,6 +135,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderC
 	}
 
 	// Process each message with individual error recovery
+	// Strategy: Continue processing other messages even if some fail (graceful degradation)
 	processedCount := 0
 	errorCount := 0
 	for _, message := range messages {
@@ -171,6 +174,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderC
 		Msg("Reminder processing completed")
 
 	// Implement graceful degradation: return success if at least some messages were processed
+	// This allows partial success rather than all-or-nothing failure
 	if processedCount > 0 {
 		log.Info().
 			Int("processedCount", processedCount).
@@ -193,29 +197,29 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, config ReminderC
 }
 
 // ProcessMessageReminder sends a reminder email for a specific message
-func (r *ReminderService) ProcessMessageReminder(ctx context.Context, req ReminderRequest) error {
+func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRequest ReminderRequest) error {
 	// Validate request parameters
-	if req.MessageID <= 0 {
-		return fmt.Errorf("messageID must be greater than 0, got %d", req.MessageID)
+	if reminderRequest.MessageID <= 0 {
+		return fmt.Errorf("messageID must be greater than 0, got %d", reminderRequest.MessageID)
 	}
 	
-	if req.UniqueID == "" {
+	if reminderRequest.UniqueID == "" {
 		return fmt.Errorf("uniqueID cannot be empty")
 	}
 	
-	if req.DaysOld < 0 {
-		return fmt.Errorf("daysOld must be non-negative, got %d", req.DaysOld)
+	if reminderRequest.DaysOld < 0 {
+		return fmt.Errorf("daysOld must be non-negative, got %d", reminderRequest.DaysOld)
 	}
 
 	// Validate email address before processing
-	if err := validation.ValidateEmail(req.RecipientEmail); err != nil {
-		return fmt.Errorf("invalid recipient email address for messageID %d: %w", req.MessageID, err)
+	if err := validation.ValidateEmail(reminderRequest.RecipientEmail); err != nil {
+		return fmt.Errorf("invalid recipient email address for messageID %d: %w", reminderRequest.MessageID, err)
 	}
 
 	log.Info().
-		Int("messageID", req.MessageID).
-		Str("email", validation.SanitizeEmailForLogging(req.RecipientEmail)).
-		Int("daysOld", req.DaysOld).
+		Int("messageID", reminderRequest.MessageID).
+		Str("email", validation.SanitizeEmailForLogging(reminderRequest.RecipientEmail)).
+		Int("daysOld", reminderRequest.DaysOld).
 		Str("operation", "process_message_reminder").
 		Msg("Processing reminder for message")
 
@@ -223,12 +227,12 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, req Remind
 	var history []*ReminderLogEntry
 	err := r.retryWithBackoff(ctx, func() error {
 		var err error
-		history, err = r.storageRepo.GetReminderHistory(ctx, req.MessageID)
+		history, err = r.storageRepo.GetReminderHistory(ctx, reminderRequest.MessageID)
 		return err
-	}, fmt.Sprintf("get_reminder_history_%d", req.MessageID))
+	}, fmt.Sprintf("get_reminder_history_%d", reminderRequest.MessageID))
 	
 	if err != nil {
-		return fmt.Errorf("failed to get reminder history for messageID %d: %w", req.MessageID, err)
+		return fmt.Errorf("failed to get reminder history for messageID %d: %w", reminderRequest.MessageID, err)
 	}
 
 	reminderCount := 0
@@ -237,41 +241,43 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, req Remind
 	}
 
 	// Update reminder number in request
-	req.ReminderNumber = reminderCount + 1
+	reminderRequest.ReminderNumber = reminderCount + 1
 
 	// Send reminder email
 	notificationReq := NotificationRequest{
-		To:            req.RecipientEmail,
+		To:            reminderRequest.RecipientEmail,
 		From:          "server@password.exchange",
 		FromName:      "Password Exchange",
-		Subject:       fmt.Sprintf("Reminder: You have an unviewed encrypted message (Reminder #%d)", req.ReminderNumber),
-		MessageURL:    req.DecryptionURL,
+		Subject:       fmt.Sprintf("Reminder: You have an unviewed encrypted message (Reminder #%d)", reminderRequest.ReminderNumber),
+		MessageURL:    reminderRequest.DecryptionURL,
 	}
 
 	_, err = r.emailSender.SendNotification(ctx, notificationReq)
 	if err != nil {
-		return fmt.Errorf("failed to send reminder email for messageID %d: %w", req.MessageID, err)
+		return fmt.Errorf("failed to send reminder email for messageID %d: %w", reminderRequest.MessageID, err)
 	}
 
 	// Record that we sent a reminder with retry logic
 	err = r.retryWithBackoff(ctx, func() error {
-		return r.storageRepo.LogReminderSent(ctx, req.MessageID, req.RecipientEmail)
-	}, fmt.Sprintf("log_reminder_sent_%d", req.MessageID))
+		return r.storageRepo.LogReminderSent(ctx, reminderRequest.MessageID, reminderRequest.RecipientEmail)
+	}, fmt.Sprintf("log_reminder_sent_%d", reminderRequest.MessageID))
 	
 	if err != nil {
-		return fmt.Errorf("failed to log reminder sent for messageID %d: %w", req.MessageID, err)
+		return fmt.Errorf("failed to log reminder sent for messageID %d: %w", reminderRequest.MessageID, err)
 	}
 
 	log.Info().
-		Int("messageID", req.MessageID).
-		Str("email", validation.SanitizeEmailForLogging(req.RecipientEmail)).
-		Int("reminderNumber", req.ReminderNumber).
+		Int("messageID", reminderRequest.MessageID).
+		Str("email", validation.SanitizeEmailForLogging(reminderRequest.RecipientEmail)).
+		Int("reminderNumber", reminderRequest.ReminderNumber).
 		Str("operation", "reminder_sent").
 		Msg("Reminder email sent successfully")
 	return nil
 }
 
-// retryWithBackoff executes a function with exponential backoff retry logic
+// retryWithBackoff executes a function with exponential backoff retry logic.
+// Implements resilience pattern: starts with 100ms delay, doubles each retry, max 5s delay.
+// Integrates with circuit breaker to prevent repeated attempts when system is failing.
 func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func() error, operationName string) error {
 	var lastErr error
 	
@@ -339,30 +345,30 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 }
 
 // validateReminderConfig validates all reminder configuration parameters
-func (r *ReminderService) validateReminderConfig(cfg ReminderConfig) error {
-	if cfg.CheckAfterHours < MinCheckAfterHours || cfg.CheckAfterHours > MaxCheckAfterHours {
-		return fmt.Errorf("%w: got %d", ErrInvalidCheckAfterHours, cfg.CheckAfterHours)
+func (r *ReminderService) validateReminderConfig(reminderConfig ReminderConfig) error {
+	if reminderConfig.CheckAfterHours < MinCheckAfterHours || reminderConfig.CheckAfterHours > MaxCheckAfterHours {
+		return fmt.Errorf("%w: got %d", ErrInvalidCheckAfterHours, reminderConfig.CheckAfterHours)
 	}
 
-	if cfg.MaxReminders < MinMaxReminders || cfg.MaxReminders > MaxMaxReminders {
-		return fmt.Errorf("%w: got %d", ErrInvalidMaxReminders, cfg.MaxReminders)
+	if reminderConfig.MaxReminders < MinMaxReminders || reminderConfig.MaxReminders > MaxMaxReminders {
+		return fmt.Errorf("%w: got %d", ErrInvalidMaxReminders, reminderConfig.MaxReminders)
 	}
 
-	if cfg.Interval < MinReminderInterval || cfg.Interval > MaxReminderInterval {
-		return fmt.Errorf("%w: got %d", ErrInvalidReminderInterval, cfg.Interval)
+	if reminderConfig.Interval < MinReminderInterval || reminderConfig.Interval > MaxReminderInterval {
+		return fmt.Errorf("%w: got %d", ErrInvalidReminderInterval, reminderConfig.Interval)
 	}
 
 	return nil
 }
 
 // CanExecute checks if the circuit breaker allows execution
-func (cb *CircuitBreaker) CanExecute() error {
-	switch cb.state {
+func (circuitBreaker *CircuitBreaker) CanExecute() error {
+	switch circuitBreaker.state {
 	case CircuitBreakerClosed:
 		return nil
 	case CircuitBreakerOpen:
-		if time.Since(cb.lastFailureTime) > CircuitBreakerTimeout {
-			cb.state = CircuitBreakerHalfOpen
+		if time.Since(circuitBreaker.lastFailureTime) > CircuitBreakerTimeout {
+			circuitBreaker.state = CircuitBreakerHalfOpen
 			return nil
 		}
 		return ErrCircuitBreakerOpen
@@ -374,20 +380,20 @@ func (cb *CircuitBreaker) CanExecute() error {
 }
 
 // RecordSuccess records a successful operation
-func (cb *CircuitBreaker) RecordSuccess() {
-	cb.failureCount = 0
-	cb.state = CircuitBreakerClosed
+func (circuitBreaker *CircuitBreaker) RecordSuccess() {
+	circuitBreaker.failureCount = 0
+	circuitBreaker.state = CircuitBreakerClosed
 }
 
 // RecordFailure records a failed operation
-func (cb *CircuitBreaker) RecordFailure() {
-	cb.failureCount++
-	cb.lastFailureTime = time.Now()
+func (circuitBreaker *CircuitBreaker) RecordFailure() {
+	circuitBreaker.failureCount++
+	circuitBreaker.lastFailureTime = time.Now()
 	
-	if cb.failureCount >= CircuitBreakerThreshold {
-		cb.state = CircuitBreakerOpen
+	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
+		circuitBreaker.state = CircuitBreakerOpen
 		log.Warn().
-			Int("failureCount", cb.failureCount).
+			Int("failureCount", circuitBreaker.failureCount).
 			Int("threshold", CircuitBreakerThreshold).
 			Msg("Circuit breaker opened due to repeated failures")
 	}

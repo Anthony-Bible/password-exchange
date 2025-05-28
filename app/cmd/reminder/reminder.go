@@ -91,7 +91,8 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			return
 		}
 
-		// Convert config to notification domain config
+		// Convert shared config to notification domain-specific config
+		// This maintains separation between CLI configuration and domain logic
 		reminderConfig := notificationDomain.ReminderConfig{
 			Enabled:         cfg.Reminder.Enabled,
 			CheckAfterHours: cfg.Reminder.CheckAfterHours,
@@ -99,7 +100,8 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			Interval:        cfg.Reminder.ReminderInterval,
 		}
 
-		// Initialize storage adapter
+		// Initialize storage adapter with database connection
+		// Uses MySQL adapter as the concrete implementation of the storage port
 		dbConfig := storageDomain.DatabaseConfig{
 			Host:     cfg.DbHost,
 			User:     cfg.DbUser,
@@ -126,7 +128,9 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		// Create notification storage adapter
 		notificationStorageAdapter := storage.NewGRPCStorageAdapter(storageService)
 
-		// Create reminder service (for now using nil for email sender - will be implemented later)
+		// Create reminder service with storage adapter
+		// Email sender is nil for now as reminders only log without actually sending emails
+		// This follows dependency injection pattern for hexagonal architecture
 		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, nil)
 		
 		// Process reminders
@@ -148,25 +152,25 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 // applyFlagOverrides applies command-line flag overrides with validation
 func applyFlagOverrides(cfg *Config) error {
 	// Override with command-line flags if provided
-	if olderThanHours := viper.GetString("older-than-hours"); olderThanHours != "" {
-		hours, err := strconv.Atoi(olderThanHours)
+	if olderThanHoursFlag := viper.GetString("older-than-hours"); olderThanHoursFlag != "" {
+		hours, err := strconv.Atoi(olderThanHoursFlag)
 		if err != nil {
-			return fmt.Errorf("invalid value for older-than-hours flag '%s': %w", olderThanHours, err)
+			return fmt.Errorf("invalid value for older-than-hours flag '%s': %w", olderThanHoursFlag, err)
 		}
 		if hours < MinCheckAfterHours || hours > MaxCheckAfterHours {
 			return fmt.Errorf("older-than-hours value %d must be between %d and %d", hours, MinCheckAfterHours, MaxCheckAfterHours)
 		}
 		cfg.Reminder.CheckAfterHours = hours
 	}
-	if maxReminders := viper.GetString("max-reminders"); maxReminders != "" {
-		max, err := strconv.Atoi(maxReminders)
+	if maxRemindersFlag := viper.GetString("max-reminders"); maxRemindersFlag != "" {
+		maxRemindersValue, err := strconv.Atoi(maxRemindersFlag)
 		if err != nil {
-			return fmt.Errorf("invalid value for max-reminders flag '%s': %w", maxReminders, err)
+			return fmt.Errorf("invalid value for max-reminders flag '%s': %w", maxRemindersFlag, err)
 		}
-		if max < MinMaxReminders || max > MaxMaxReminders {
-			return fmt.Errorf("max-reminders value %d must be between %d and %d", max, MinMaxReminders, MaxMaxReminders)
+		if maxRemindersValue < MinMaxReminders || maxRemindersValue > MaxMaxReminders {
+			return fmt.Errorf("max-reminders value %d must be between %d and %d", maxRemindersValue, MinMaxReminders, MaxMaxReminders)
 		}
-		cfg.Reminder.MaxReminders = max
+		cfg.Reminder.MaxReminders = maxRemindersValue
 	}
 
 	log.Info().

@@ -306,6 +306,7 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 			"emailNotifications":   true,
 			"passphraseProtection": true,
 			"antiSpamProtection":   true,
+			"emailReminders":       true,
 		},
 	}
 

@@ -37,7 +37,7 @@ type PassConfig struct {
 	ProdHost              string `mapstructure:"prodhost"`
 	DevHost               string `mapstructure:"devhost"`
 	EncryptionProdService string `mapstructure:"encryptionprodservice"`
-	DatabaseProdService   string `mapstructure:"encryptionprodservice"`
+	DatabaseProdService   string `mapstructure:"databaseprodservice"`
 	EncryptionDevService  string `mapstructure:"encryptiondevservice"`
 	DatabaseDevService    string `mapstructure:"databasedevservice"`
 	Loglevel              string `mapstructure:"loglevel"`
