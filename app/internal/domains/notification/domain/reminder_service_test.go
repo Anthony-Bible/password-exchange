@@ -431,7 +431,7 @@ func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 				UniqueID:       "abc123",
 				RecipientEmail: tc.email,
 				DaysOld:        2,
-				DecryptionURL:  "https://password.exchange/decrypt/abc123",
+				DecryptionURL:  "", // Empty - template references original email
 			}
 
 			// Act
@@ -446,8 +446,8 @@ func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 	}
 }
 
-// Test ProcessMessageReminder with malformed decryption URL - URLs are not validated
-func TestProcessMessageReminder_MalformedURL_StillProcesses(t *testing.T) {
+// Test ProcessMessageReminder with empty decryption URL - new behavior references original email
+func TestProcessMessageReminder_EmptyURL_StillProcesses(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
 	mockEmailSender := &MockNotificationSender{}
@@ -459,14 +459,14 @@ func TestProcessMessageReminder_MalformedURL_StillProcesses(t *testing.T) {
 		UniqueID:       "abc123",
 		RecipientEmail: "test@example.com",
 		DaysOld:        2,
-		DecryptionURL:  "://invalid-url", // Malformed URL but service doesn't validate it
+		DecryptionURL:  "", // Empty - template references original email
 	}
 
 	// Mock storage calls
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
 
-	// Mock email sending - should still work with malformed URL
+	// Mock email sending - should work with empty URL (template references original email)
 	expectedResponse := &NotificationResponse{
 		Success:   true,
 		MessageID: "msg-456",
@@ -477,7 +477,7 @@ func TestProcessMessageReminder_MalformedURL_StillProcesses(t *testing.T) {
 	err := service.ProcessMessageReminder(ctx, req)
 
 	// Assert
-	// URLs are not validated by the service - it passes them through
+	// Empty URLs are acceptable - template now references original email
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
 	mockEmailSender.AssertExpectations(t)
@@ -655,7 +655,7 @@ func TestProcessMessageReminder_ZeroMessageID_Error(t *testing.T) {
 		UniqueID:       "abc123",
 		RecipientEmail: "test@example.com",
 		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+		DecryptionURL:  "", // Empty - template references original email
 	}
 
 	// Act
@@ -680,7 +680,7 @@ func TestProcessMessageReminder_EmptyUniqueID_Error(t *testing.T) {
 		UniqueID:       "", // Invalid
 		RecipientEmail: "test@example.com",
 		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+		DecryptionURL:  "", // Empty - template references original email
 	}
 
 	// Act
@@ -705,7 +705,7 @@ func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
 		UniqueID:       "abc123",
 		RecipientEmail: "test@example.com",
 		DaysOld:        -1, // Invalid
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+		DecryptionURL:  "", // Empty - template references original email
 	}
 
 	// Act
@@ -730,7 +730,7 @@ func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 		UniqueID:       "abc123",
 		RecipientEmail: "test@example.com",
 		DaysOld:        2,
-		DecryptionURL:  "https://password.exchange/decrypt/abc123",
+		DecryptionURL:  "", // Empty - template references original email
 	}
 
 	// Mock storage calls

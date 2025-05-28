@@ -21,17 +21,17 @@ var (
 
 // Validation constants for reminder configuration
 const (
-	MinCheckAfterHours   = 1     // Minimum 1 hour
-	MaxCheckAfterHours   = 8760  // Maximum 1 year (365 * 24)
-	MinMaxReminders      = 1     // Minimum 1 reminder
-	MaxMaxReminders      = 10    // Maximum 10 reminders
-	MinReminderInterval  = 1     // Minimum 1 hour between reminders
-	MaxReminderInterval  = 720   // Maximum 30 days (30 * 24)
+	MinCheckAfterHours  = 1    // Minimum 1 hour
+	MaxCheckAfterHours  = 8760 // Maximum 1 year (365 * 24)
+	MinMaxReminders     = 1    // Minimum 1 reminder
+	MaxMaxReminders     = 10   // Maximum 10 reminders
+	MinReminderInterval = 1    // Minimum 1 hour between reminders
+	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 
 	// Error recovery constants
-	MaxRetries           = 3
-	BaseRetryDelay       = 100 * time.Millisecond
-	MaxRetryDelay        = 5 * time.Second
+	MaxRetries              = 3
+	BaseRetryDelay          = 100 * time.Millisecond
+	MaxRetryDelay           = 5 * time.Second
 	CircuitBreakerThreshold = 5
 	CircuitBreakerTimeout   = 30 * time.Second
 )
@@ -51,7 +51,7 @@ const (
 type CircuitBreaker struct {
 	failureCount    int                 // Number of consecutive failures
 	lastFailureTime time.Time           // Time of the last failure
-	state          CircuitBreakerState // Current state of the circuit breaker
+	state           CircuitBreakerState // Current state of the circuit breaker
 }
 
 // StorageRepository defines the interface for storage operations
@@ -63,13 +63,14 @@ type StorageRepository interface {
 
 // ReminderService provides reminder processing operations
 type ReminderService struct {
-	storageRepo     StorageRepository
-	emailSender     NotificationSender
-	circuitBreaker  *CircuitBreaker
+	storageRepo    StorageRepository
+	emailSender    NotificationSender
+	circuitBreaker *CircuitBreaker
 }
 
 // NewReminderService creates a new reminder service
 func NewReminderService(storageRepo StorageRepository, emailSender NotificationSender) *ReminderService {
+	//TODO: Emailsender isn't used so in the future we need to add the ability to customize the email sender
 	return &ReminderService{
 		storageRepo: storageRepo,
 		emailSender: emailSender,
@@ -111,7 +112,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		Msg("Starting reminder email processing")
 
 	var messages []*UnviewedMessage
-	
+
 	// Get unviewed messages with retry logic
 	err := r.retryWithBackoff(ctx, func() error {
 		var err error
@@ -122,7 +123,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		)
 		return err
 	}, "get_unviewed_messages")
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to get unviewed messages: %w", err)
 	}
@@ -145,14 +146,14 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 			UniqueID:       message.UniqueID,
 			RecipientEmail: message.RecipientEmail,
 			DaysOld:        message.DaysOld,
-			DecryptionURL:  fmt.Sprintf("https://password.exchange/decrypt/%s", message.UniqueID),
+			DecryptionURL:  "", // Empty - template now references original email
 		}
 
 		// Use retry logic for each message processing
 		err := r.retryWithBackoff(ctx, func() error {
 			return r.ProcessMessageReminder(ctx, reminderReq)
 		}, fmt.Sprintf("process_message_%d", message.MessageID))
-		
+
 		if err != nil {
 			errorCount++
 			log.Error().
@@ -202,11 +203,11 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	if reminderRequest.MessageID <= 0 {
 		return fmt.Errorf("messageID must be greater than 0, got %d", reminderRequest.MessageID)
 	}
-	
+
 	if reminderRequest.UniqueID == "" {
 		return fmt.Errorf("uniqueID cannot be empty")
 	}
-	
+
 	if reminderRequest.DaysOld < 0 {
 		return fmt.Errorf("daysOld must be non-negative, got %d", reminderRequest.DaysOld)
 	}
@@ -230,7 +231,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		history, err = r.storageRepo.GetReminderHistory(ctx, reminderRequest.MessageID)
 		return err
 	}, fmt.Sprintf("get_reminder_history_%d", reminderRequest.MessageID))
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to get reminder history for messageID %d: %w", reminderRequest.MessageID, err)
 	}
@@ -250,6 +251,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		FromName:      "Password Exchange",
 		Subject:       fmt.Sprintf("Reminder: You have an unviewed encrypted message (Reminder #%d)", reminderRequest.ReminderNumber),
 		MessageURL:    reminderRequest.DecryptionURL,
+		MessageContent: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
 	}
 
 	_, err = r.emailSender.SendNotification(ctx, notificationReq)
@@ -261,7 +263,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	err = r.retryWithBackoff(ctx, func() error {
 		return r.storageRepo.LogReminderSent(ctx, reminderRequest.MessageID, reminderRequest.RecipientEmail)
 	}, fmt.Sprintf("log_reminder_sent_%d", reminderRequest.MessageID))
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to log reminder sent for messageID %d: %w", reminderRequest.MessageID, err)
 	}
@@ -280,7 +282,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 // Integrates with circuit breaker to prevent repeated attempts when system is failing.
 func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func() error, operationName string) error {
 	var lastErr error
-	
+
 	for attempt := 0; attempt < MaxRetries; attempt++ {
 		// Check circuit breaker before attempting operation
 		if err := r.circuitBreaker.CanExecute(); err != nil {
@@ -389,7 +391,7 @@ func (circuitBreaker *CircuitBreaker) RecordSuccess() {
 func (circuitBreaker *CircuitBreaker) RecordFailure() {
 	circuitBreaker.failureCount++
 	circuitBreaker.lastFailureTime = time.Now()
-	
+
 	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
 		circuitBreaker.state = CircuitBreakerOpen
 		log.Warn().
