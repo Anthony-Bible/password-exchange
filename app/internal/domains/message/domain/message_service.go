@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,7 +39,7 @@ func NewMessageService(
 
 // SubmitMessage handles the submission of a new encrypted message
 func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissionRequest) (*MessageSubmissionResponse, error) {
-	log.Info().Str("senderEmail", req.SenderEmail).Msg("Processing message submission")
+	log.Info().Str("senderEmail", validation.SanitizeEmailForLogging(req.SenderEmail)).Msg("Processing message submission")
 
 	// Validate the request
 	if err := s.validateSubmissionRequest(req); err != nil {
@@ -83,7 +84,7 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	// Determine max view count (use request value or default from config)
 	maxViewCount := req.MaxViewCount
 	if maxViewCount <= 0 {
-		maxViewCount = config.Config.DefaultMaxViewCount
+		maxViewCount = config.AppConfig.DefaultMaxViewCount
 		if maxViewCount <= 0 {
 			maxViewCount = 5 // Fallback default
 		}

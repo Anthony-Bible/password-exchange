@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 // NotificationRequest represents a request to send a notification
@@ -83,4 +84,40 @@ type QueueConsumer interface {
 // TemplateRenderer defines the interface for rendering notification templates
 type TemplateRenderer interface {
 	RenderTemplate(ctx context.Context, templateName string, data NotificationTemplateData) (string, error)
+}
+
+// ReminderConfig holds configuration for reminder processing.
+// Defines when and how often reminder emails are sent for unviewed messages.
+type ReminderConfig struct {
+	Enabled         bool // Whether reminder system is active
+	CheckAfterHours int  // Hours to wait before first reminder (1-8760)
+	MaxReminders    int  // Maximum reminders per message (1-10)
+	Interval        int  // Hours between subsequent reminders (1-720)
+}
+
+// ReminderRequest represents a request to send a reminder notification
+type ReminderRequest struct {
+	MessageID      int
+	UniqueID       string
+	RecipientEmail string
+	DaysOld        int
+	ReminderNumber int
+	DecryptionURL  string
+}
+
+// UnviewedMessage represents a message that hasn't been viewed and may need reminders
+type UnviewedMessage struct {
+	MessageID      int
+	UniqueID       string
+	RecipientEmail string
+	DaysOld        int
+	Created        time.Time
+}
+
+// ReminderLogEntry represents a logged reminder attempt
+type ReminderLogEntry struct {
+	MessageID      int
+	RecipientEmail string
+	ReminderCount  int
+	SentAt         time.Time
 }

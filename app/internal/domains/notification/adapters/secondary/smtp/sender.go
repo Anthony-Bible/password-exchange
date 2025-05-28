@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 )
 
@@ -25,7 +26,7 @@ func NewSMTPSender(emailConn domain.EmailConnection) *SMTPSender {
 
 // SendEmail sends an email notification via SMTP
 func (s *SMTPSender) SendNotification(ctx context.Context, req domain.NotificationRequest) (*domain.NotificationResponse, error) {
-	log.Debug().Str("to", req.To).Str("subject", req.Subject).Msg("Sending email via SMTP")
+	log.Debug().Str("to", validation.SanitizeEmailForLogging(req.To)).Str("subject", req.Subject).Msg("Sending email via SMTP")
 
 	// Create SMTP authentication
 	auth := smtp.PlainAuth("", s.emailConn.User, s.emailConn.Password, s.emailConn.Host)
@@ -66,7 +67,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req domain.Notificati
 		log.Error().Err(err).
 			Str("smtpHost", s.emailConn.Host).
 			Str("from", s.emailConn.From).
-			Str("to", req.To).
+			Str("to", validation.SanitizeEmailForLogging(req.To)).
 			Msg("Failed to send email via SMTP")
 		return nil, fmt.Errorf("%w: %v", domain.ErrEmailSendFailed, err)
 	}
@@ -79,7 +80,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req domain.Notificati
 		MessageID: messageID,
 	}
 
-	log.Info().Str("to", req.To).Str("messageId", response.MessageID).Msg("Email sent successfully via SMTP")
+	log.Info().Str("to", validation.SanitizeEmailForLogging(req.To)).Str("messageId", response.MessageID).Msg("Email sent successfully via SMTP")
 	return response, nil
 }
 

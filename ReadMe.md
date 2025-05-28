@@ -100,10 +100,11 @@ _If you have a tool or extension that interacts with Password Exchange please ma
 - **Rate limiting**: Built-in protection against abuse
 - **Prometheus metrics**: Monitoring and observability support
 - **Swagger documentation**: Complete API documentation at `/api/v1/docs`
+- **Email reminders**: Automated reminders for unviewed messages with configurable timing
 
 ### 🚧 Planned Features
 1. Send message to both users
-2. Remind users after a day of not opening
+2. ✅ **Email reminders**: Automated reminders for unviewed messages (configurable intervals)
 3. Email/page visit notifications
 4. Configurable expiration times
 5. User-generated passwords
@@ -158,6 +159,24 @@ cd app && swag init -g internal/domains/message/adapters/primary/api/docs.go -o 
 # Build Docker images
 docker build -t passwordexchange .
 docker build -t slackbot -f slackbot/Dockerfile .
+```
+
+### Available Commands
+```bash
+# Web service with frontend and REST API
+./app web --config=config.yaml
+
+# Database service (gRPC)
+./app database --config=config.yaml
+
+# Encryption service (gRPC)  
+./app encryption --config=config.yaml
+
+# Email service (RabbitMQ consumer)
+./app email --config=config.yaml
+
+# Send email reminders for unviewed messages
+./app reminder --config=config.yaml --older-than-hours=24 --max-reminders=3
 ```
 
 

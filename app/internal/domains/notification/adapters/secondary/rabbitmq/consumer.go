@@ -7,6 +7,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/golang/protobuf/proto"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
@@ -166,11 +167,11 @@ func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Deli
 	// Handle the message
 	err = handler.HandleMessage(ctx, queueMsg)
 	if err != nil {
-		log.Error().Err(err).Int("workerId", workerID).Str("to", queueMsg.OtherEmail).Msg("Failed to handle message")
+		log.Error().Err(err).Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Failed to handle message")
 		return false
 	}
 
-	log.Debug().Int("workerId", workerID).Str("to", queueMsg.OtherEmail).Msg("Successfully handled message")
+	log.Debug().Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Successfully handled message")
 	return true
 }
 

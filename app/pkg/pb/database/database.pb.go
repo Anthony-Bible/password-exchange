@@ -143,13 +143,14 @@ func (x *SelectResponse) GetMaxViewCount() int32 {
 }
 
 type InsertRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
-	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Passphrase    string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
-	MaxViewCount  int32                  `protobuf:"varint,4,opt,name=max_view_count,json=maxViewCount,proto3" json:"max_view_count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Uuid           string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Content        string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Passphrase     string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
+	MaxViewCount   int32                  `protobuf:"varint,4,opt,name=max_view_count,json=maxViewCount,proto3" json:"max_view_count,omitempty"`
+	RecipientEmail string                 `protobuf:"bytes,5,opt,name=recipient_email,json=recipientEmail,proto3" json:"recipient_email,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InsertRequest) Reset() {
@@ -210,6 +211,393 @@ func (x *InsertRequest) GetMaxViewCount() int32 {
 	return 0
 }
 
+func (x *InsertRequest) GetRecipientEmail() string {
+	if x != nil {
+		return x.RecipientEmail
+	}
+	return ""
+}
+
+type GetUnviewedMessagesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OlderThanHours int32                  `protobuf:"varint,1,opt,name=older_than_hours,json=olderThanHours,proto3" json:"older_than_hours,omitempty"`
+	MaxReminders   int32                  `protobuf:"varint,2,opt,name=max_reminders,json=maxReminders,proto3" json:"max_reminders,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetUnviewedMessagesRequest) Reset() {
+	*x = GetUnviewedMessagesRequest{}
+	mi := &file_database_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUnviewedMessagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUnviewedMessagesRequest) ProtoMessage() {}
+
+func (x *GetUnviewedMessagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUnviewedMessagesRequest.ProtoReflect.Descriptor instead.
+func (*GetUnviewedMessagesRequest) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetUnviewedMessagesRequest) GetOlderThanHours() int32 {
+	if x != nil {
+		return x.OlderThanHours
+	}
+	return 0
+}
+
+func (x *GetUnviewedMessagesRequest) GetMaxReminders() int32 {
+	if x != nil {
+		return x.MaxReminders
+	}
+	return 0
+}
+
+type UnviewedMessage struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	MessageId      int32                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	UniqueId       string                 `protobuf:"bytes,2,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
+	RecipientEmail string                 `protobuf:"bytes,3,opt,name=recipient_email,json=recipientEmail,proto3" json:"recipient_email,omitempty"`
+	Created        string                 `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
+	DaysOld        int32                  `protobuf:"varint,5,opt,name=days_old,json=daysOld,proto3" json:"days_old,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UnviewedMessage) Reset() {
+	*x = UnviewedMessage{}
+	mi := &file_database_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnviewedMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnviewedMessage) ProtoMessage() {}
+
+func (x *UnviewedMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnviewedMessage.ProtoReflect.Descriptor instead.
+func (*UnviewedMessage) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UnviewedMessage) GetMessageId() int32 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *UnviewedMessage) GetUniqueId() string {
+	if x != nil {
+		return x.UniqueId
+	}
+	return ""
+}
+
+func (x *UnviewedMessage) GetRecipientEmail() string {
+	if x != nil {
+		return x.RecipientEmail
+	}
+	return ""
+}
+
+func (x *UnviewedMessage) GetCreated() string {
+	if x != nil {
+		return x.Created
+	}
+	return ""
+}
+
+func (x *UnviewedMessage) GetDaysOld() int32 {
+	if x != nil {
+		return x.DaysOld
+	}
+	return 0
+}
+
+type GetUnviewedMessagesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Messages      []*UnviewedMessage     `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUnviewedMessagesResponse) Reset() {
+	*x = GetUnviewedMessagesResponse{}
+	mi := &file_database_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUnviewedMessagesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUnviewedMessagesResponse) ProtoMessage() {}
+
+func (x *GetUnviewedMessagesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUnviewedMessagesResponse.ProtoReflect.Descriptor instead.
+func (*GetUnviewedMessagesResponse) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetUnviewedMessagesResponse) GetMessages() []*UnviewedMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+type LogReminderRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     int32                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EmailAddress  string                 `protobuf:"bytes,2,opt,name=email_address,json=emailAddress,proto3" json:"email_address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LogReminderRequest) Reset() {
+	*x = LogReminderRequest{}
+	mi := &file_database_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogReminderRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogReminderRequest) ProtoMessage() {}
+
+func (x *LogReminderRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogReminderRequest.ProtoReflect.Descriptor instead.
+func (*LogReminderRequest) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *LogReminderRequest) GetMessageId() int32 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *LogReminderRequest) GetEmailAddress() string {
+	if x != nil {
+		return x.EmailAddress
+	}
+	return ""
+}
+
+type GetReminderHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MessageId     int32                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReminderHistoryRequest) Reset() {
+	*x = GetReminderHistoryRequest{}
+	mi := &file_database_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReminderHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReminderHistoryRequest) ProtoMessage() {}
+
+func (x *GetReminderHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReminderHistoryRequest.ProtoReflect.Descriptor instead.
+func (*GetReminderHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetReminderHistoryRequest) GetMessageId() int32 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+type ReminderLogEntry struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	MessageId        int32                  `protobuf:"varint,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	EmailAddress     string                 `protobuf:"bytes,2,opt,name=email_address,json=emailAddress,proto3" json:"email_address,omitempty"`
+	ReminderCount    int32                  `protobuf:"varint,3,opt,name=reminder_count,json=reminderCount,proto3" json:"reminder_count,omitempty"`
+	LastReminderSent string                 `protobuf:"bytes,4,opt,name=last_reminder_sent,json=lastReminderSent,proto3" json:"last_reminder_sent,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReminderLogEntry) Reset() {
+	*x = ReminderLogEntry{}
+	mi := &file_database_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReminderLogEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReminderLogEntry) ProtoMessage() {}
+
+func (x *ReminderLogEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReminderLogEntry.ProtoReflect.Descriptor instead.
+func (*ReminderLogEntry) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ReminderLogEntry) GetMessageId() int32 {
+	if x != nil {
+		return x.MessageId
+	}
+	return 0
+}
+
+func (x *ReminderLogEntry) GetEmailAddress() string {
+	if x != nil {
+		return x.EmailAddress
+	}
+	return ""
+}
+
+func (x *ReminderLogEntry) GetReminderCount() int32 {
+	if x != nil {
+		return x.ReminderCount
+	}
+	return 0
+}
+
+func (x *ReminderLogEntry) GetLastReminderSent() string {
+	if x != nil {
+		return x.LastReminderSent
+	}
+	return ""
+}
+
+type GetReminderHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Entries       []*ReminderLogEntry    `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReminderHistoryResponse) Reset() {
+	*x = GetReminderHistoryResponse{}
+	mi := &file_database_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReminderHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReminderHistoryResponse) ProtoMessage() {}
+
+func (x *GetReminderHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_database_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReminderHistoryResponse.ProtoReflect.Descriptor instead.
+func (*GetReminderHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_database_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetReminderHistoryResponse) GetEntries() []*ReminderLogEntry {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
 var File_database_proto protoreflect.FileDescriptor
 
 const file_database_proto_rawDesc = "" +
@@ -226,19 +614,50 @@ const file_database_proto_rawDesc = "" +
 	"passphrase\x12\x1d\n" +
 	"\n" +
 	"view_count\x18\x04 \x01(\x05R\tviewCount\x12$\n" +
-	"\x0emax_view_count\x18\x05 \x01(\x05R\fmaxViewCount\"\x83\x01\n" +
+	"\x0emax_view_count\x18\x05 \x01(\x05R\fmaxViewCount\"\xac\x01\n" +
 	"\rInsertRequest\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
 	"\n" +
 	"passphrase\x18\x03 \x01(\tR\n" +
 	"passphrase\x12$\n" +
-	"\x0emax_view_count\x18\x04 \x01(\x05R\fmaxViewCount2\xd4\x01\n" +
+	"\x0emax_view_count\x18\x04 \x01(\x05R\fmaxViewCount\x12'\n" +
+	"\x0frecipient_email\x18\x05 \x01(\tR\x0erecipientEmail\"k\n" +
+	"\x1aGetUnviewedMessagesRequest\x12(\n" +
+	"\x10older_than_hours\x18\x01 \x01(\x05R\x0eolderThanHours\x12#\n" +
+	"\rmax_reminders\x18\x02 \x01(\x05R\fmaxReminders\"\xab\x01\n" +
+	"\x0fUnviewedMessage\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\x05R\tmessageId\x12\x1b\n" +
+	"\tunique_id\x18\x02 \x01(\tR\buniqueId\x12'\n" +
+	"\x0frecipient_email\x18\x03 \x01(\tR\x0erecipientEmail\x12\x18\n" +
+	"\acreated\x18\x04 \x01(\tR\acreated\x12\x19\n" +
+	"\bdays_old\x18\x05 \x01(\x05R\adaysOld\"V\n" +
+	"\x1bGetUnviewedMessagesResponse\x127\n" +
+	"\bmessages\x18\x01 \x03(\v2\x1b.databasepb.UnviewedMessageR\bmessages\"X\n" +
+	"\x12LogReminderRequest\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\x05R\tmessageId\x12#\n" +
+	"\remail_address\x18\x02 \x01(\tR\femailAddress\":\n" +
+	"\x19GetReminderHistoryRequest\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\x05R\tmessageId\"\xab\x01\n" +
+	"\x10ReminderLogEntry\x12\x1d\n" +
+	"\n" +
+	"message_id\x18\x01 \x01(\x05R\tmessageId\x12#\n" +
+	"\remail_address\x18\x02 \x01(\tR\femailAddress\x12%\n" +
+	"\x0ereminder_count\x18\x03 \x01(\x05R\rreminderCount\x12,\n" +
+	"\x12last_reminder_sent\x18\x04 \x01(\tR\x10lastReminderSent\"T\n" +
+	"\x1aGetReminderHistoryResponse\x126\n" +
+	"\aentries\x18\x01 \x03(\v2\x1c.databasepb.ReminderLogEntryR\aentries2\xfe\x03\n" +
 	"\tdbService\x12A\n" +
 	"\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n" +
 	"\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12E\n" +
 	"\n" +
-	"GetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00B;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3"
+	"GetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12t\n" +
+	"\x1fGetUnviewedMessagesForReminders\x12&.databasepb.GetUnviewedMessagesRequest\x1a'.databasepb.GetUnviewedMessagesResponse\"\x00\x12K\n" +
+	"\x0fLogReminderSent\x12\x1e.databasepb.LogReminderRequest\x1a\x16.google.protobuf.Empty\"\x00\x12e\n" +
+	"\x12GetReminderHistory\x12%.databasepb.GetReminderHistoryRequest\x1a&.databasepb.GetReminderHistoryResponse\"\x00B;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3"
 
 var (
 	file_database_proto_rawDescOnce sync.Once
@@ -252,25 +671,40 @@ func file_database_proto_rawDescGZIP() []byte {
 	return file_database_proto_rawDescData
 }
 
-var file_database_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_database_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_database_proto_goTypes = []any{
-	(*SelectRequest)(nil),  // 0: databasepb.SelectRequest
-	(*SelectResponse)(nil), // 1: databasepb.SelectResponse
-	(*InsertRequest)(nil),  // 2: databasepb.InsertRequest
-	(*emptypb.Empty)(nil),  // 3: google.protobuf.Empty
+	(*SelectRequest)(nil),               // 0: databasepb.SelectRequest
+	(*SelectResponse)(nil),              // 1: databasepb.SelectResponse
+	(*InsertRequest)(nil),               // 2: databasepb.InsertRequest
+	(*GetUnviewedMessagesRequest)(nil),  // 3: databasepb.GetUnviewedMessagesRequest
+	(*UnviewedMessage)(nil),             // 4: databasepb.UnviewedMessage
+	(*GetUnviewedMessagesResponse)(nil), // 5: databasepb.GetUnviewedMessagesResponse
+	(*LogReminderRequest)(nil),          // 6: databasepb.LogReminderRequest
+	(*GetReminderHistoryRequest)(nil),   // 7: databasepb.GetReminderHistoryRequest
+	(*ReminderLogEntry)(nil),            // 8: databasepb.ReminderLogEntry
+	(*GetReminderHistoryResponse)(nil),  // 9: databasepb.GetReminderHistoryResponse
+	(*emptypb.Empty)(nil),               // 10: google.protobuf.Empty
 }
 var file_database_proto_depIdxs = []int32{
-	0, // 0: databasepb.dbService.Select:input_type -> databasepb.SelectRequest
-	2, // 1: databasepb.dbService.Insert:input_type -> databasepb.InsertRequest
-	0, // 2: databasepb.dbService.GetMessage:input_type -> databasepb.SelectRequest
-	1, // 3: databasepb.dbService.Select:output_type -> databasepb.SelectResponse
-	3, // 4: databasepb.dbService.Insert:output_type -> google.protobuf.Empty
-	1, // 5: databasepb.dbService.GetMessage:output_type -> databasepb.SelectResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	4,  // 0: databasepb.GetUnviewedMessagesResponse.messages:type_name -> databasepb.UnviewedMessage
+	8,  // 1: databasepb.GetReminderHistoryResponse.entries:type_name -> databasepb.ReminderLogEntry
+	0,  // 2: databasepb.dbService.Select:input_type -> databasepb.SelectRequest
+	2,  // 3: databasepb.dbService.Insert:input_type -> databasepb.InsertRequest
+	0,  // 4: databasepb.dbService.GetMessage:input_type -> databasepb.SelectRequest
+	3,  // 5: databasepb.dbService.GetUnviewedMessagesForReminders:input_type -> databasepb.GetUnviewedMessagesRequest
+	6,  // 6: databasepb.dbService.LogReminderSent:input_type -> databasepb.LogReminderRequest
+	7,  // 7: databasepb.dbService.GetReminderHistory:input_type -> databasepb.GetReminderHistoryRequest
+	1,  // 8: databasepb.dbService.Select:output_type -> databasepb.SelectResponse
+	10, // 9: databasepb.dbService.Insert:output_type -> google.protobuf.Empty
+	1,  // 10: databasepb.dbService.GetMessage:output_type -> databasepb.SelectResponse
+	5,  // 11: databasepb.dbService.GetUnviewedMessagesForReminders:output_type -> databasepb.GetUnviewedMessagesResponse
+	10, // 12: databasepb.dbService.LogReminderSent:output_type -> google.protobuf.Empty
+	9,  // 13: databasepb.dbService.GetReminderHistory:output_type -> databasepb.GetReminderHistoryResponse
+	8,  // [8:14] is the sub-list for method output_type
+	2,  // [2:8] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_database_proto_init() }
@@ -284,7 +718,7 @@ func file_database_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_database_proto_rawDesc), len(file_database_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
