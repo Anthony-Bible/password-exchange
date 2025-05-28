@@ -85,6 +85,9 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		bindenvs(&cfg)
 		viper.Unmarshal(&cfg)
 
+		// Apply default values for any unset reminder configuration
+		cfg.Reminder.WithDefaults()
+
 		// Apply CLI flag overrides with validation
 		if err := applyFlagOverrides(&cfg); err != nil {
 			log.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
