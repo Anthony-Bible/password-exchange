@@ -27,7 +27,7 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: reminder
-            image: ${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG}
+            image: ghcr.io/anthony-bible/passwordexchange-container-%{PHASE}@%{MAIN_IMAGE_SHA}
             imagePullPolicy: Always
             command: ["/app/app"]
             args: ["reminder", "--config=/config/config.yaml"]
