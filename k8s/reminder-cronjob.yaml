@@ -80,8 +80,6 @@ spec:
           - name: config
             configMap:
               name: password-exchange-config
-          # Use a service account with appropriate permissions
-          serviceAccountName: password-exchange
 ---
 apiVersion: v1
 kind: ConfigMap
