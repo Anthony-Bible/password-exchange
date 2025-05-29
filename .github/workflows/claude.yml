@@ -34,4 +34,5 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_tools: "Bash(npm install),Bash(npm run test),Edit,Replace,NotebookEditCell, mcp__puppeteer__puppeteer_click, mcp__puppeteer__puppeteer_fill, mcp__puppeteer__puppeteer_navigate, mcp__puppeteer__puppeteer_screenshot"
 
