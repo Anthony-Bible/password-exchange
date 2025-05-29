@@ -34,10 +34,6 @@ func (s *StorageService) StoreMessage(ctx context.Context, message *Message) err
 		log.Warn().Int("maxViewCount", message.MaxViewCount).Msg("Attempted to store message with invalid max view count")
 		return ErrInvalidMaxViewCount
 	}
-	if message.RecipientEmail == "" {
-		log.Warn().Msg("Attempted to store message with empty recipient email")
-		return ErrEmptyRecipientEmail
-	}
 
 	// Delegate to repository
 	return s.repository.InsertMessage(message)
