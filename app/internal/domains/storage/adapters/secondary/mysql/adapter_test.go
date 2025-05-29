@@ -59,10 +59,12 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders(t *testing.T) {
 	olderThanHours := 24
 	maxReminders := 3
 
-	// Mock rows
+	// Mock rows - use time.Time for created column
+	mockTime1 := time.Date(2023, 1, 1, 10, 0, 0, 0, time.UTC)
+	mockTime2 := time.Date(2023, 1, 2, 15, 30, 0, 0, time.UTC)
 	rows := sqlmock.NewRows([]string{"messageid", "uniqueid", "other_email", "created", "days_old"}).
-		AddRow(1, "uuid-1", "user1@example.com", "2023-01-01 10:00:00", 2).
-		AddRow(2, "uuid-2", "user2@example.com", "2023-01-02 15:30:00", 1)
+		AddRow(1, "uuid-1", "user1@example.com", mockTime1, 2).
+		AddRow(2, "uuid-2", "user2@example.com", mockTime2, 1)
 
 	// Expected SQL query for unviewed messages
 	expectedSQL := `SELECT m\.messageid, m\.uniqueid, m\.other_email, m\.created,
