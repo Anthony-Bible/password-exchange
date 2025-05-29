@@ -762,6 +762,17 @@ h2 {
     font-size: 1em;
 }
 
+/* Fix for modal scrollbar disappearing issue */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+.modal-open .modal {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 /* Enhanced Bootstrap tooltip styling */
 .tooltip {
     z-index: 10000 !important;
