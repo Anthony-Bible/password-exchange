@@ -41,8 +41,8 @@ func (m *MockStorageService) HealthCheck(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (m *MockStorageService) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders int) ([]*storageDomain.UnviewedMessage, error) {
-	args := m.Called(ctx, checkAfterHours, maxReminders)
+func (m *MockStorageService) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*storageDomain.UnviewedMessage, error) {
+	args := m.Called(ctx, checkAfterHours, maxReminders, reminderIntervalHours)
 	return args.Get(0).([]*storageDomain.UnviewedMessage), args.Error(1)
 }
 
@@ -84,11 +84,11 @@ func TestGetUnviewedMessagesForReminders_Success(t *testing.T) {
 		},
 	}
 
-	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders).
+	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders, 24).
 		Return(storageMessages, nil)
 
 	// Act
-	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders)
+	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders, 24)
 
 	// Assert
 	assert.NoError(t, err)
@@ -121,11 +121,11 @@ func TestGetUnviewedMessagesForReminders_EmptyResult(t *testing.T) {
 
 	// Mock empty result (no messages need reminders)
 	storageMessages := []*storageDomain.UnviewedMessage{}
-	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders).
+	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders, 24).
 		Return(storageMessages, nil)
 
 	// Act
-	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders)
+	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders, 24)
 
 	// Assert
 	assert.NoError(t, err)
@@ -143,11 +143,11 @@ func TestGetUnviewedMessagesForReminders_StorageError(t *testing.T) {
 	maxReminders := 3
 
 	// Mock storage service error (simulating gRPC/protobuf communication error)
-	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders).
+	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders, 24).
 		Return(([]*storageDomain.UnviewedMessage)(nil), assert.AnError)
 
 	// Act
-	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders)
+	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders, 24)
 
 	// Assert
 	assert.Error(t, err)
@@ -372,11 +372,11 @@ func TestGRPCStorageAdapter_ParameterValidation(t *testing.T) {
 			ctx := context.Background()
 
 			// Mock storage service expects exact parameters
-			mockStorage.On("GetUnviewedMessagesForReminders", ctx, tc.checkAfterHours, tc.maxReminders).
+			mockStorage.On("GetUnviewedMessagesForReminders", ctx, tc.checkAfterHours, tc.maxReminders, 24).
 				Return([]*storageDomain.UnviewedMessage{}, nil)
 
 			// Act
-			_, err := adapter.GetUnviewedMessagesForReminders(ctx, tc.checkAfterHours, tc.maxReminders)
+			_, err := adapter.GetUnviewedMessagesForReminders(ctx, tc.checkAfterHours, tc.maxReminders, 24)
 
 			// Assert
 			assert.NoError(t, err)

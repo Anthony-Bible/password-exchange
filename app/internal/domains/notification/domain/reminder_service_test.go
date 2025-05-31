@@ -262,7 +262,7 @@ func TestProcessReminders_NoMessages_ReturnsSuccess(t *testing.T) {
 	}
 
 	// Mock storage to return empty list
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return([]*UnviewedMessage{}, nil)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return([]*UnviewedMessage{}, nil)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -289,7 +289,7 @@ func TestProcessReminders_StorageError_ReturnsError(t *testing.T) {
 	}
 
 	storageError := errors.New("database connection failed")
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(nil, storageError)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(nil, storageError)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -327,7 +327,7 @@ func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	}
 
 	// Mock storage calls
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(messages, nil)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
 
@@ -386,7 +386,7 @@ func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
 	}
 
 	// Mock storage to simulate slow operation
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(nil, context.DeadlineExceeded)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(nil, context.DeadlineExceeded)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -508,7 +508,7 @@ func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 	}
 
 	// Mock storage calls - first message logging fails, second succeeds
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(messages, nil)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
 	
 	// First message - logging fails after retry attempts
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
@@ -599,7 +599,7 @@ func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	}
 
 	// Mock storage calls
-	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3).Return(messages, nil)
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
 	
 	// Valid email processing (message 123)
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
@@ -699,6 +699,61 @@ func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "daysOld must be non-negative")
 	mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
+}
+
+// Test reminder interval logic - messages should only be sent after interval has passed
+func TestProcessReminders_ReminderInterval_RespectedCorrectly(t *testing.T) {
+	// Arrange
+	mockStorageRepo := &MockStorageRepository{}
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
+
+	ctx := context.Background()
+	config := ReminderConfig{
+		Enabled:         true,
+		CheckAfterHours: 24,
+		MaxReminders:    3,
+		Interval:        48, // 48 hour interval between reminders
+	}
+
+	// The storage adapter should receive the interval parameter (48 hours)
+	// and only return messages where last_reminder_sent is either NULL
+	// or more than 48 hours ago
+	messages := []*UnviewedMessage{
+		{
+			MessageID:      123,
+			UniqueID:       "abc123",
+			RecipientEmail: "test@example.com",
+			DaysOld:        3,
+			Created:        time.Now().Add(-72 * time.Hour),
+		},
+	}
+
+	// Mock storage calls with the interval parameter
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 48).Return(messages, nil)
+	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{
+		{
+			MessageID:      123,
+			RecipientEmail: "test@example.com",
+			ReminderCount:  1,
+			SentAt:         time.Now().Add(-49 * time.Hour), // Last reminder sent 49 hours ago
+		},
+	}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
+
+	// Mock email sending
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
+
+	// Act
+	err := service.ProcessReminders(ctx, config)
+
+	// Assert
+	assert.NoError(t, err)
+	mockStorageRepo.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
+	
+	// Verify that the storage adapter was called with the correct interval parameter
+	mockStorageRepo.AssertCalled(t, "GetUnviewedMessagesForReminders", ctx, 24, 3, 48)
 }
 
 // Test ProcessMessageReminder with valid request

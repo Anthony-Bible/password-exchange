@@ -219,11 +219,12 @@ func (x *InsertRequest) GetRecipientEmail() string {
 }
 
 type GetUnviewedMessagesRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	OlderThanHours int32                  `protobuf:"varint,1,opt,name=older_than_hours,json=olderThanHours,proto3" json:"older_than_hours,omitempty"`
-	MaxReminders   int32                  `protobuf:"varint,2,opt,name=max_reminders,json=maxReminders,proto3" json:"max_reminders,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	OlderThanHours        int32                  `protobuf:"varint,1,opt,name=older_than_hours,json=olderThanHours,proto3" json:"older_than_hours,omitempty"`
+	MaxReminders          int32                  `protobuf:"varint,2,opt,name=max_reminders,json=maxReminders,proto3" json:"max_reminders,omitempty"`
+	ReminderIntervalHours int32                  `protobuf:"varint,3,opt,name=reminder_interval_hours,json=reminderIntervalHours,proto3" json:"reminder_interval_hours,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *GetUnviewedMessagesRequest) Reset() {
@@ -266,6 +267,13 @@ func (x *GetUnviewedMessagesRequest) GetOlderThanHours() int32 {
 func (x *GetUnviewedMessagesRequest) GetMaxReminders() int32 {
 	if x != nil {
 		return x.MaxReminders
+	}
+	return 0
+}
+
+func (x *GetUnviewedMessagesRequest) GetReminderIntervalHours() int32 {
+	if x != nil {
+		return x.ReminderIntervalHours
 	}
 	return 0
 }
@@ -622,10 +630,11 @@ const file_database_proto_rawDesc = "" +
 	"passphrase\x18\x03 \x01(\tR\n" +
 	"passphrase\x12$\n" +
 	"\x0emax_view_count\x18\x04 \x01(\x05R\fmaxViewCount\x12'\n" +
-	"\x0frecipient_email\x18\x05 \x01(\tR\x0erecipientEmail\"k\n" +
+	"\x0frecipient_email\x18\x05 \x01(\tR\x0erecipientEmail\"\xa3\x01\n" +
 	"\x1aGetUnviewedMessagesRequest\x12(\n" +
 	"\x10older_than_hours\x18\x01 \x01(\x05R\x0eolderThanHours\x12#\n" +
-	"\rmax_reminders\x18\x02 \x01(\x05R\fmaxReminders\"\xab\x01\n" +
+	"\rmax_reminders\x18\x02 \x01(\x05R\fmaxReminders\x126\n" +
+	"\x17reminder_interval_hours\x18\x03 \x01(\x05R\x15reminderIntervalHours\"\xab\x01\n" +
 	"\x0fUnviewedMessage\x12\x1d\n" +
 	"\n" +
 	"message_id\x18\x01 \x01(\x05R\tmessageId\x12\x1b\n" +

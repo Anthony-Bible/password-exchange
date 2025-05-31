@@ -108,7 +108,7 @@ else
 fi
 
 echo "Testing Kubernetes manifest generation..."
-cd ..
+# Already in project root directory
 
 # Set VERSION and PHASE
 if [[ "${GITHUB_REF_TYPE}" =~ "tag" ]]; then

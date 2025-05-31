@@ -22,7 +22,7 @@ type StorageServicePort interface {
 	CleanupExpiredMessages(ctx context.Context) error
 
 	// GetUnviewedMessagesForReminders retrieves messages eligible for reminder emails
-	GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders int) ([]*domain.UnviewedMessage, error)
+	GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error)
 
 	// LogReminderSent records that a reminder email was sent for a message
 	LogReminderSent(ctx context.Context, messageID int, emailAddress string) error

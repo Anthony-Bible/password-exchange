@@ -70,8 +70,8 @@ type MockStorageRepository struct {
 	mock.Mock
 }
 
-func (m *MockStorageRepository) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders int) ([]*UnviewedMessage, error) {
-	args := m.Called(ctx, checkAfterHours, maxReminders)
+func (m *MockStorageRepository) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error) {
+	args := m.Called(ctx, checkAfterHours, maxReminders, reminderIntervalHours)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

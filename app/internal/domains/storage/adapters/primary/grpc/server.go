@@ -89,7 +89,7 @@ func (s *GRPCServer) GetMessage(ctx context.Context, request *database.SelectReq
 
 // GetUnviewedMessagesForReminders handles gRPC requests for unviewed messages eligible for reminders
 func (s *GRPCServer) GetUnviewedMessagesForReminders(ctx context.Context, request *database.GetUnviewedMessagesRequest) (*database.GetUnviewedMessagesResponse, error) {
-	messages, err := s.storageService.GetUnviewedMessagesForReminders(ctx, int(request.GetOlderThanHours()), int(request.GetMaxReminders()))
+	messages, err := s.storageService.GetUnviewedMessagesForReminders(ctx, int(request.GetOlderThanHours()), int(request.GetMaxReminders()), int(request.GetReminderIntervalHours()))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get unviewed messages for reminders via gRPC")
 		return nil, err

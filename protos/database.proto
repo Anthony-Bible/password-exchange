@@ -27,6 +27,7 @@ message InsertRequest
 message GetUnviewedMessagesRequest {
     int32 older_than_hours = 1;
     int32 max_reminders = 2;
+    int32 reminder_interval_hours = 3;
 }
 
 message UnviewedMessage {
