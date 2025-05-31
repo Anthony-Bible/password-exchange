@@ -22,8 +22,8 @@ func NewGRPCStorageAdapter(storageService storagePorts.StorageServicePort) *GRPC
 }
 
 // GetUnviewedMessagesForReminders retrieves messages eligible for reminders
-func (a *GRPCStorageAdapter) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders int) ([]*domain.UnviewedMessage, error) {
-	storageMessages, err := a.storageService.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders)
+func (a *GRPCStorageAdapter) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error) {
+	storageMessages, err := a.storageService.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders, reminderIntervalHours)
 	if err != nil {
 		return nil, err
 	}

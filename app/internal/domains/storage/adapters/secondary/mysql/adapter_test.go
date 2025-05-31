@@ -45,6 +45,60 @@ func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
 	}
 }
 
+func TestMySQLAdapter_GetUnviewedMessagesForReminders_WithInterval(t *testing.T) {
+	// Test that reminder interval is properly applied in the query
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db}
+
+	// Test parameters
+	olderThanHours := 24
+	maxReminders := 3
+	reminderIntervalHours := 48
+
+	// Expected columns for the query
+	columns := []string{"messageid", "uniqueid", "other_email", "created", "days_old"}
+	
+	// Mock rows with test data
+	rows := sqlmock.NewRows(columns).
+		AddRow(123, "test-uuid-123", "test@example.com", time.Now().Add(-72*time.Hour), 3).
+		AddRow(124, "test-uuid-124", "test2@example.com", time.Now().Add(-48*time.Hour), 2)
+
+	// The query should include the reminder interval check
+	mock.ExpectQuery(`SELECT m.messageid, m.uniqueid, m.other_email, m.created,
+         TIMESTAMPDIFF\(DAY, m.created, NOW\(\)\) as days_old
+  FROM messages m 
+  LEFT JOIN email_reminders er ON m.messageid = er.message_id
+  WHERE m.view_count = 0 
+    AND m.created < NOW\(\) - INTERVAL \? HOUR
+    AND m.other_email IS NOT NULL
+    AND m.other_email != ''
+    AND \(er.reminder_count IS NULL OR er.reminder_count < \?\)
+    AND \(er.last_reminder_sent IS NULL OR er.last_reminder_sent < NOW\(\) - INTERVAL \? HOUR\)`).
+		WithArgs(olderThanHours, maxReminders, reminderIntervalHours).
+		WillReturnRows(rows)
+
+	// Act
+	messages, err := adapter.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours)
+
+	// Assert
+	if err != nil {
+		t.Errorf("GetUnviewedMessagesForReminders() error = %v", err)
+	}
+
+	if len(messages) != 2 {
+		t.Errorf("Expected 2 messages, got %d", len(messages))
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
 func TestMySQLAdapter_GetUnviewedMessagesForReminders(t *testing.T) {
 	// Test that unviewed messages are properly retrieved for reminders
 	db, mock, err := sqlmock.New()
@@ -75,14 +129,15 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders(t *testing.T) {
     AND m\.created < NOW\(\) - INTERVAL \? HOUR
     AND m\.other_email IS NOT NULL
     AND m\.other_email != ''
-    AND \(er\.reminder_count IS NULL OR er\.reminder_count < \?\)`
+    AND \(er\.reminder_count IS NULL OR er\.reminder_count < \?\)
+    AND \(er\.last_reminder_sent IS NULL OR er\.last_reminder_sent < NOW\(\) - INTERVAL \? HOUR\)`
 
 	mock.ExpectQuery(expectedSQL).
-		WithArgs(olderThanHours, maxReminders).
+		WithArgs(olderThanHours, maxReminders, 24).
 		WillReturnRows(rows)
 
 	// Act
-	messages, err := adapter.GetUnviewedMessagesForReminders(olderThanHours, maxReminders)
+	messages, err := adapter.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, 24) // Default 24 hour interval
 
 	// Assert
 	if err != nil {

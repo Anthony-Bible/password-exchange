@@ -84,7 +84,7 @@ func (s *StorageService) CleanupExpiredMessages(ctx context.Context) error {
 }
 
 // GetUnviewedMessagesForReminders retrieves messages eligible for reminder emails
-func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders int) ([]*UnviewedMessage, error) {
+func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error) {
 	// Business rule validation
 	if olderThanHours < 1 {
 		log.Warn().Int("olderThanHours", olderThanHours).Msg("Invalid olderThanHours parameter")
@@ -94,15 +94,19 @@ func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, ol
 		log.Warn().Int("maxReminders", maxReminders).Msg("Invalid maxReminders parameter")
 		return nil, ErrInvalidParameter
 	}
+	if reminderIntervalHours < 1 {
+		log.Warn().Int("reminderIntervalHours", reminderIntervalHours).Msg("Invalid reminderIntervalHours parameter")
+		return nil, ErrInvalidParameter
+	}
 
 	// Delegate to repository
-	messages, err := s.repository.GetUnviewedMessagesForReminders(olderThanHours, maxReminders)
+	messages, err := s.repository.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to retrieve unviewed messages for reminders")
 		return nil, err
 	}
 
-	log.Info().Int("count", len(messages)).Int("olderThanHours", olderThanHours).Int("maxReminders", maxReminders).Msg("Retrieved unviewed messages for reminders")
+	log.Info().Int("count", len(messages)).Int("olderThanHours", olderThanHours).Int("maxReminders", maxReminders).Int("reminderIntervalHours", reminderIntervalHours).Msg("Retrieved unviewed messages for reminders")
 	return messages, nil
 }
 

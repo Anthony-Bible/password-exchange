@@ -41,7 +41,7 @@ type MessageRepository interface {
 	IncrementViewCountAndGet(uniqueID string) (*Message, error)
 	DeleteExpiredMessages() error
 	GetMessage(uniqueID string) (*Message, error)
-	GetUnviewedMessagesForReminders(olderThanHours, maxReminders int) ([]*UnviewedMessage, error)
+	GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error)
 	LogReminderSent(messageID int, emailAddress string) error
 	GetReminderHistory(messageID int) ([]*ReminderLogEntry, error)
 	Close() error

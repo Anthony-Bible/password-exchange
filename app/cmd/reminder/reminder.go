@@ -6,9 +6,11 @@ package reminder
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
@@ -170,6 +172,9 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		log.Info().
 			Str("operation", "processing_completed").
 			Msg("Reminder email processing completed")
+		
+		// Signal Istio sidecar to shut down for cronjob completion
+		shutdownIstioSidecar()
 	},
 }
 
@@ -235,4 +240,34 @@ func init() {
 	viper.BindPFlag("older-than-hours", reminderCmd.Flags().Lookup("older-than-hours"))
 	viper.BindPFlag("max-reminders", reminderCmd.Flags().Lookup("max-reminders"))
 	viper.BindPFlag("interval-hours", reminderCmd.Flags().Lookup("interval-hours"))
+}
+
+// shutdownIstioSidecar sends a shutdown signal to Istio sidecar proxy
+// This is necessary for cronjobs to complete properly when using Istio service mesh
+// The sidecar will continue running after the main container exits unless we explicitly shut it down
+func shutdownIstioSidecar() {
+	// Istio sidecar shutdown endpoint
+	url := "http://localhost:15020/quitquitquit"
+	
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to create shutdown request for Istio sidecar")
+		return
+	}
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Debug().Err(err).Msg("Failed to shutdown Istio sidecar (may not be present)")
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		log.Info().Msg("Successfully signaled Istio sidecar shutdown")
+		// Give the sidecar a moment to shut down gracefully
+		time.Sleep(2 * time.Second)
+	} else {
+		log.Debug().Int("status", resp.StatusCode).Msg("Unexpected response from Istio sidecar shutdown endpoint")
+	}
 }

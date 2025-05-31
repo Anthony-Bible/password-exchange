@@ -56,7 +56,7 @@ type CircuitBreaker struct {
 
 // StorageRepository defines the interface for storage operations
 type StorageRepository interface {
-	GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders int) ([]*UnviewedMessage, error)
+	GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error)
 	GetReminderHistory(ctx context.Context, messageID int) ([]*ReminderLogEntry, error)
 	LogReminderSent(ctx context.Context, messageID int, recipientEmail string) error
 }
@@ -124,6 +124,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 			ctx,
 			reminderConfig.CheckAfterHours,
 			reminderConfig.MaxReminders,
+			reminderConfig.Interval,
 		)
 		return err
 	}, "get_unviewed_messages")

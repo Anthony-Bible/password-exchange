@@ -214,7 +214,7 @@ func (m *MySQLAdapter) DeleteExpiredMessages() error {
 }
 
 // GetUnviewedMessagesForReminders retrieves messages that are unviewed and eligible for reminder emails
-func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxReminders int) ([]*domain.UnviewedMessage, error) {
+func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error) {
 	if m.db == nil {
 		if err := m.Connect(); err != nil {
 			return nil, err
@@ -229,9 +229,10 @@ func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxRemind
     AND m.created < NOW() - INTERVAL ? HOUR
     AND m.other_email IS NOT NULL
     AND m.other_email != ''
-    AND (er.reminder_count IS NULL OR er.reminder_count < ?)`
+    AND (er.reminder_count IS NULL OR er.reminder_count < ?)
+    AND (er.last_reminder_sent IS NULL OR er.last_reminder_sent < NOW() - INTERVAL ? HOUR)`
 
-	rows, err := m.db.Query(query, olderThanHours, maxReminders)
+	rows, err := m.db.Query(query, olderThanHours, maxReminders, reminderIntervalHours)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to query unviewed messages for reminders")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
