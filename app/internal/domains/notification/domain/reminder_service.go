@@ -254,9 +254,17 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		MessageContent: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
 	}
 
-	_, err = r.emailSender.SendNotification(ctx, notificationReq)
-	if err != nil {
-		return fmt.Errorf("failed to send reminder email for messageID %d: %w", reminderRequest.MessageID, err)
+	if r.emailSender != nil {
+		_, err = r.emailSender.SendNotification(ctx, notificationReq)
+		if err != nil {
+			return fmt.Errorf("failed to send reminder email for messageID %d: %w", reminderRequest.MessageID, err)
+		}
+	} else {
+		log.Info().
+			Int("messageID", reminderRequest.MessageID).
+			Str("recipientEmail", reminderRequest.RecipientEmail).
+			Int("reminderNumber", reminderRequest.ReminderNumber).
+			Msg("Email sender not configured - reminder would be sent")
 	}
 
 	// Record that we sent a reminder with retry logic
