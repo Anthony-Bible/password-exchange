@@ -5,15 +5,15 @@ package messagepb;
 option go_package = "github.com/Anthony-Bible/password-exchange/app/messagepb";
 message Message {
     string email = 1;
-    string firstname = 2;
-    string otherfirstname = 3;
-    string OtherLastName = 4;
-    string OtherEmail = 5;
-    string Uniqueid = 6;
-    string Content = 7;
-    string Errors =8;
-    string Url = 9;
-    string Hidden = 10;
-    string Captcha = 11;
+    string first_name = 2;
+    string other_first_name = 3;
+    string other_last_name = 4;
+    string other_email = 5;
+    string unique_id = 6;
+    string content = 7;
+    string errors = 8;
+    string url = 9;
+    string hidden = 10;
+    string captcha = 11;
 }
 

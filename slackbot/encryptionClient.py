@@ -35,7 +35,7 @@ class EncryptionServiceClient(object):
             length (int): Length of string you want generated.
         """
         try:
-            random_request = encryption_pb2.Randomrequest(randomLength=length)
+            random_request = encryption_pb2.Randomrequest(random_length=length)
             encryptionbytes = self.stub.GenerateRandomString(random_request)
             return encryptionbytes
         except grpc.RpcError as err:
@@ -52,14 +52,14 @@ class EncryptionServiceClient(object):
            Outputed encrypted text
         """
         request = encryption_pb2.EncryptedMessageRequest()
-        request.PlainText.append(plaintext)
+        request.plain_text.append(plaintext)
 
 
         try:    
-            request.Key = self.generate_random_strng(32).encryptionbytes
+            request.key = self.generate_random_strng(32).encryption_bytes
             guid = uuid.uuid4().hex
             encrypt_response = self.stub.encryptMessage(request)
-            for i in encrypt_response.Ciphertext:
+            for i in encrypt_response.ciphertext:
                 insert_request = {'uuid': guid, 'content': i}
                 db.insert_message(insert_request)
             return request.Key, str(guid)

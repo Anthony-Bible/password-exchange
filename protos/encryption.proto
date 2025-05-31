@@ -24,28 +24,28 @@ option go_package = "github.com/Anthony-Bible/password-exchange/app/encryptionpb
     **/
 
 message EncryptedMessageRequest{
-  repeated string PlainText = 1;
-  bytes Key = 2;
+  repeated string plain_text = 1;
+  bytes key = 2;
 }
 message EncryptedMessageResponse{
-  repeated string Ciphertext = 1;
+  repeated string ciphertext = 1;
 }
 message DecryptedMessageRequest{
-  repeated string Ciphertext = 1;
+  repeated string ciphertext = 1;
   bytes key = 2;
 }
 message DecryptedMessageResponse{
   repeated string plaintext = 1;
 }
 message Randomresponse{
-bytes encryptionbytes = 1;
-string encryptionString = 2;
+bytes encryption_bytes = 1;
+string encryption_string = 2;
 }
 message  Randomrequest{
-int32 randomLength = 1;
+int32 random_length = 1;
 }
 
-service messageService{
+service MessageService{
   rpc encryptMessage(EncryptedMessageRequest) returns (EncryptedMessageResponse) {}
   rpc DecryptMessage(DecryptedMessageRequest) returns (DecryptedMessageResponse) {}
   rpc GenerateRandomString(Randomrequest) returns (Randomresponse) {}

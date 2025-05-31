@@ -153,11 +153,11 @@ func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Deli
 	// Convert to domain message
 	queueMsg := domain.QueueMessage{
 		Email:          pbMsg.Email,
-		FirstName:      pbMsg.Firstname,
-		OtherFirstName: pbMsg.Otherfirstname,
+		FirstName:      pbMsg.FirstName,
+		OtherFirstName: pbMsg.OtherFirstName,
 		OtherLastName:  pbMsg.OtherLastName,
 		OtherEmail:     pbMsg.OtherEmail,
-		UniqueID:       pbMsg.Uniqueid,
+		UniqueID:       pbMsg.UniqueId,
 		Content:        pbMsg.Content,
 		URL:            pbMsg.Url,
 		Hidden:         pbMsg.Hidden,

@@ -74,8 +74,8 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	// Create protobuf message
 	pbMsg := &messagepb.Message{
 		Email:          req.SenderEmail,
-		Firstname:      req.SenderName,
-		Otherfirstname: req.RecipientName,
+		FirstName:      req.SenderName,
+		OtherFirstName: req.RecipientName,
 		OtherEmail:     req.RecipientEmail,
 		Content:        fmt.Sprintf("Please click this link to get your encrypted message\n<a href=\"%s\">here</a>", req.MessageURL),
 		Url:            req.MessageURL,

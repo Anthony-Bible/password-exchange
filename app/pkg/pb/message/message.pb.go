@@ -24,16 +24,16 @@ const (
 type Message struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Email          string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Firstname      string                 `protobuf:"bytes,2,opt,name=firstname,proto3" json:"firstname,omitempty"`
-	Otherfirstname string                 `protobuf:"bytes,3,opt,name=otherfirstname,proto3" json:"otherfirstname,omitempty"`
-	OtherLastName  string                 `protobuf:"bytes,4,opt,name=OtherLastName,proto3" json:"OtherLastName,omitempty"`
-	OtherEmail     string                 `protobuf:"bytes,5,opt,name=OtherEmail,proto3" json:"OtherEmail,omitempty"`
-	Uniqueid       string                 `protobuf:"bytes,6,opt,name=Uniqueid,proto3" json:"Uniqueid,omitempty"`
-	Content        string                 `protobuf:"bytes,7,opt,name=Content,proto3" json:"Content,omitempty"`
-	Errors         string                 `protobuf:"bytes,8,opt,name=Errors,proto3" json:"Errors,omitempty"`
-	Url            string                 `protobuf:"bytes,9,opt,name=Url,proto3" json:"Url,omitempty"`
-	Hidden         string                 `protobuf:"bytes,10,opt,name=Hidden,proto3" json:"Hidden,omitempty"`
-	Captcha        string                 `protobuf:"bytes,11,opt,name=Captcha,proto3" json:"Captcha,omitempty"`
+	FirstName      string                 `protobuf:"bytes,2,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
+	OtherFirstName string                 `protobuf:"bytes,3,opt,name=other_first_name,json=otherFirstName,proto3" json:"other_first_name,omitempty"`
+	OtherLastName  string                 `protobuf:"bytes,4,opt,name=other_last_name,json=otherLastName,proto3" json:"other_last_name,omitempty"`
+	OtherEmail     string                 `protobuf:"bytes,5,opt,name=other_email,json=otherEmail,proto3" json:"other_email,omitempty"`
+	UniqueId       string                 `protobuf:"bytes,6,opt,name=unique_id,json=uniqueId,proto3" json:"unique_id,omitempty"`
+	Content        string                 `protobuf:"bytes,7,opt,name=content,proto3" json:"content,omitempty"`
+	Errors         string                 `protobuf:"bytes,8,opt,name=errors,proto3" json:"errors,omitempty"`
+	Url            string                 `protobuf:"bytes,9,opt,name=url,proto3" json:"url,omitempty"`
+	Hidden         string                 `protobuf:"bytes,10,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	Captcha        string                 `protobuf:"bytes,11,opt,name=captcha,proto3" json:"captcha,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -75,16 +75,16 @@ func (x *Message) GetEmail() string {
 	return ""
 }
 
-func (x *Message) GetFirstname() string {
+func (x *Message) GetFirstName() string {
 	if x != nil {
-		return x.Firstname
+		return x.FirstName
 	}
 	return ""
 }
 
-func (x *Message) GetOtherfirstname() string {
+func (x *Message) GetOtherFirstName() string {
 	if x != nil {
-		return x.Otherfirstname
+		return x.OtherFirstName
 	}
 	return ""
 }
@@ -103,9 +103,9 @@ func (x *Message) GetOtherEmail() string {
 	return ""
 }
 
-func (x *Message) GetUniqueid() string {
+func (x *Message) GetUniqueId() string {
 	if x != nil {
-		return x.Uniqueid
+		return x.UniqueId
 	}
 	return ""
 }
@@ -149,22 +149,22 @@ var File_message_proto protoreflect.FileDescriptor
 
 const file_message_proto_rawDesc = "" +
 	"\n" +
-	"\rmessage.proto\x12\tmessagepb\"\xbd\x02\n" +
+	"\rmessage.proto\x12\tmessagepb\"\xc4\x02\n" +
 	"\aMessage\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1c\n" +
-	"\tfirstname\x18\x02 \x01(\tR\tfirstname\x12&\n" +
-	"\x0eotherfirstname\x18\x03 \x01(\tR\x0eotherfirstname\x12$\n" +
-	"\rOtherLastName\x18\x04 \x01(\tR\rOtherLastName\x12\x1e\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1d\n" +
 	"\n" +
-	"OtherEmail\x18\x05 \x01(\tR\n" +
-	"OtherEmail\x12\x1a\n" +
-	"\bUniqueid\x18\x06 \x01(\tR\bUniqueid\x12\x18\n" +
-	"\aContent\x18\a \x01(\tR\aContent\x12\x16\n" +
-	"\x06Errors\x18\b \x01(\tR\x06Errors\x12\x10\n" +
-	"\x03Url\x18\t \x01(\tR\x03Url\x12\x16\n" +
-	"\x06Hidden\x18\n" +
-	" \x01(\tR\x06Hidden\x12\x18\n" +
-	"\aCaptcha\x18\v \x01(\tR\aCaptchaB:Z8github.com/Anthony-Bible/password-exchange/app/messagepbb\x06proto3"
+	"first_name\x18\x02 \x01(\tR\tfirstName\x12(\n" +
+	"\x10other_first_name\x18\x03 \x01(\tR\x0eotherFirstName\x12&\n" +
+	"\x0fother_last_name\x18\x04 \x01(\tR\rotherLastName\x12\x1f\n" +
+	"\vother_email\x18\x05 \x01(\tR\n" +
+	"otherEmail\x12\x1b\n" +
+	"\tunique_id\x18\x06 \x01(\tR\buniqueId\x12\x18\n" +
+	"\acontent\x18\a \x01(\tR\acontent\x12\x16\n" +
+	"\x06errors\x18\b \x01(\tR\x06errors\x12\x10\n" +
+	"\x03url\x18\t \x01(\tR\x03url\x12\x16\n" +
+	"\x06hidden\x18\n" +
+	" \x01(\tR\x06hidden\x12\x18\n" +
+	"\acaptcha\x18\v \x01(\tR\acaptchaB:Z8github.com/Anthony-Bible/password-exchange/app/messagepbb\x06proto3"
 
 var (
 	file_message_proto_rawDescOnce sync.Once

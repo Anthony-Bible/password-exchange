@@ -37,7 +37,7 @@ func NewMessageServiceClient(cc grpc.ClientConnInterface) MessageServiceClient {
 
 func (c *messageServiceClient) EncryptMessage(ctx context.Context, in *EncryptedMessageRequest, opts ...grpc.CallOption) (*EncryptedMessageResponse, error) {
 	out := new(EncryptedMessageResponse)
-	err := c.cc.Invoke(ctx, "/encryptionpb.messageService/encryptMessage", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/encryptionpb.MessageService/encryptMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *messageServiceClient) EncryptMessage(ctx context.Context, in *Encrypted
 
 func (c *messageServiceClient) DecryptMessage(ctx context.Context, in *DecryptedMessageRequest, opts ...grpc.CallOption) (*DecryptedMessageResponse, error) {
 	out := new(DecryptedMessageResponse)
-	err := c.cc.Invoke(ctx, "/encryptionpb.messageService/DecryptMessage", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/encryptionpb.MessageService/DecryptMessage", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *messageServiceClient) DecryptMessage(ctx context.Context, in *Decrypted
 
 func (c *messageServiceClient) GenerateRandomString(ctx context.Context, in *Randomrequest, opts ...grpc.CallOption) (*Randomresponse, error) {
 	out := new(Randomresponse)
-	err := c.cc.Invoke(ctx, "/encryptionpb.messageService/GenerateRandomString", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/encryptionpb.MessageService/GenerateRandomString", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func _MessageService_EncryptMessage_Handler(srv interface{}, ctx context.Context
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/encryptionpb.messageService/encryptMessage",
+		FullMethod: "/encryptionpb.MessageService/encryptMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MessageServiceServer).EncryptMessage(ctx, req.(*EncryptedMessageRequest))
@@ -126,7 +126,7 @@ func _MessageService_DecryptMessage_Handler(srv interface{}, ctx context.Context
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/encryptionpb.messageService/DecryptMessage",
+		FullMethod: "/encryptionpb.MessageService/DecryptMessage",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MessageServiceServer).DecryptMessage(ctx, req.(*DecryptedMessageRequest))
@@ -144,7 +144,7 @@ func _MessageService_GenerateRandomString_Handler(srv interface{}, ctx context.C
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/encryptionpb.messageService/GenerateRandomString",
+		FullMethod: "/encryptionpb.MessageService/GenerateRandomString",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MessageServiceServer).GenerateRandomString(ctx, req.(*Randomrequest))
@@ -156,7 +156,7 @@ func _MessageService_GenerateRandomString_Handler(srv interface{}, ctx context.C
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MessageService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "encryptionpb.messageService",
+	ServiceName: "encryptionpb.MessageService",
 	HandlerType: (*MessageServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

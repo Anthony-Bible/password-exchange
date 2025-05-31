@@ -44,7 +44,7 @@ func (c *EncryptionClient) GenerateKey(ctx context.Context, length int32) ([]byt
 	}
 
 	log.Debug().Int32("length", length).Msg("Generated encryption key successfully")
-	return resp.GetEncryptionbytes(), nil
+	return resp.GetEncryptionBytes(), nil
 }
 
 // Encrypt encrypts plaintext using the provided key
