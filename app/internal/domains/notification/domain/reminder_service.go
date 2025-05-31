@@ -48,9 +48,10 @@ const (
 // It prevents cascading failures by temporarily blocking requests when error rates are high.
 // States: Closed (normal), Open (blocking), HalfOpen (testing recovery)
 type CircuitBreaker struct {
-	failureCount    int                 // Number of consecutive failures
-	lastFailureTime time.Time           // Time of the last failure
-	state           CircuitBreakerState // Current state of the circuit breaker
+	failureCount    int                    // Number of consecutive failures
+	lastFailureTime time.Time              // Time of the last failure
+	state           CircuitBreakerState    // Current state of the circuit breaker
+	logger          secondary.LoggerPort   // Logger for recording state transitions
 }
 
 // StorageRepository defines the interface for storage operations
@@ -81,7 +82,8 @@ func NewReminderService(storageRepo secondary.StoragePort, notificationPublisher
 		storageRepo:           storageRepo,
 		notificationPublisher: notificationPublisher,
 		circuitBreaker: &CircuitBreaker{
-			state: CircuitBreakerClosed,
+			state:  CircuitBreakerClosed,
+			logger: logger,
 		},
 		logger:     logger,
 		config:     config,
@@ -389,6 +391,15 @@ func (circuitBreaker *CircuitBreaker) CanExecute() error {
 	case CircuitBreakerOpen:
 		if time.Since(circuitBreaker.lastFailureTime) > CircuitBreakerTimeout {
 			circuitBreaker.state = CircuitBreakerHalfOpen
+			
+			// Log state transition from OPEN to HALF_OPEN
+			if circuitBreaker.logger != nil {
+				circuitBreaker.logger.Info().
+					Str("state", "HALF_OPEN").
+					Str("reason", "timeout_expired").
+					Dur("timeout", CircuitBreakerTimeout).
+					Msg("Circuit breaker transitioned to HALF_OPEN state after timeout")
+			}
 			return nil
 		}
 		return ErrCircuitBreakerOpen
@@ -401,8 +412,17 @@ func (circuitBreaker *CircuitBreaker) CanExecute() error {
 
 // RecordSuccess records a successful operation
 func (circuitBreaker *CircuitBreaker) RecordSuccess() {
+	oldState := circuitBreaker.state
 	circuitBreaker.failureCount = 0
 	circuitBreaker.state = CircuitBreakerClosed
+	
+	// Log state transition to CLOSED when coming from HALF_OPEN
+	if oldState == CircuitBreakerHalfOpen && circuitBreaker.logger != nil {
+		circuitBreaker.logger.Info().
+			Str("state", "CLOSED").
+			Str("reason", "operation_succeeded").
+			Msg("Circuit breaker transitioned to CLOSED state after successful operation")
+	}
 }
 
 // RecordFailure records a failed operation
@@ -412,8 +432,14 @@ func (circuitBreaker *CircuitBreaker) RecordFailure() {
 
 	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
 		circuitBreaker.state = CircuitBreakerOpen
-		// Note: This is in the CircuitBreaker method, but we need a logger reference
-		// For now, this will be handled by the calling service's logger
-		// TODO: Consider injecting logger into CircuitBreaker or using a package-level logger
+		
+		// Log state transition to OPEN when threshold is exceeded
+		if circuitBreaker.logger != nil {
+			circuitBreaker.logger.Error().
+				Str("state", "OPEN").
+				Str("reason", "threshold_exceeded").
+				Int("failures", CircuitBreakerThreshold).
+				Msg("Circuit breaker transitioned to OPEN state due to repeated failures")
+		}
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 )
 
 // Test CircuitBreaker CanExecute when closed
@@ -157,4 +158,113 @@ func TestRetryWithBackoff_ContextCancelled_ReturnsContextError(t *testing.T) {
 	err := service.retryWithBackoff(ctx, operation, "test_operation")
 	assert.Error(t, err)
 	assert.Equal(t, context.Canceled, err)
+}
+
+// Test CircuitBreaker logging when transitioning to OPEN state
+func TestCircuitBreaker_RecordFailure_LogsWhenTransitioningToOpen(t *testing.T) {
+	// Arrange - create circuit breaker with logger
+	mockLogger := &MockLoggerPort{}
+	mockLogEvent := &MockLogEvent{}
+	
+	// Set up expectations for logging when transitioning to OPEN state
+	mockLogger.On("Error").Return(mockLogEvent)
+	mockLogEvent.On("Str", "state", "OPEN").Return(mockLogEvent)
+	mockLogEvent.On("Str", "reason", "threshold_exceeded").Return(mockLogEvent)
+	mockLogEvent.On("Int", "failures", CircuitBreakerThreshold).Return(mockLogEvent)
+	mockLogEvent.On("Msg", "Circuit breaker transitioned to OPEN state due to repeated failures").Return()
+	
+	cb := &CircuitBreaker{
+		state:        CircuitBreakerClosed,
+		failureCount: CircuitBreakerThreshold - 1,
+		logger:       mockLogger,
+	}
+
+	// Act - record failure that should trigger state transition
+	cb.RecordFailure()
+
+	// Assert
+	assert.Equal(t, CircuitBreakerOpen, cb.state)
+	assert.Equal(t, CircuitBreakerThreshold, cb.failureCount)
+	mockLogger.AssertExpectations(t)
+	mockLogEvent.AssertExpectations(t)
+}
+
+// Test CircuitBreaker logging when transitioning from OPEN to HALF_OPEN
+func TestCircuitBreaker_CanExecute_LogsWhenTransitioningToHalfOpen(t *testing.T) {
+	// Arrange - create circuit breaker with logger in OPEN state with expired timeout
+	mockLogger := &MockLoggerPort{}
+	mockLogEvent := &MockLogEvent{}
+	
+	// Set up expectations for logging when transitioning to HALF_OPEN state
+	mockLogger.On("Info").Return(mockLogEvent)
+	mockLogEvent.On("Str", "state", "HALF_OPEN").Return(mockLogEvent)
+	mockLogEvent.On("Str", "reason", "timeout_expired").Return(mockLogEvent)
+	mockLogEvent.On("Dur", "timeout", CircuitBreakerTimeout).Return(mockLogEvent)
+	mockLogEvent.On("Msg", "Circuit breaker transitioned to HALF_OPEN state after timeout").Return()
+	
+	cb := &CircuitBreaker{
+		state:           CircuitBreakerOpen,
+		lastFailureTime: time.Now().Add(-CircuitBreakerTimeout - time.Second),
+		logger:          mockLogger,
+	}
+
+	// Act - call CanExecute which should trigger state transition
+	err := cb.CanExecute()
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, CircuitBreakerHalfOpen, cb.state)
+	mockLogger.AssertExpectations(t)
+	mockLogEvent.AssertExpectations(t)
+}
+
+// Test CircuitBreaker logging when transitioning from HALF_OPEN to CLOSED
+func TestCircuitBreaker_RecordSuccess_LogsWhenTransitioningToClosed(t *testing.T) {
+	// Arrange - create circuit breaker with logger in HALF_OPEN state
+	mockLogger := &MockLoggerPort{}
+	mockLogEvent := &MockLogEvent{}
+	
+	// Set up expectations for logging when transitioning to CLOSED state
+	mockLogger.On("Info").Return(mockLogEvent)
+	mockLogEvent.On("Str", "state", "CLOSED").Return(mockLogEvent)
+	mockLogEvent.On("Str", "reason", "operation_succeeded").Return(mockLogEvent)
+	mockLogEvent.On("Msg", "Circuit breaker transitioned to CLOSED state after successful operation").Return()
+	
+	cb := &CircuitBreaker{
+		state:        CircuitBreakerHalfOpen,
+		failureCount: 3,
+		logger:       mockLogger,
+	}
+
+	// Act - record success which should transition to closed
+	cb.RecordSuccess()
+
+	// Assert
+	assert.Equal(t, CircuitBreakerClosed, cb.state)
+	assert.Equal(t, 0, cb.failureCount)
+	mockLogger.AssertExpectations(t)
+	mockLogEvent.AssertExpectations(t)
+}
+
+// Test CircuitBreaker with nil logger doesn't panic
+func TestCircuitBreaker_NilLogger_DoesNotPanic(t *testing.T) {
+	// Arrange - create circuit breaker without logger
+	cb := &CircuitBreaker{
+		state:        CircuitBreakerClosed,
+		failureCount: CircuitBreakerThreshold - 1,
+		logger:       nil,
+	}
+
+	// Act & Assert - operations should not panic with nil logger
+	assert.NotPanics(t, func() {
+		cb.RecordFailure()
+	})
+	
+	assert.NotPanics(t, func() {
+		cb.RecordSuccess()
+	})
+	
+	assert.NotPanics(t, func() {
+		cb.CanExecute()
+	})
 }
