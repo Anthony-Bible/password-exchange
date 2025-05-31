@@ -10,9 +10,9 @@ import (
 
 // NotificationService provides notification operations
 type NotificationService struct {
-	emailSender      secondary.EmailSenderPort
-	queueConsumer    secondary.QueueConsumerPort
-	templateRenderer secondary.TemplateRendererPort
+	emailSender      secondary.EmailPort
+	queueConsumer    secondary.QueuePort
+	templateRenderer secondary.TemplatePort
 	reminderService  *ReminderService
 	logger           secondary.LoggerPort
 	validation       secondary.ValidationPort
@@ -21,16 +21,16 @@ type NotificationService struct {
 
 // NewNotificationService creates a new notification service
 func NewNotificationService(
-	emailSender secondary.EmailSenderPort,
-	queueConsumer secondary.QueueConsumerPort,
-	templateRenderer secondary.TemplateRendererPort,
+	emailSender secondary.EmailPort,
+	queueConsumer secondary.QueuePort,
+	templateRenderer secondary.TemplatePort,
 	storageRepo secondary.StoragePort,
-	notificationPublisher secondary.NotificationPublisherPort,
+	notificationPublisher secondary.NotificationPort,
 	logger secondary.LoggerPort,
 	validation secondary.ValidationPort,
 	config secondary.ConfigPort,
 ) *NotificationService {
-	reminderService := NewReminderService(storageRepo, notificationPublisher, logger, config)
+	reminderService := NewReminderService(storageRepo, notificationPublisher, logger, config, validation)
 	return &NotificationService{
 		emailSender:      emailSender,
 		queueConsumer:    queueConsumer,
@@ -44,9 +44,9 @@ func NewNotificationService(
 
 // NewNotificationServiceWithReminder creates a new notification service with an existing reminder service
 func NewNotificationServiceWithReminder(
-	emailSender secondary.EmailSenderPort,
-	queueConsumer secondary.QueueConsumerPort,
-	templateRenderer secondary.TemplateRendererPort,
+	emailSender secondary.EmailPort,
+	queueConsumer secondary.QueuePort,
+	templateRenderer secondary.TemplatePort,
 	reminderService *ReminderService,
 	logger secondary.LoggerPort,
 	validation secondary.ValidationPort,

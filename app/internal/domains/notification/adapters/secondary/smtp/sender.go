@@ -12,7 +12,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 )
 
-// SMTPSender implements the EmailSenderPort using SMTP
+// SMTPSender implements the EmailPort using SMTP
 type SMTPSender struct {
 	emailConn  contracts.EmailConnection
 	config     secondary.ConfigPort

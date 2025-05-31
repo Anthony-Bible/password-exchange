@@ -68,22 +68,24 @@ type NotificationPublisher interface {
 // ReminderService provides reminder processing operations
 type ReminderService struct {
 	storageRepo           secondary.StoragePort
-	notificationPublisher secondary.NotificationPublisherPort
+	notificationPublisher secondary.NotificationPort
 	circuitBreaker        *CircuitBreaker
 	logger                secondary.LoggerPort
 	config                secondary.ConfigPort
+	validation            secondary.ValidationPort
 }
 
 // NewReminderService creates a new reminder service
-func NewReminderService(storageRepo secondary.StoragePort, notificationPublisher secondary.NotificationPublisherPort, logger secondary.LoggerPort, config secondary.ConfigPort) *ReminderService {
+func NewReminderService(storageRepo secondary.StoragePort, notificationPublisher secondary.NotificationPort, logger secondary.LoggerPort, config secondary.ConfigPort, validation secondary.ValidationPort) *ReminderService {
 	return &ReminderService{
 		storageRepo:           storageRepo,
 		notificationPublisher: notificationPublisher,
 		circuitBreaker: &CircuitBreaker{
 			state: CircuitBreakerClosed,
 		},
-		logger: logger,
-		config: config,
+		logger:     logger,
+		config:     config,
+		validation: validation,
 	}
 }
 
@@ -220,7 +222,10 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		return fmt.Errorf("daysOld must be non-negative, got %d", reminderRequest.DaysOld)
 	}
 
-	// Email validation will be handled by the notification service
+	// Validate recipient email address
+	if err := r.validation.ValidateEmail(reminderRequest.RecipientEmail); err != nil {
+		return fmt.Errorf("invalid recipient email address: %w", err)
+	}
 
 	r.logger.Info().
 		Int("messageID", reminderRequest.MessageID).

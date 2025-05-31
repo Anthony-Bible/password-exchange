@@ -6,8 +6,8 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 )
 
-// QueueConsumerPort defines the secondary port for message queue operations
-type QueueConsumerPort interface {
+// QueuePort defines the secondary port for message queue operations
+type QueuePort interface {
 	// Connect establishes a connection to the message queue
 	Connect(ctx context.Context, queueConn contracts.QueueConnection) error
 	
