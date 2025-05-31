@@ -20,6 +20,9 @@ spec:
       ttlSecondsAfterFinished: 21600
       template:
         metadata:
+          annotations:
+            linkerd.io/inject: enabled
+            proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
           labels:
             app: password-exchange
             component: reminder
@@ -31,28 +34,11 @@ spec:
             imagePullPolicy: Always
             command: ["/app/app"]
             args: ["reminder", "--config=/config/config.yaml"]
+            envFrom:
+              - secretRef:
+                name: test-secret
             env:
             # Database configuration
-            - name: PASSWORDEXCHANGE_DBHOST
-              valueFrom:
-                secretKeyRef:
-                  name: password-exchange-secrets
-                  key: db-host
-            - name: PASSWORDEXCHANGE_DBUSER
-              valueFrom:
-                secretKeyRef:
-                  name: password-exchange-secrets
-                  key: db-user
-            - name: PASSWORDEXCHANGE_DBPASS
-              valueFrom:
-                secretKeyRef:
-                  name: password-exchange-secrets
-                  key: db-password
-            - name: PASSWORDEXCHANGE_DBNAME
-              valueFrom:
-                secretKeyRef:
-                  name: password-exchange-secrets
-                  key: db-name
             # Reminder configuration
             - name: PASSWORDEXCHANGE_REMINDER_ENABLED
               value: "true"
