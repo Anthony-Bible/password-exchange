@@ -390,7 +390,6 @@ func (circuitBreaker *CircuitBreaker) CanExecute() error {
 		return nil
 	case CircuitBreakerOpen:
 		if time.Since(circuitBreaker.lastFailureTime) > CircuitBreakerTimeout {
-			oldState := circuitBreaker.state
 			circuitBreaker.state = CircuitBreakerHalfOpen
 			
 			// Log state transition from OPEN to HALF_OPEN
@@ -432,7 +431,6 @@ func (circuitBreaker *CircuitBreaker) RecordFailure() {
 	circuitBreaker.lastFailureTime = time.Now()
 
 	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
-		oldState := circuitBreaker.state
 		circuitBreaker.state = CircuitBreakerOpen
 		
 		// Log state transition to OPEN when threshold is exceeded
