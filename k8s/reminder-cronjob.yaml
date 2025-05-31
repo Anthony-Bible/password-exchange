@@ -35,8 +35,7 @@ spec:
             command: ["/app/app"]
             args: ["reminder", "--config=/config/config.yaml"]
             envFrom:
-              - secretRef:
-                name: test-secret
+              - secretRef: test-secret
             env:
             # Database configuration
             # Reminder configuration
