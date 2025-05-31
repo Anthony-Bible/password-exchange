@@ -14,15 +14,15 @@ import (
 func TestNewReminderService(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
+	mockNotificationPublisher := &MockNotificationPublisher{}
 
 	// Act
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	// Assert
 	assert.NotNil(t, service)
 	assert.Equal(t, mockStorageRepo, service.storageRepo)
-	assert.Equal(t, mockEmailSender, service.emailSender)
+	assert.Equal(t, mockNotificationPublisher, service.notificationPublisher)
 	assert.NotNil(t, service.circuitBreaker)
 	assert.Equal(t, CircuitBreakerClosed, service.circuitBreaker.state)
 }
@@ -201,8 +201,8 @@ func TestValidateReminderConfig_InvalidInterval_ReturnsError(t *testing.T) {
 func TestProcessReminders_DisabledConfig_ReturnsEarly(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -219,15 +219,15 @@ func TestProcessReminders_DisabledConfig_ReturnsEarly(t *testing.T) {
 	assert.NoError(t, err)
 	// Verify no storage calls were made
 	mockStorageRepo.AssertNotCalled(t, "GetUnviewedMessagesForReminders")
-	mockEmailSender.AssertNotCalled(t, "SendNotification")
+	mockNotificationPublisher.AssertNotCalled(t, "PublishNotification")
 }
 
 // Test ProcessReminders with invalid config
 func TestProcessReminders_InvalidConfig_ReturnsError(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -250,8 +250,8 @@ func TestProcessReminders_InvalidConfig_ReturnsError(t *testing.T) {
 func TestProcessReminders_NoMessages_ReturnsSuccess(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -270,15 +270,15 @@ func TestProcessReminders_NoMessages_ReturnsSuccess(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertNotCalled(t, "SendNotification")
+	mockNotificationPublisher.AssertNotCalled(t, "PublishNotification")
 }
 
 // Test ProcessReminders with storage error
 func TestProcessReminders_StorageError_ReturnsError(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -305,8 +305,8 @@ func TestProcessReminders_StorageError_ReturnsError(t *testing.T) {
 func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -332,11 +332,7 @@ func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
 
 	// Mock email sending
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -344,15 +340,15 @@ func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
 }
 
 // Test ProcessReminders with context cancellation
 func TestProcessReminders_ContextCancelled_ReturnsError(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -376,8 +372,8 @@ func TestProcessReminders_ContextCancelled_ReturnsError(t *testing.T) {
 func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
@@ -405,8 +401,8 @@ func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
 func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 
@@ -441,7 +437,7 @@ func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid recipient email address")
 			mockStorageRepo.AssertNotCalled(t, "GetReminderHistory")
-			mockEmailSender.AssertNotCalled(t, "SendNotification")
+			mockNotificationPublisher.AssertNotCalled(t, "PublishNotification")
 		})
 	}
 }
@@ -450,8 +446,8 @@ func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 func TestProcessMessageReminder_EmptyURL_StillProcesses(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	req := ReminderRequest{
@@ -467,11 +463,7 @@ func TestProcessMessageReminder_EmptyURL_StillProcesses(t *testing.T) {
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
 
 	// Mock email sending - should work with empty URL (template references original email)
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
 	err := service.ProcessMessageReminder(ctx, req)
@@ -480,15 +472,15 @@ func TestProcessMessageReminder_EmptyURL_StillProcesses(t *testing.T) {
 	// Empty URLs are acceptable - template now references original email
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
 }
 
 // Test ProcessReminders with storage logging failure - continues with other messages
 func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -527,11 +519,7 @@ func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 	mockStorageRepo.On("LogReminderSent", ctx, 124, "valid@example.com").Return(nil)
 
 	// Mock successful email sending for both
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -540,15 +528,15 @@ func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 	// Should succeed because at least one message was processed successfully
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
 }
 
 // Test ProcessReminders with circuit breaker activation
 func TestProcessReminders_CircuitBreakerOpen_StopsProcessing(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -575,8 +563,8 @@ func TestProcessReminders_CircuitBreakerOpen_StopsProcessing(t *testing.T) {
 func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	config := ReminderConfig{
@@ -624,13 +612,9 @@ func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	mockStorageRepo.On("LogReminderSent", ctx, 125, "another@example.com").Return(nil)
 
 	// Mock email sending for valid emails only
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.MatchedBy(func(req NotificationRequest) bool {
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.MatchedBy(func(req NotificationRequest) bool {
 		return req.To == "valid@example.com" || req.To == "another@example.com"
-	})).Return(expectedResponse, nil)
+	})).Return(nil)
 
 	// Act
 	err := service.ProcessReminders(ctx, config)
@@ -639,15 +623,15 @@ func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	// Should succeed overall despite individual failures
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
 }
 
 // Test ProcessMessageReminder with zero MessageID
 func TestProcessMessageReminder_ZeroMessageID_Error(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	req := ReminderRequest{
@@ -671,8 +655,8 @@ func TestProcessMessageReminder_ZeroMessageID_Error(t *testing.T) {
 func TestProcessMessageReminder_EmptyUniqueID_Error(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	req := ReminderRequest{
@@ -696,8 +680,8 @@ func TestProcessMessageReminder_EmptyUniqueID_Error(t *testing.T) {
 func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	req := ReminderRequest{
@@ -721,8 +705,8 @@ func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
 func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 	// Arrange
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	req := ReminderRequest{
@@ -738,11 +722,7 @@ func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(nil)
 
 	// Mock email sending
-	expectedResponse := &NotificationResponse{
-		Success:   true,
-		MessageID: "msg-456",
-	}
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
 	err := service.ProcessMessageReminder(ctx, req)
@@ -750,5 +730,5 @@ func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
-	mockEmailSender.AssertExpectations(t)
+	mockNotificationPublisher.AssertExpectations(t)
 }

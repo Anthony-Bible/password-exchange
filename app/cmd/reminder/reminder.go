@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
@@ -23,12 +24,12 @@ import (
 
 const (
 	// Validation constants for reminder configuration
-	MinCheckAfterHours   = 1     // Minimum 1 hour
-	MaxCheckAfterHours   = 8760  // Maximum 1 year (365 * 24)
-	MinMaxReminders      = 1     // Minimum 1 reminder
-	MaxMaxReminders      = 10    // Maximum 10 reminders
-	MinReminderInterval  = 1     // Minimum 1 hour between reminders
-	MaxReminderInterval  = 720   // Maximum 30 days (30 * 24)
+	MinCheckAfterHours  = 1    // Minimum 1 hour
+	MaxCheckAfterHours  = 8760 // Maximum 1 year (365 * 24)
+	MinMaxReminders     = 1    // Minimum 1 reminder
+	MaxMaxReminders     = 10   // Maximum 10 reminders
+	MinReminderInterval = 1    // Minimum 1 hour between reminders
+	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
 
 // Config represents the reminder command configuration
@@ -131,11 +132,31 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		// Create notification storage adapter
 		notificationStorageAdapter := storage.NewGRPCStorageAdapter(storageService)
 
-		// Create reminder service with storage adapter
-		// Email sender is nil for now as reminders only log without actually sending emails
-		// This follows dependency injection pattern for hexagonal architecture
-		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, nil)
+		// Create RabbitMQ notification publisher
+		rabbitConfig := rabbitmq.NotificationConfig{
+			Host:      cfg.RabHost,
+			Port:      cfg.RabPort,
+			User:      cfg.RabUser,
+			Password:  cfg.RabPass,
+			QueueName: cfg.RabQName,
+		}
 		
+		notificationPublisher, err := rabbitmq.NewNotificationPublisher(rabbitConfig)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("operation", "rabbitmq_connect").
+				Str("host", cfg.RabHost).
+				Int("port", cfg.RabPort).
+				Msg("Failed to connect to RabbitMQ")
+			return
+		}
+		defer notificationPublisher.Close()
+       
+		// Create reminder service with storage adapter and notification publisher
+		// Uses RabbitMQ to publish reminder notifications instead of sending emails directly
+		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, notificationPublisher)
+
 		// Process reminders
 		ctx := context.Background()
 		if err := reminderService.ProcessReminders(ctx, reminderConfig); err != nil {

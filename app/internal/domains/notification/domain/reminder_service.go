@@ -61,19 +61,23 @@ type StorageRepository interface {
 	LogReminderSent(ctx context.Context, messageID int, recipientEmail string) error
 }
 
+// NotificationPublisher defines the interface for publishing notifications to queue
+type NotificationPublisher interface {
+	PublishNotification(ctx context.Context, req NotificationRequest) error
+}
+
 // ReminderService provides reminder processing operations
 type ReminderService struct {
-	storageRepo    StorageRepository
-	emailSender    NotificationSender
-	circuitBreaker *CircuitBreaker
+	storageRepo           StorageRepository
+	notificationPublisher NotificationPublisher
+	circuitBreaker        *CircuitBreaker
 }
 
 // NewReminderService creates a new reminder service
-func NewReminderService(storageRepo StorageRepository, emailSender NotificationSender) *ReminderService {
-	//TODO: Emailsender isn't used so in the future we need to add the ability to customize the email sender
+func NewReminderService(storageRepo StorageRepository, notificationPublisher NotificationPublisher) *ReminderService {
 	return &ReminderService{
-		storageRepo: storageRepo,
-		emailSender: emailSender,
+		storageRepo:           storageRepo,
+		notificationPublisher: notificationPublisher,
 		circuitBreaker: &CircuitBreaker{
 			state: CircuitBreakerClosed,
 		},
@@ -244,7 +248,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	// Update reminder number in request
 	reminderRequest.ReminderNumber = reminderCount + 1
 
-	// Send reminder email
+	// Publish reminder notification to queue
 	notificationReq := NotificationRequest{
 		To:            reminderRequest.RecipientEmail,
 		From:          "server@password.exchange",
@@ -254,17 +258,17 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		MessageContent: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
 	}
 
-	if r.emailSender != nil {
-		_, err = r.emailSender.SendNotification(ctx, notificationReq)
+	if r.notificationPublisher != nil {
+		err = r.notificationPublisher.PublishNotification(ctx, notificationReq)
 		if err != nil {
-			return fmt.Errorf("failed to send reminder email for messageID %d: %w", reminderRequest.MessageID, err)
+			return fmt.Errorf("failed to publish reminder notification for messageID %d: %w", reminderRequest.MessageID, err)
 		}
 	} else {
 		log.Info().
 			Int("messageID", reminderRequest.MessageID).
 			Str("recipientEmail", reminderRequest.RecipientEmail).
 			Int("reminderNumber", reminderRequest.ReminderNumber).
-			Msg("Email sender not configured - reminder would be sent")
+			Msg("Notification publisher not configured - reminder would be published")
 	}
 
 	// Record that we sent a reminder with retry logic

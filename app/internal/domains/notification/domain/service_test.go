@@ -25,6 +25,16 @@ func (m *MockNotificationSender) SendNotification(ctx context.Context, req Notif
 	return args.Get(0).(*NotificationResponse), args.Error(1)
 }
 
+// MockNotificationPublisher mocks the NotificationPublisher interface
+type MockNotificationPublisher struct {
+	mock.Mock
+}
+
+func (m *MockNotificationPublisher) PublishNotification(ctx context.Context, req NotificationRequest) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
 // MockQueueConsumer mocks the QueueConsumer interface
 type MockQueueConsumer struct {
 	mock.Mock
@@ -90,7 +100,7 @@ func TestNewNotificationService(t *testing.T) {
 	mockStorageRepo := &MockStorageRepository{}
 
 	// Act
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 
 	// Assert
 	assert.NotNil(t, service)
@@ -108,7 +118,7 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 	
 	ctx := context.Background()
 	req := NotificationRequest{
@@ -141,7 +151,7 @@ func TestSendNotification_InvalidRequest_ReturnsError(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 	
 	ctx := context.Background()
 	req := NotificationRequest{
@@ -168,7 +178,7 @@ func TestSendNotification_EmailSendingFails_ReturnsError(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 	
 	ctx := context.Background()
 	req := NotificationRequest{
@@ -310,7 +320,7 @@ func TestHandleMessage_Success(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 	
 	ctx := context.Background()
 	queueMsg := QueueMessage{
@@ -345,7 +355,7 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo)
+	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
 	
 	ctx := context.Background()
 	queueMsg := QueueMessage{

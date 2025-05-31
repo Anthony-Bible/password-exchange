@@ -23,8 +23,9 @@ func NewNotificationService(
 	queueConsumer QueueConsumer,
 	templateRenderer TemplateRenderer,
 	storageRepo StorageRepository,
+	notificationPublisher NotificationPublisher,
 ) *NotificationService {
-	reminderService := NewReminderService(storageRepo, emailSender)
+	reminderService := NewReminderService(storageRepo, notificationPublisher)
 	return &NotificationService{
 		emailSender:      emailSender,
 		queueConsumer:    queueConsumer,

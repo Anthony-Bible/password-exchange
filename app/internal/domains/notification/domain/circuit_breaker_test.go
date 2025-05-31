@@ -83,8 +83,8 @@ func TestCircuitBreaker_RecordFailure_AtThreshold_OpensCircuit(t *testing.T) {
 // Test retryWithBackoff success on first attempt
 func TestRetryWithBackoff_SuccessFirstAttempt_NoRetry(t *testing.T) {
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	callCount := 0
@@ -101,8 +101,8 @@ func TestRetryWithBackoff_SuccessFirstAttempt_NoRetry(t *testing.T) {
 // Test retryWithBackoff with eventual success
 func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	callCount := 0
@@ -122,8 +122,8 @@ func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 // Test retryWithBackoff max retries exceeded
 func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx := context.Background()
 	callCount := 0
@@ -141,8 +141,8 @@ func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 // Test retryWithBackoff context cancellation
 func TestRetryWithBackoff_ContextCancelled_ReturnsContextError(t *testing.T) {
 	mockStorageRepo := &MockStorageRepository{}
-	mockEmailSender := &MockNotificationSender{}
-	service := NewReminderService(mockStorageRepo, mockEmailSender)
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	callCount := 0
