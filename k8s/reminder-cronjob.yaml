@@ -8,7 +8,7 @@ metadata:
     component: reminder
 spec:
   # Run daily at 9:00 AM UTC
-  schedule: "0 9 * * *"
+  schedule: "*/10 * * * *"
   # Alternatively, run every 24 hours from first execution: "@every 24h"
   concurrencyPolicy: Forbid  # Don't allow overlapping jobs
   failedJobsHistoryLimit: 3
