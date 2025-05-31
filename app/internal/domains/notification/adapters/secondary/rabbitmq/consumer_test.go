@@ -30,11 +30,11 @@ func TestHandleMessage_ValidProtobufMessage(t *testing.T) {
 	// Create a valid protobuf message
 	pbMsg := &pb.Message{
 		Email:          "test@example.com",
-		Firstname:      "John",
-		Otherfirstname: "Jane",
+		FirstName:      "John",
+		OtherFirstName: "Jane",
 		OtherLastName:  "Doe",
 		OtherEmail:     "jane.doe@example.com",
-		Uniqueid:       "unique123",
+		UniqueId:       "unique123",
 		Content:        "Test password message",
 		Url:            "https://password.exchange/view/unique123",
 		Hidden:         "false",
@@ -118,7 +118,7 @@ func TestHandleMessage_HandlerError(t *testing.T) {
 	pbMsg := &pb.Message{
 		Email:     "test@example.com",
 		OtherEmail: "recipient@example.com",
-		Uniqueid:  "unique123",
+		UniqueId:  "unique123",
 	}
 
 	pbBytes, err := proto.Marshal(pbMsg)
@@ -156,11 +156,11 @@ func TestHandleMessage_ProtobufFieldMapping(t *testing.T) {
 			name: "All fields populated",
 			pbMsg: &pb.Message{
 				Email:          "sender@example.com",
-				Firstname:      "Alice",
-				Otherfirstname: "Bob",
+				FirstName:      "Alice",
+				OtherFirstName: "Bob",
 				OtherLastName:  "Smith",
 				OtherEmail:     "bob.smith@example.com",
-				Uniqueid:       "abc123",
+				UniqueId:       "abc123",
 				Content:        "Secret password content",
 				Url:            "https://password.exchange/view/abc123",
 				Hidden:         "true",
@@ -183,7 +183,7 @@ func TestHandleMessage_ProtobufFieldMapping(t *testing.T) {
 			name: "Minimal fields",
 			pbMsg: &pb.Message{
 				OtherEmail: "minimal@example.com",
-				Uniqueid:   "min123",
+				UniqueId:   "min123",
 			},
 			expected: domain.QueueMessage{
 				OtherEmail: "minimal@example.com",
@@ -194,11 +194,11 @@ func TestHandleMessage_ProtobufFieldMapping(t *testing.T) {
 			name: "Empty strings preserved",
 			pbMsg: &pb.Message{
 				Email:          "",
-				Firstname:      "",
-				Otherfirstname: "",
+				FirstName:      "",
+				OtherFirstName: "",
 				OtherLastName:  "",
 				OtherEmail:     "empty@example.com",
-				Uniqueid:       "empty123",
+				UniqueId:       "empty123",
 				Content:        "",
 				Url:            "",
 				Hidden:         "false",
@@ -254,7 +254,7 @@ func TestHandleMessage_ProtobufBinaryData(t *testing.T) {
 		Email:     "test@example.com",
 		Content:   "Password with special chars: !@#$%^&*()_+ and Unicode: 你好",
 		OtherEmail: "recipient@测试.com",
-		Uniqueid:  "unicode-123",
+		UniqueId:  "unicode-123",
 	}
 
 	pbBytes, err := proto.Marshal(pbMsg)
@@ -285,11 +285,11 @@ func TestProtobufMarshalUnmarshal_RoundTrip(t *testing.T) {
 	// Test protobuf round-trip marshaling/unmarshaling
 	originalMsg := &pb.Message{
 		Email:          "roundtrip@example.com",
-		Firstname:      "Round",
-		Otherfirstname: "Trip",
+		FirstName:      "Round",
+		OtherFirstName: "Trip",
 		OtherLastName:  "Test",
 		OtherEmail:     "trip@example.com",
-		Uniqueid:       "round123",
+		UniqueId:       "round123",
 		Content:        "Round trip test content",
 		Url:            "https://password.exchange/view/round123",
 		Hidden:         "true",
@@ -308,11 +308,11 @@ func TestProtobufMarshalUnmarshal_RoundTrip(t *testing.T) {
 
 	// Verify all fields match
 	assert.Equal(t, originalMsg.Email, unmarshaledMsg.Email)
-	assert.Equal(t, originalMsg.Firstname, unmarshaledMsg.Firstname)
-	assert.Equal(t, originalMsg.Otherfirstname, unmarshaledMsg.Otherfirstname)
+	assert.Equal(t, originalMsg.FirstName, unmarshaledMsg.FirstName)
+	assert.Equal(t, originalMsg.OtherFirstName, unmarshaledMsg.OtherFirstName)
 	assert.Equal(t, originalMsg.OtherLastName, unmarshaledMsg.OtherLastName)
 	assert.Equal(t, originalMsg.OtherEmail, unmarshaledMsg.OtherEmail)
-	assert.Equal(t, originalMsg.Uniqueid, unmarshaledMsg.Uniqueid)
+	assert.Equal(t, originalMsg.UniqueId, unmarshaledMsg.UniqueId)
 	assert.Equal(t, originalMsg.Content, unmarshaledMsg.Content)
 	assert.Equal(t, originalMsg.Url, unmarshaledMsg.Url)
 	assert.Equal(t, originalMsg.Hidden, unmarshaledMsg.Hidden)
@@ -332,7 +332,7 @@ func TestProtobufMessage_FieldValidation(t *testing.T) {
 				return &pb.Message{
 					Email:     "valid@example.com",
 					OtherEmail: "other@example.com",
-					Uniqueid:  "valid123",
+					UniqueId:  "valid123",
 				}
 			},
 			shouldError: false,
@@ -347,7 +347,7 @@ func TestProtobufMessage_FieldValidation(t *testing.T) {
 				return &pb.Message{
 					Email:   "long@example.com",
 					Content: string(longString),
-					Uniqueid: "long123",
+					UniqueId: "long123",
 				}
 			},
 			shouldError: false,

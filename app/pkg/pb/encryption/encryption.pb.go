@@ -23,8 +23,8 @@ const (
 
 type EncryptedMessageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlainText     []string               `protobuf:"bytes,1,rep,name=PlainText,proto3" json:"PlainText,omitempty"`
-	Key           []byte                 `protobuf:"bytes,2,opt,name=Key,proto3" json:"Key,omitempty"`
+	PlainText     []string               `protobuf:"bytes,1,rep,name=plain_text,json=plainText,proto3" json:"plain_text,omitempty"`
+	Key           []byte                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,7 +75,7 @@ func (x *EncryptedMessageRequest) GetKey() []byte {
 
 type EncryptedMessageResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ciphertext    []string               `protobuf:"bytes,1,rep,name=Ciphertext,proto3" json:"Ciphertext,omitempty"`
+	Ciphertext    []string               `protobuf:"bytes,1,rep,name=ciphertext,proto3" json:"ciphertext,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,7 +119,7 @@ func (x *EncryptedMessageResponse) GetCiphertext() []string {
 
 type DecryptedMessageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ciphertext    []string               `protobuf:"bytes,1,rep,name=Ciphertext,proto3" json:"Ciphertext,omitempty"`
+	Ciphertext    []string               `protobuf:"bytes,1,rep,name=ciphertext,proto3" json:"ciphertext,omitempty"`
 	Key           []byte                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -215,8 +215,8 @@ func (x *DecryptedMessageResponse) GetPlaintext() []string {
 
 type Randomresponse struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Encryptionbytes  []byte                 `protobuf:"bytes,1,opt,name=encryptionbytes,proto3" json:"encryptionbytes,omitempty"`
-	EncryptionString string                 `protobuf:"bytes,2,opt,name=encryptionString,proto3" json:"encryptionString,omitempty"`
+	EncryptionBytes  []byte                 `protobuf:"bytes,1,opt,name=encryption_bytes,json=encryptionBytes,proto3" json:"encryption_bytes,omitempty"`
+	EncryptionString string                 `protobuf:"bytes,2,opt,name=encryption_string,json=encryptionString,proto3" json:"encryption_string,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -251,9 +251,9 @@ func (*Randomresponse) Descriptor() ([]byte, []int) {
 	return file_encryption_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *Randomresponse) GetEncryptionbytes() []byte {
+func (x *Randomresponse) GetEncryptionBytes() []byte {
 	if x != nil {
-		return x.Encryptionbytes
+		return x.EncryptionBytes
 	}
 	return nil
 }
@@ -267,7 +267,7 @@ func (x *Randomresponse) GetEncryptionString() string {
 
 type Randomrequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RandomLength  int32                  `protobuf:"varint,1,opt,name=randomLength,proto3" json:"randomLength,omitempty"`
+	RandomLength  int32                  `protobuf:"varint,1,opt,name=random_length,json=randomLength,proto3" json:"random_length,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -313,27 +313,28 @@ var File_encryption_proto protoreflect.FileDescriptor
 
 const file_encryption_proto_rawDesc = "" +
 	"\n" +
-	"\x10encryption.proto\x12\fencryptionpb\"I\n" +
-	"\x17EncryptedMessageRequest\x12\x1c\n" +
-	"\tPlainText\x18\x01 \x03(\tR\tPlainText\x12\x10\n" +
-	"\x03Key\x18\x02 \x01(\fR\x03Key\":\n" +
+	"\x10encryption.proto\x12\fencryptionpb\"J\n" +
+	"\x17EncryptedMessageRequest\x12\x1d\n" +
+	"\n" +
+	"plain_text\x18\x01 \x03(\tR\tplainText\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\fR\x03key\":\n" +
 	"\x18EncryptedMessageResponse\x12\x1e\n" +
 	"\n" +
-	"Ciphertext\x18\x01 \x03(\tR\n" +
-	"Ciphertext\"K\n" +
+	"ciphertext\x18\x01 \x03(\tR\n" +
+	"ciphertext\"K\n" +
 	"\x17DecryptedMessageRequest\x12\x1e\n" +
 	"\n" +
-	"Ciphertext\x18\x01 \x03(\tR\n" +
-	"Ciphertext\x12\x10\n" +
+	"ciphertext\x18\x01 \x03(\tR\n" +
+	"ciphertext\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\fR\x03key\"8\n" +
 	"\x18DecryptedMessageResponse\x12\x1c\n" +
-	"\tplaintext\x18\x01 \x03(\tR\tplaintext\"f\n" +
-	"\x0eRandomresponse\x12(\n" +
-	"\x0fencryptionbytes\x18\x01 \x01(\fR\x0fencryptionbytes\x12*\n" +
-	"\x10encryptionString\x18\x02 \x01(\tR\x10encryptionString\"3\n" +
-	"\rRandomrequest\x12\"\n" +
-	"\frandomLength\x18\x01 \x01(\x05R\frandomLength2\xab\x02\n" +
-	"\x0emessageService\x12a\n" +
+	"\tplaintext\x18\x01 \x03(\tR\tplaintext\"h\n" +
+	"\x0eRandomresponse\x12)\n" +
+	"\x10encryption_bytes\x18\x01 \x01(\fR\x0fencryptionBytes\x12+\n" +
+	"\x11encryption_string\x18\x02 \x01(\tR\x10encryptionString\"4\n" +
+	"\rRandomrequest\x12#\n" +
+	"\rrandom_length\x18\x01 \x01(\x05R\frandomLength2\xab\x02\n" +
+	"\x0eMessageService\x12a\n" +
 	"\x0eencryptMessage\x12%.encryptionpb.EncryptedMessageRequest\x1a&.encryptionpb.EncryptedMessageResponse\"\x00\x12a\n" +
 	"\x0eDecryptMessage\x12%.encryptionpb.DecryptedMessageRequest\x1a&.encryptionpb.DecryptedMessageResponse\"\x00\x12S\n" +
 	"\x14GenerateRandomString\x12\x1b.encryptionpb.Randomrequest\x1a\x1c.encryptionpb.Randomresponse\"\x00B=Z;github.com/Anthony-Bible/password-exchange/app/encryptionpbb\x06proto3"
@@ -360,12 +361,12 @@ var file_encryption_proto_goTypes = []any{
 	(*Randomrequest)(nil),            // 5: encryptionpb.Randomrequest
 }
 var file_encryption_proto_depIdxs = []int32{
-	0, // 0: encryptionpb.messageService.encryptMessage:input_type -> encryptionpb.EncryptedMessageRequest
-	2, // 1: encryptionpb.messageService.DecryptMessage:input_type -> encryptionpb.DecryptedMessageRequest
-	5, // 2: encryptionpb.messageService.GenerateRandomString:input_type -> encryptionpb.Randomrequest
-	1, // 3: encryptionpb.messageService.encryptMessage:output_type -> encryptionpb.EncryptedMessageResponse
-	3, // 4: encryptionpb.messageService.DecryptMessage:output_type -> encryptionpb.DecryptedMessageResponse
-	4, // 5: encryptionpb.messageService.GenerateRandomString:output_type -> encryptionpb.Randomresponse
+	0, // 0: encryptionpb.MessageService.encryptMessage:input_type -> encryptionpb.EncryptedMessageRequest
+	2, // 1: encryptionpb.MessageService.DecryptMessage:input_type -> encryptionpb.DecryptedMessageRequest
+	5, // 2: encryptionpb.MessageService.GenerateRandomString:input_type -> encryptionpb.Randomrequest
+	1, // 3: encryptionpb.MessageService.encryptMessage:output_type -> encryptionpb.EncryptedMessageResponse
+	3, // 4: encryptionpb.MessageService.DecryptMessage:output_type -> encryptionpb.DecryptedMessageResponse
+	4, // 5: encryptionpb.MessageService.GenerateRandomString:output_type -> encryptionpb.Randomresponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

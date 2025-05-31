@@ -77,8 +77,8 @@ func (p *NotificationPublisher) PublishNotification(ctx context.Context, req dom
 	// Create protobuf message
 	pbMsg := &messagepb.Message{
 		Email:          req.From,
-		Firstname:      req.FromName,
-		Otherfirstname: req.RecipientName,
+		FirstName:      req.FromName,
+		OtherFirstName: req.RecipientName,
 		OtherEmail:     req.To,
 		Content:        req.MessageContent,
 		Url:            req.MessageURL,

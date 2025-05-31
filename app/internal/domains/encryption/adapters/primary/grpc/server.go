@@ -109,7 +109,7 @@ func (s *GRPCServer) GenerateRandomString(ctx context.Context, request *pb.Rando
 	}
 
 	pbResponse := &pb.Randomresponse{
-		Encryptionbytes:  response.Key.Bytes(),
+		EncryptionBytes:  response.Key.Bytes(),
 		EncryptionString: response.KeyString,
 	}
 
