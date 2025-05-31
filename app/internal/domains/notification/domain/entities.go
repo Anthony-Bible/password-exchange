@@ -64,27 +64,6 @@ type NotificationTemplateData struct {
 	Message string
 }
 
-// MessageHandler defines the interface for handling queue messages
-type MessageHandler interface {
-	HandleMessage(ctx context.Context, msg QueueMessage) error
-}
-
-// NotificationSender defines the interface for sending notifications
-type NotificationSender interface {
-	SendNotification(ctx context.Context, req NotificationRequest) (*NotificationResponse, error)
-}
-
-// QueueConsumer defines the interface for consuming from message queues
-type QueueConsumer interface {
-	StartConsuming(ctx context.Context, queueConn QueueConnection, handler MessageHandler, concurrency int) error
-	Connect(ctx context.Context, queueConn QueueConnection) error
-	Close() error
-}
-
-// TemplateRenderer defines the interface for rendering notification templates
-type TemplateRenderer interface {
-	RenderTemplate(ctx context.Context, templateName string, data NotificationTemplateData) (string, error)
-}
 
 // ReminderConfig holds configuration for reminder processing.
 // Defines when and how often reminder emails are sent for unviewed messages.

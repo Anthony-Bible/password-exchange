@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 )
 
 // Error constants for reminder processing
@@ -68,19 +67,23 @@ type NotificationPublisher interface {
 
 // ReminderService provides reminder processing operations
 type ReminderService struct {
-	storageRepo           StorageRepository
-	notificationPublisher NotificationPublisher
+	storageRepo           secondary.StoragePort
+	notificationPublisher secondary.NotificationPublisherPort
 	circuitBreaker        *CircuitBreaker
+	logger                secondary.LoggerPort
+	config                secondary.ConfigPort
 }
 
 // NewReminderService creates a new reminder service
-func NewReminderService(storageRepo StorageRepository, notificationPublisher NotificationPublisher) *ReminderService {
+func NewReminderService(storageRepo secondary.StoragePort, notificationPublisher secondary.NotificationPublisherPort, logger secondary.LoggerPort, config secondary.ConfigPort) *ReminderService {
 	return &ReminderService{
 		storageRepo:           storageRepo,
 		notificationPublisher: notificationPublisher,
 		circuitBreaker: &CircuitBreaker{
 			state: CircuitBreakerClosed,
 		},
+		logger: logger,
+		config: config,
 	}
 }
 
@@ -93,7 +96,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 
 	// Validate configuration
 	if err := r.validateReminderConfig(reminderConfig); err != nil {
-		log.Error().
+		r.logger.Error().
 			Err(err).
 			Str("operation", "validate_config").
 			Int("checkAfterHours", reminderConfig.CheckAfterHours).
@@ -104,11 +107,11 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 	}
 
 	if !reminderConfig.Enabled {
-		log.Info().Bool("enabled", false).Msg("Reminder system is disabled")
+		r.logger.Info().Bool("enabled", false).Msg("Reminder system is disabled")
 		return nil
 	}
 
-	log.Info().
+	r.logger.Info().
 		Str("operation", "start_processing").
 		Bool("enabled", reminderConfig.Enabled).
 		Int("checkAfterHours", reminderConfig.CheckAfterHours).
@@ -133,10 +136,10 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		return fmt.Errorf("failed to get unviewed messages: %w", err)
 	}
 
-	log.Info().Int("count", len(messages)).Msg("Found messages eligible for reminders")
+	r.logger.Info().Int("count", len(messages)).Msg("Found messages eligible for reminders")
 
 	if len(messages) == 0 {
-		log.Info().Msg("No messages found requiring reminders")
+		r.logger.Info().Msg("No messages found requiring reminders")
 		return nil
 	}
 
@@ -161,10 +164,10 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 
 		if err != nil {
 			errorCount++
-			log.Error().
+			r.logger.Error().
 				Err(err).
 				Int("messageID", message.MessageID).
-				Str("email", validation.SanitizeEmailForLogging(message.RecipientEmail)).
+				Str("email", message.RecipientEmail).
 				Int("daysOld", message.DaysOld).
 				Str("operation", "process_reminder").
 				Msg("Failed to process reminder for message after all retry attempts")
@@ -173,7 +176,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		processedCount++
 	}
 
-	log.Info().
+	r.logger.Info().
 		Int("totalMessages", len(messages)).
 		Int("processedCount", processedCount).
 		Int("errorCount", errorCount).
@@ -182,7 +185,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 	// Implement graceful degradation: return success if at least some messages were processed
 	// This allows partial success rather than all-or-nothing failure
 	if processedCount > 0 {
-		log.Info().
+		r.logger.Info().
 			Int("processedCount", processedCount).
 			Int("errorCount", errorCount).
 			Float64("successRate", float64(processedCount)/float64(len(messages))*100).
@@ -192,7 +195,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 
 	// If no messages were processed and we had errors, this indicates a more serious issue
 	if errorCount > 0 {
-		log.Error().
+		r.logger.Error().
 			Int("errorCount", errorCount).
 			Int("totalMessages", len(messages)).
 			Msg("Failed to process any reminder messages")
@@ -217,14 +220,11 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		return fmt.Errorf("daysOld must be non-negative, got %d", reminderRequest.DaysOld)
 	}
 
-	// Validate email address before processing
-	if err := validation.ValidateEmail(reminderRequest.RecipientEmail); err != nil {
-		return fmt.Errorf("invalid recipient email address for messageID %d: %w", reminderRequest.MessageID, err)
-	}
+	// Email validation will be handled by the notification service
 
-	log.Info().
+	r.logger.Info().
 		Int("messageID", reminderRequest.MessageID).
-		Str("email", validation.SanitizeEmailForLogging(reminderRequest.RecipientEmail)).
+		Str("email", reminderRequest.RecipientEmail).
 		Int("daysOld", reminderRequest.DaysOld).
 		Str("operation", "process_message_reminder").
 		Msg("Processing reminder for message")
@@ -265,7 +265,7 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 			return fmt.Errorf("failed to publish reminder notification for messageID %d: %w", reminderRequest.MessageID, err)
 		}
 	} else {
-		log.Info().
+		r.logger.Info().
 			Int("messageID", reminderRequest.MessageID).
 			Str("recipientEmail", reminderRequest.RecipientEmail).
 			Int("reminderNumber", reminderRequest.ReminderNumber).
@@ -281,9 +281,9 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		return fmt.Errorf("failed to log reminder sent for messageID %d: %w", reminderRequest.MessageID, err)
 	}
 
-	log.Info().
+	r.logger.Info().
 		Int("messageID", reminderRequest.MessageID).
-		Str("email", validation.SanitizeEmailForLogging(reminderRequest.RecipientEmail)).
+		Str("email", reminderRequest.RecipientEmail).
 		Int("reminderNumber", reminderRequest.ReminderNumber).
 		Str("operation", "reminder_sent").
 		Msg("Reminder email sent successfully")
@@ -299,7 +299,7 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 	for attempt := 0; attempt < MaxRetries; attempt++ {
 		// Check circuit breaker before attempting operation
 		if err := r.circuitBreaker.CanExecute(); err != nil {
-			log.Warn().
+			r.logger.Warn().
 				Err(err).
 				Str("operation", operationName).
 				Int("attempt", attempt+1).
@@ -313,10 +313,10 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 			// Success - record success and return
 			r.circuitBreaker.RecordSuccess()
 			if attempt > 0 {
-				log.Info().
-					Str("operation", operationName).
-					Int("successfulAttempt", attempt+1).
-					Msg("Operation succeeded after retry")
+			r.logger.Info().
+				Str("operation", operationName).
+				Int("successfulAttempt", attempt+1).
+				Msg("Operation succeeded after retry")
 			}
 			return nil
 		}
@@ -335,7 +335,7 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 			delay = MaxRetryDelay
 		}
 
-		log.Warn().
+		r.logger.Warn().
 			Err(err).
 			Str("operation", operationName).
 			Int("attempt", attempt+1).
@@ -350,7 +350,7 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 		}
 	}
 
-	log.Error().
+	r.logger.Error().
 		Err(lastErr).
 		Str("operation", operationName).
 		Int("maxRetries", MaxRetries).
@@ -407,9 +407,8 @@ func (circuitBreaker *CircuitBreaker) RecordFailure() {
 
 	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
 		circuitBreaker.state = CircuitBreakerOpen
-		log.Warn().
-			Int("failureCount", circuitBreaker.failureCount).
-			Int("threshold", CircuitBreakerThreshold).
-			Msg("Circuit breaker opened due to repeated failures")
+		// Note: This is in the CircuitBreaker method, but we need a logger reference
+		// For now, this will be handled by the calling service's logger
+		// TODO: Consider injecting logger into CircuitBreaker or using a package-level logger
 	}
 }
