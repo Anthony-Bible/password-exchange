@@ -252,8 +252,8 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	// Publish reminder notification to queue
 	notificationReq := NotificationRequest{
 		To:            reminderRequest.RecipientEmail,
-		From:          "server@password.exchange",
-		FromName:      "Password Exchange",
+		From:          r.config.GetServerEmail(),
+		FromName:      r.config.GetServerName(),
 		Subject:       fmt.Sprintf("Reminder: You have an unviewed encrypted message (Reminder #%d)", reminderRequest.ReminderNumber),
 		MessageURL:    reminderRequest.DecryptionURL,
 		MessageContent: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",

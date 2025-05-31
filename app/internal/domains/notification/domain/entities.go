@@ -1,68 +1,23 @@
 package domain
 
 import (
-	"context"
-	"time"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 )
 
-// NotificationRequest represents a request to send a notification
-type NotificationRequest struct {
-	To              string
-	From            string  
-	FromName        string
-	Subject         string
-	Body            string
-	MessageContent  string
-	SenderName      string
-	RecipientName   string
-	MessageURL      string
-	Hidden          string
-}
-
-// NotificationResponse represents the result of sending a notification
-type NotificationResponse struct {
-	Success   bool
-	MessageID string
-	Error     error
-}
-
-// QueueMessage represents a message consumed from the queue
-type QueueMessage struct {
-	Email           string
-	FirstName       string
-	OtherFirstName  string
-	OtherLastName   string
-	OtherEmail      string
-	UniqueID        string
-	Content         string
-	URL             string
-	Hidden          string
-	Captcha         string
-}
-
-// QueueConnection represents connection configuration for message queues
-type QueueConnection struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	QueueName string
-}
-
-// EmailConnection represents connection configuration for email sending
-type EmailConnection struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	From     string
-}
-
-// NotificationTemplateData represents data for notification templates
-type NotificationTemplateData struct {
-	Body    string
-	Message string
-}
+// Type aliases to contracts and secondary ports - these define the domain's data contracts
+type (
+	NotificationRequest      = contracts.NotificationRequest
+	NotificationResponse     = contracts.NotificationResponse
+	QueueMessage            = contracts.QueueMessage
+	QueueConnection         = contracts.QueueConnection
+	EmailConnection         = contracts.EmailConnection
+	NotificationTemplateData = contracts.NotificationTemplateData
+	UnviewedMessage         = contracts.UnviewedMessage
+	ReminderLogEntry        = contracts.ReminderLogEntry
+	ReminderRequest         = contracts.ReminderRequest
+	MessageHandler          = contracts.MessageHandler
+	LogEvent                = contracts.LogEvent
+)
 
 
 // ReminderConfig holds configuration for reminder processing.
@@ -74,29 +29,3 @@ type ReminderConfig struct {
 	Interval        int  // Hours between subsequent reminders (1-720)
 }
 
-// ReminderRequest represents a request to send a reminder notification
-type ReminderRequest struct {
-	MessageID      int
-	UniqueID       string
-	RecipientEmail string
-	DaysOld        int
-	ReminderNumber int
-	DecryptionURL  string
-}
-
-// UnviewedMessage represents a message that hasn't been viewed and may need reminders
-type UnviewedMessage struct {
-	MessageID      int
-	UniqueID       string
-	RecipientEmail string
-	DaysOld        int
-	Created        time.Time
-}
-
-// ReminderLogEntry represents a logged reminder attempt
-type ReminderLogEntry struct {
-	MessageID      int
-	RecipientEmail string
-	ReminderCount  int
-	SentAt         time.Time
-}

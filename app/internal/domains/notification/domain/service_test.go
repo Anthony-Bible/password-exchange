@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -91,6 +92,100 @@ func (m *MockStorageRepository) LogReminderSent(ctx context.Context, messageID i
 	return args.Error(0)
 }
 
+// MockConfigPort mocks the ConfigPort interface
+type MockConfigPort struct {
+	mock.Mock
+}
+
+func (m *MockConfigPort) GetEmailTemplate() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetServerEmail() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetServerName() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetPasswordExchangeURL() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+// MockLoggerPort mocks the LoggerPort interface
+type MockLoggerPort struct {
+	mock.Mock
+}
+
+func (m *MockLoggerPort) Debug() LogEvent {
+	return &MockLogEvent{}
+}
+
+func (m *MockLoggerPort) Info() LogEvent {
+	return &MockLogEvent{}
+}
+
+func (m *MockLoggerPort) Warn() LogEvent {
+	return &MockLogEvent{}
+}
+
+func (m *MockLoggerPort) Error() LogEvent {
+	return &MockLogEvent{}
+}
+
+// MockLogEvent mocks the LogEvent interface
+type MockLogEvent struct {
+	mock.Mock
+}
+
+func (m *MockLogEvent) Err(err error) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Str(key, value string) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Int(key string, value int) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Bool(key string, value bool) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Dur(key string, value time.Duration) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Float64(key string, value float64) LogEvent {
+	return m
+}
+
+func (m *MockLogEvent) Msg(msg string) {
+	// No-op for tests
+}
+
+// MockValidationPort mocks the ValidationPort interface
+type MockValidationPort struct {
+	mock.Mock
+}
+
+func (m *MockValidationPort) ValidateEmail(email string) error {
+	args := m.Called(email)
+	return args.Error(0)
+}
+
+func (m *MockValidationPort) SanitizeEmailForLogging(email string) string {
+	args := m.Called(email)
+	return args.String(0)
+}
+
 // Test NewNotificationService constructor
 func TestNewNotificationService(t *testing.T) {
 	// Arrange
@@ -98,9 +193,22 @@ func TestNewNotificationService(t *testing.T) {
 	mockQueueConsumer := &MockQueueConsumer{}
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	mockLogger := &MockLoggerPort{}
+	mockValidation := &MockValidationPort{}
+	mockConfig := &MockConfigPort{}
 
 	// Act
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
+	service := NewNotificationService(
+		mockEmailSender,
+		mockQueueConsumer,
+		mockTemplateRenderer,
+		mockStorageRepo,
+		mockNotificationPublisher,
+		mockLogger,
+		mockValidation,
+		mockConfig,
+	)
 
 	// Assert
 	assert.NotNil(t, service)
@@ -117,8 +225,21 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 	mockQueueConsumer := &MockQueueConsumer{}
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
+	mockNotificationPublisher := &MockNotificationPublisher{}
+	mockLogger := &MockLoggerPort{}
+	mockValidation := &MockValidationPort{}
+	mockConfig := &MockConfigPort{}
 
-	service := NewNotificationService(mockEmailSender, mockQueueConsumer, mockTemplateRenderer, mockStorageRepo, &MockNotificationPublisher{})
+	service := NewNotificationService(
+		mockEmailSender,
+		mockQueueConsumer,
+		mockTemplateRenderer,
+		mockStorageRepo,
+		mockNotificationPublisher,
+		mockLogger,
+		mockValidation,
+		mockConfig,
+	)
 	
 	ctx := context.Background()
 	req := NotificationRequest{
@@ -287,7 +408,13 @@ func TestValidateNotificationRequest(t *testing.T) {
 // Test createNotificationRequest
 func TestCreateNotificationRequest(t *testing.T) {
 	// Arrange
-	service := &NotificationService{}
+	mockConfig := &MockConfigPort{}
+	mockConfig.On("GetServerEmail").Return("server@password.exchange")
+	mockConfig.On("GetServerName").Return("Password Exchange")
+	
+	service := &NotificationService{
+		config: mockConfig,
+	}
 	queueMsg := QueueMessage{
 		FirstName:      "John",
 		OtherFirstName: "Jane",

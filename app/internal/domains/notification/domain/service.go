@@ -70,7 +70,7 @@ func (s *NotificationService) SendNotification(ctx context.Context, req Notifica
 		return nil, fmt.Errorf("%w: %v", ErrInvalidNotificationRequest, err)
 	}
 
-	response, err := s.emailSender.SendEmail(ctx, req)
+	response, err := s.emailSender.SendNotification(ctx, req)
 	if err != nil {
 		s.logger.Error().Err(err).Str("to", s.validation.SanitizeEmailForLogging(req.To)).Msg("Failed to send notification")
 		return nil, fmt.Errorf("%w: %v", ErrEmailSendFailed, err)

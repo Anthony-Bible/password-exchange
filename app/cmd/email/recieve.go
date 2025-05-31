@@ -8,11 +8,75 @@ import (
 	notificationConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/consumer"
 	smtpSender "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/smtp"
 	rabbitMQConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"time"
 )
 
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
+}
+
+// Simple config adapter using existing PassConfig
+type configAdapter struct {
+	config config.PassConfig
+}
+
+func (c *configAdapter) GetEmailTemplate() string {
+	return "/templates/email_template.html" // Default template path
+}
+
+func (c *configAdapter) GetServerEmail() string {
+	if c.config.EmailFrom != "" {
+		return c.config.EmailFrom
+	}
+	return "server@password.exchange"
+}
+
+func (c *configAdapter) GetServerName() string {
+	return "Password Exchange"
+}
+
+func (c *configAdapter) GetPasswordExchangeURL() string {
+	if c.config.ProdHost != "" {
+		return "https://" + c.config.ProdHost
+	}
+	return "https://password.exchange"
+}
+
+// Simple logger adapter using existing zerolog
+type loggerAdapter struct {
+	logger zerolog.Logger
+}
+
+func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{l.logger.Debug()} }
+func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{l.logger.Info()} }
+func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{l.logger.Warn()} }
+func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{l.logger.Error()} }
+
+type logEvent struct {
+	event *zerolog.Event
+}
+
+func (e *logEvent) Err(err error) contracts.LogEvent              { e.event = e.event.Err(err); return e }
+func (e *logEvent) Str(key, value string) contracts.LogEvent     { e.event = e.event.Str(key, value); return e }
+func (e *logEvent) Int(key string, value int) contracts.LogEvent { e.event = e.event.Int(key, value); return e }
+func (e *logEvent) Bool(key string, value bool) contracts.LogEvent { e.event = e.event.Bool(key, value); return e }
+func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent { e.event = e.event.Dur(key, value); return e }
+func (e *logEvent) Float64(key string, value float64) contracts.LogEvent { e.event = e.event.Float64(key, value); return e }
+func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
+
+// Simple validation adapter using existing validation package
+type validationAdapter struct{}
+
+func (v *validationAdapter) ValidateEmail(email string) error {
+	return validation.ValidateEmail(email)
+}
+
+func (v *validationAdapter) SanitizeEmailForLogging(email string) string {
+	return validation.SanitizeEmailForLogging(email)
 }
 
 
@@ -42,12 +106,17 @@ func (conf Config) startHexagonalProcessing() {
 		QueueName: conf.RabQName,
 	}
 
+	// Create port adapters using existing functionality
+	configPort := &configAdapter{config: conf.PassConfig}
+	loggerPort := &loggerAdapter{logger: log.Logger}
+	validationPort := &validationAdapter{}
+
 	// Create secondary adapters
-	emailSender := smtpSender.NewSMTPSender(emailConn)
+	emailSender := smtpSender.NewSMTPSender(emailConn, configPort, loggerPort, validationPort)
 	queueConsumer := rabbitMQConsumer.NewRabbitMQConsumer()
 
 	// Create notification service (domain) - using WithReminder constructor with nil reminder service since email command doesn't need reminders
-	notificationService := notificationDomain.NewNotificationServiceWithReminder(emailSender, queueConsumer, nil, nil)
+	notificationService := notificationDomain.NewNotificationServiceWithReminder(emailSender, queueConsumer, nil, nil, loggerPort, validationPort, configPort)
 
 	// Create primary adapter (consumer)
 	consumer := notificationConsumer.NewNotificationConsumer(notificationService, queueConn, 100)
