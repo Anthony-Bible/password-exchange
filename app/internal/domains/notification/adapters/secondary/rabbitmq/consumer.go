@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/golang/protobuf/proto"
@@ -13,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// RabbitMQConsumer implements the QueueConsumerPort using RabbitMQ
+// RabbitMQConsumer implements the QueuePort using RabbitMQ
 type RabbitMQConsumer struct {
 	connection *amqp.Connection
 	channel    *amqp.Channel
@@ -25,7 +26,7 @@ func NewRabbitMQConsumer() *RabbitMQConsumer {
 }
 
 // Connect establishes a connection to RabbitMQ
-func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn domain.QueueConnection) error {
+func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn contracts.QueueConnection) error {
 	rabbitURL := fmt.Sprintf("amqp://%s:%s@%s:%d/", queueConn.User, queueConn.Password, queueConn.Host, queueConn.Port)
 	
 	conn, err := amqp.Dial(rabbitURL)
@@ -49,7 +50,7 @@ func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn domain.QueueCo
 }
 
 // StartConsuming starts consuming messages from the queue
-func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn domain.QueueConnection, handler domain.MessageHandler, concurrency int) error {
+func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn contracts.QueueConnection, handler contracts.MessageHandler, concurrency int) error {
 	if r.channel == nil {
 		if err := r.Connect(ctx, queueConn); err != nil {
 			return err

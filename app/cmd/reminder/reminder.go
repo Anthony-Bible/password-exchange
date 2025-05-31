@@ -15,10 +15,13 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,6 +36,55 @@ const (
 	MinReminderInterval = 1    // Minimum 1 hour between reminders
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
+
+// Simple config adapter for reminder command
+type configAdapter struct {
+	config config.PassConfig
+}
+
+func (c *configAdapter) GetEmailTemplate() string {
+	return "/templates/email_template.html"
+}
+
+func (c *configAdapter) GetServerEmail() string {
+	if c.config.EmailFrom != "" {
+		return c.config.EmailFrom
+	}
+	return "server@password.exchange"
+}
+
+func (c *configAdapter) GetServerName() string {
+	return "Password Exchange"
+}
+
+func (c *configAdapter) GetPasswordExchangeURL() string {
+	if c.config.ProdHost != "" {
+		return "https://" + c.config.ProdHost
+	}
+	return "https://password.exchange"
+}
+
+// Simple logger adapter
+type loggerAdapter struct {
+	logger zerolog.Logger
+}
+
+func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{l.logger.Debug()} }
+func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{l.logger.Info()} }
+func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{l.logger.Warn()} }
+func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{l.logger.Error()} }
+
+type logEvent struct {
+	event *zerolog.Event
+}
+
+func (e *logEvent) Err(err error) contracts.LogEvent              { e.event = e.event.Err(err); return e }
+func (e *logEvent) Str(key, value string) contracts.LogEvent     { e.event = e.event.Str(key, value); return e }
+func (e *logEvent) Int(key string, value int) contracts.LogEvent { e.event = e.event.Int(key, value); return e }
+func (e *logEvent) Bool(key string, value bool) contracts.LogEvent { e.event = e.event.Bool(key, value); return e }
+func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent { e.event = e.event.Dur(key, value); return e }
+func (e *logEvent) Float64(key string, value float64) contracts.LogEvent { e.event = e.event.Float64(key, value); return e }
+func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 
 // Config represents the reminder command configuration
 type Config struct {
@@ -155,9 +207,14 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		}
 		defer notificationPublisher.Close()
        
+		// Create port adapters
+		configPort := &configAdapter{config: cfg.PassConfig}
+		loggerPort := &loggerAdapter{logger: log.Logger}
+		validationPort := validator.NewValidationAdapter()
+
 		// Create reminder service with storage adapter and notification publisher
 		// Uses RabbitMQ to publish reminder notifications instead of sending emails directly
-		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, notificationPublisher)
+		reminderService := notificationDomain.NewReminderService(notificationStorageAdapter, notificationPublisher, loggerPort, configPort, validationPort)
 
 		// Process reminders
 		ctx := context.Background()

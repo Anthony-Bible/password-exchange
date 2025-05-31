@@ -19,7 +19,8 @@ internal/domains/{domain}/
 ├── domain/           # Business logic (entities, services, errors)
 ├── ports/
 │   ├── primary/      # Inbound interfaces (REST API, gRPC, web handlers)
-│   └── secondary/    # Outbound interfaces (databases, external services)
+│   ├── secondary/    # Outbound interfaces (databases, external services)
+│   └── contracts/    # Shared types to prevent import cycles
 └── adapters/
     ├── primary/      # Inbound implementations (API handlers, gRPC servers)
     └── secondary/    # Outbound implementations (MySQL, RabbitMQ, SMTP)
@@ -29,7 +30,7 @@ internal/domains/{domain}/
 - `message/`: Core password sharing logic with submission, retrieval, encryption
 - `storage/`: Database operations via gRPC
 - `encryption/`: Key generation and cryptographic operations via gRPC
-- `notification/`: Email notifications via RabbitMQ
+- `notification/`: Email notifications via RabbitMQ with complete hexagonal architecture
 
 ### Key Technologies
 - **Go 1.23+**: Main application with Cobra CLI, Gin web framework, gRPC services
@@ -144,14 +145,17 @@ protoc --proto_path=protos \
 
 ### Domain Layer (`domain/`)
 - **Entities**: Core business objects (`entities.go`, `message_entities.go`)
-- **Services**: Business logic implementations (`message_service.go`)
-- **Errors**: Domain-specific error types (`message_errors.go`)
-- NO external dependencies - only standard library and other domain objects
+- **Services**: Business logic implementations (`message_service.go`, `service.go`, `reminder_service.go`)
+- **Errors**: Domain-specific error types (`message_errors.go`, `errors.go`)
+- NO external dependencies - only standard library and port interfaces
+- Domain services receive all dependencies through port interfaces
 
 ### Ports (`ports/`)
 - **Primary ports**: Inbound interfaces defining what the domain offers
 - **Secondary ports**: Outbound interfaces defining what the domain needs
+- **Contracts**: Shared data types used across layers (prevents import cycles)
 - Define contracts WITHOUT implementations
+- All ports must include comprehensive godoc comments
 
 ### Adapters (`adapters/`)
 - **Primary adapters**: Handle inbound requests (REST API, gRPC servers, web handlers)
@@ -166,6 +170,8 @@ protoc --proto_path=protos \
 - Email notifications use RabbitMQ message queue pattern
 - Testing uses mocks for ports to isolate domain logic
 - Slackbot OAuth tokens stored in separate database tables via SQLAlchemy
+- Contracts package (`ports/contracts/`) holds shared types to prevent circular dependencies
+- All port interfaces include comprehensive godoc documentation
 
 ### Adding New Features
 1. Define business logic in `domain/` layer
@@ -173,6 +179,14 @@ protoc --proto_path=protos \
 3. Implement primary adapters for inbound requests
 4. Implement secondary adapters for outbound calls
 5. Wire dependencies in main application
+
+### Example: Notification Domain (Fully Refactored)
+The notification domain demonstrates complete hexagonal architecture:
+- **Domain Services**: `NotificationService` and `ReminderService` with pure business logic
+- **Secondary Ports**: `ConfigPort`, `EmailPort`, `LoggerPort`, `QueuePort`, `StoragePort`, `TemplatePort`, `URLBuilderPort`, `ValidationPort`
+- **Adapters**: SMTP email sender, RabbitMQ consumer/publisher, gRPC storage client, Viper config, Zerolog logger
+- **No hardcoded values**: All configuration externalized through `ConfigPort`
+- **Clean imports**: Domain layer has zero external dependencies
 
 ## Testing
 

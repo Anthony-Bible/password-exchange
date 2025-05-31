@@ -59,7 +59,7 @@ Password Exchange uses a **microservices architecture** with **hexagonal (ports 
 - **Web Service**: Gin-based HTTP server serving frontend and REST API
 - **Database Service**: gRPC service for all database operations
 - **Encryption Service**: gRPC service handling encryption/decryption
-- **Email Service**: RabbitMQ consumer for sending notification emails
+- **Email Service**: RabbitMQ consumer for sending notification emails (fully hexagonal)
 - **Slackbot**: Python Flask app with Slack integration
 
 ### Key Technologies
@@ -76,6 +76,13 @@ Password Exchange uses a **microservices architecture** with **hexagonal (ports 
 3. Email service sends notifications via RabbitMQ (if enabled)
 4. Recipient accesses unique URL with decryption key
 5. Slackbot provides same functionality within Slack workspaces
+
+### Hexagonal Architecture
+The codebase follows hexagonal architecture principles:
+- **Domain Layer**: Pure business logic with no external dependencies
+- **Ports**: Define interfaces for inbound/outbound interactions
+- **Adapters**: Implement infrastructure concerns (databases, messaging, APIs)
+- **Clean separation**: Business logic isolated from technical implementation details
 
 ---
 ### Extensions/Tools

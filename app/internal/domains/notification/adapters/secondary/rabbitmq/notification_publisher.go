@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	messagepb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// NotificationPublisher implements the NotificationPublisherPort using RabbitMQ
+// NotificationPublisher implements the NotificationPort using RabbitMQ
 // This is used by the reminder service to publish notification messages to the queue
 // instead of sending emails directly
 type NotificationPublisher struct {
@@ -57,7 +57,7 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 
 // PublishNotification publishes a notification message to RabbitMQ for processing
 // Used by the reminder service to queue reminder emails instead of sending them directly
-func (p *NotificationPublisher) PublishNotification(ctx context.Context, req domain.NotificationRequest) error {
+func (p *NotificationPublisher) PublishNotification(ctx context.Context, req contracts.NotificationRequest) error {
 	log.Debug().Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Msg("Publishing notification message")
 
 	// Declare the queue
