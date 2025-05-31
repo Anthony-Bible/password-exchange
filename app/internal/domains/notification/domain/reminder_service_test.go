@@ -723,9 +723,8 @@ func TestProcessMessageReminder_NegativeDaysOld_Error(t *testing.T) {
 // Test reminder interval logic - messages should only be sent after interval has passed
 func TestProcessReminders_ReminderInterval_RespectedCorrectly(t *testing.T) {
 	// Arrange
-	mockStorageRepo := &MockStorageRepository{}
-	mockNotificationPublisher := &MockNotificationPublisher{}
-	service := NewReminderService(mockStorageRepo, mockNotificationPublisher)
+	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
 	config := ReminderConfig{
