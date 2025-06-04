@@ -14,6 +14,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
+	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
@@ -37,32 +38,6 @@ const (
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
 
-// Simple config adapter for reminder command
-type configAdapter struct {
-	config config.PassConfig
-}
-
-func (c *configAdapter) GetEmailTemplate() string {
-	return "/templates/email_template.html"
-}
-
-func (c *configAdapter) GetServerEmail() string {
-	if c.config.EmailFrom != "" {
-		return c.config.EmailFrom
-	}
-	return "server@password.exchange"
-}
-
-func (c *configAdapter) GetServerName() string {
-	return "Password Exchange"
-}
-
-func (c *configAdapter) GetPasswordExchangeURL() string {
-	if c.config.ProdHost != "" {
-		return "https://" + c.config.ProdHost
-	}
-	return "https://password.exchange"
-}
 
 // Simple logger adapter
 type loggerAdapter struct {
@@ -208,7 +183,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		defer notificationPublisher.Close()
        
 		// Create port adapters
-		configPort := &configAdapter{config: cfg.PassConfig}
+		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
 		loggerPort := &loggerAdapter{logger: log.Logger}
 		validationPort := validator.NewValidationAdapter()
 

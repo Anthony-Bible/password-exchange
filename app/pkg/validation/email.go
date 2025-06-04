@@ -112,3 +112,52 @@ func SanitizeEmailForLogging(email string) string {
 func NormalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
+
+// SanitizeEmailHeaderValue sanitizes email header values to prevent CRLF injection
+// Removes carriage return (\r) and line feed (\n) characters to prevent header injection attacks
+func SanitizeEmailHeaderValue(value string) string {
+	// Remove all CR and LF characters to prevent CRLF injection
+	sanitized := strings.ReplaceAll(value, "\r", "")
+	sanitized = strings.ReplaceAll(sanitized, "\n", "")
+	
+	// Also remove other potentially dangerous control characters
+	sanitized = strings.ReplaceAll(sanitized, "\t", " ") // Replace tabs with spaces
+	sanitized = strings.ReplaceAll(sanitized, "\v", "")  // Remove vertical tabs
+	sanitized = strings.ReplaceAll(sanitized, "\f", "")  // Remove form feeds
+	sanitized = strings.ReplaceAll(sanitized, "\b", "")  // Remove backspace characters
+	
+	return sanitized
+}
+
+// ValidateEmailHeaderValue validates that an email header value is safe from injection
+func ValidateEmailHeaderValue(value string) error {
+	// Check for CRLF injection attempts
+	if strings.Contains(value, "\r") || strings.Contains(value, "\n") {
+		return fmt.Errorf("email header injection detected: CRLF characters found")
+	}
+	
+	// Check for other control characters that could be dangerous
+	controlChars := []rune{'\t', '\v', '\f', '\b'}
+	for _, char := range controlChars {
+		if strings.ContainsRune(value, char) {
+			return fmt.Errorf("email header injection detected: control character found")
+		}
+	}
+	
+	// Check for suspicious header-like patterns that could indicate injection
+	// Look for patterns that start with typical email headers followed by colon and space
+	// This is more restrictive to avoid false positives with legitimate content like "Company: Product"
+	suspiciousHeaders := []string{
+		"bcc:", "cc:", "to:", "from:", "reply-to:", "return-path:", 
+		"x-", "content-", "mime-", "message-id:", "date:", "received:",
+	}
+	
+	lowerValue := strings.ToLower(value)
+	for _, header := range suspiciousHeaders {
+		if strings.HasPrefix(lowerValue, header) {
+			return fmt.Errorf("email header injection detected: header-like pattern found")
+		}
+	}
+	
+	return nil
+}

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
+	"github.com/stretchr/testify/mock"
 )
 
 // Test CircuitBreaker CanExecute when closed
@@ -103,6 +103,24 @@ func TestRetryWithBackoff_SuccessFirstAttempt_NoRetry(t *testing.T) {
 func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
 	
+	// Set up mock expectations for warning log that will be called on first failure
+	mockLogEvent := &MockLogEvent{}
+	mockInfoEvent := &MockLogEvent{}
+	
+	// Warn call for first failure
+	mockLogger.On("Warn").Return(mockLogEvent)
+	mockLogEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockLogEvent)
+	mockLogEvent.On("Str", "operation", "test_operation").Return(mockLogEvent)
+	mockLogEvent.On("Int", "attempt", 1).Return(mockLogEvent)
+	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay).Return(mockLogEvent)
+	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return()
+	
+	// Info call for success after retry
+	mockLogger.On("Info").Return(mockInfoEvent)
+	mockInfoEvent.On("Str", "operation", "test_operation").Return(mockInfoEvent)
+	mockInfoEvent.On("Int", "successfulAttempt", 2).Return(mockInfoEvent)
+	mockInfoEvent.On("Msg", "Operation succeeded after retry").Return()
+	
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -124,6 +142,29 @@ func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
 	
+	// Set up mock expectations for warning logs that will be called on each failure
+	mockLogEvent := &MockLogEvent{}
+	mockErrorEvent := &MockLogEvent{}
+	
+	// Warn calls for each retry attempt
+	mockLogger.On("Warn").Return(mockLogEvent).Times(MaxRetries)
+	mockLogEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockLogEvent).Times(MaxRetries)
+	mockLogEvent.On("Str", "operation", "test_operation").Return(mockLogEvent).Times(MaxRetries)
+	mockLogEvent.On("Int", "attempt", 1).Return(mockLogEvent).Once()
+	mockLogEvent.On("Int", "attempt", 2).Return(mockLogEvent).Once()
+	mockLogEvent.On("Int", "attempt", 3).Return(mockLogEvent).Once()
+	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay).Return(mockLogEvent).Once()
+	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay*2).Return(mockLogEvent).Once()
+	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay*4).Return(mockLogEvent).Once()
+	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return().Times(MaxRetries)
+	
+	// Error call when max retries exceeded
+	mockLogger.On("Error").Return(mockErrorEvent)
+	mockErrorEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockErrorEvent)
+	mockErrorEvent.On("Str", "operation", "test_operation").Return(mockErrorEvent)
+	mockErrorEvent.On("Int", "maxRetries", MaxRetries).Return(mockErrorEvent)
+	mockErrorEvent.On("Msg", "Operation failed after all retry attempts").Return()
+	
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -142,6 +183,15 @@ func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 // Test retryWithBackoff context cancellation
 func TestRetryWithBackoff_ContextCancelled_ReturnsContextError(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
+	
+	// Set up mock expectations for warning log that will be called on first failure
+	mockLogEvent := &MockLogEvent{}
+	mockLogger.On("Warn").Return(mockLogEvent)
+	mockLogEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockLogEvent)
+	mockLogEvent.On("Str", "operation", "test_operation").Return(mockLogEvent)
+	mockLogEvent.On("Int", "attempt", 1).Return(mockLogEvent)
+	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay).Return(mockLogEvent)
+	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return()
 	
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
