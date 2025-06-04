@@ -14,6 +14,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
+	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
@@ -37,56 +38,6 @@ const (
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
 
-// Simple config adapter for reminder command
-type configAdapter struct {
-	config config.PassConfig
-}
-
-func (c *configAdapter) GetEmailTemplate() string {
-	return "/templates/email_template.html"
-}
-
-func (c *configAdapter) GetServerEmail() string {
-	if c.config.EmailFrom != "" {
-		return c.config.EmailFrom
-	}
-	return "server@password.exchange"
-}
-
-func (c *configAdapter) GetServerName() string {
-	return "Password Exchange"
-}
-
-func (c *configAdapter) GetPasswordExchangeURL() string {
-	if c.config.ProdHost != "" {
-		return "https://" + c.config.ProdHost
-	}
-	return "https://password.exchange"
-}
-
-func (c *configAdapter) GetInitialNotificationSubject() string {
-	return "Encrypted Message from Password Exchange from %s"
-}
-
-func (c *configAdapter) GetReminderNotificationSubject() string {
-	return "Reminder: You have an unviewed encrypted message (Reminder #%d)"
-}
-
-func (c *configAdapter) GetInitialNotificationBodyTemplate() string {
-	return "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about"
-}
-
-func (c *configAdapter) GetReminderNotificationBodyTemplate() string {
-	return ""
-}
-
-func (c *configAdapter) GetReminderEmailTemplate() string {
-	return "/templates/reminder_email_template.html"
-}
-
-func (c *configAdapter) GetReminderMessageContent() string {
-	return "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message."
-}
 
 // Simple logger adapter
 type loggerAdapter struct {
@@ -232,7 +183,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		defer notificationPublisher.Close()
        
 		// Create port adapters
-		configPort := &configAdapter{config: cfg.PassConfig}
+		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
 		loggerPort := &loggerAdapter{logger: log.Logger}
 		validationPort := validator.NewValidationAdapter()
 

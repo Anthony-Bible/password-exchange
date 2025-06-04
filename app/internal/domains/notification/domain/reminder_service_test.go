@@ -28,6 +28,22 @@ func createTestMocks() (*MockStorageRepository, *MockNotificationPublisher, *Moc
 	mockConfig.On("GetReminderMessageContent").Return("You have an unviewed encrypted message. Please check it.")
 	mockConfig.On("GetInitialNotificationBodyTemplate").Return("You have received an encrypted message from {{.SenderName}}")
 	
+	// Set up lenient mock expectations for logger - these will match any calls
+	mockLogEvent := &MockLogEvent{}
+	mockLogger.On("Debug").Return(mockLogEvent).Maybe()
+	mockLogger.On("Info").Return(mockLogEvent).Maybe()
+	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
+	mockLogger.On("Error").Return(mockLogEvent).Maybe()
+	
+	// Set up lenient mock expectations for log event methods
+	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Int", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Bool", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
+	
 	// No default storage expectations - set up as needed in individual tests
 	
 	// Set up default mock expectations for validation (can be overridden in specific tests)

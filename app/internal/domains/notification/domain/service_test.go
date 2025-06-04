@@ -147,25 +147,64 @@ func (m *MockConfigPort) GetReminderMessageContent() string {
 	return args.String(0)
 }
 
+func (m *MockConfigPort) ValidatePasswordExchangeURL() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockConfigPort) ValidateServerEmail() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockConfigPort) ValidateTemplateFormats() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 // MockLoggerPort mocks the LoggerPort interface
 type MockLoggerPort struct {
 	mock.Mock
 }
 
+// setupLenientLoggerMock sets up lenient expectations for a logger mock that will match any log calls
+func setupLenientLoggerMock(mockLogger *MockLoggerPort) *MockLogEvent {
+	mockLogEvent := &MockLogEvent{}
+	mockLogger.On("Debug").Return(mockLogEvent).Maybe()
+	mockLogger.On("Info").Return(mockLogEvent).Maybe()
+	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
+	mockLogger.On("Error").Return(mockLogEvent).Maybe()
+	
+	// Set up lenient mock expectations for log event methods
+	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Int", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Bool", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
+	
+	return mockLogEvent
+}
+
 func (m *MockLoggerPort) Debug() LogEvent {
-	return &MockLogEvent{}
+	args := m.Called()
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLoggerPort) Info() LogEvent {
-	return &MockLogEvent{}
+	args := m.Called()
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLoggerPort) Warn() LogEvent {
-	return &MockLogEvent{}
+	args := m.Called()
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLoggerPort) Error() LogEvent {
-	return &MockLogEvent{}
+	args := m.Called()
+	return args.Get(0).(LogEvent)
 }
 
 // MockLogEvent mocks the LogEvent interface
@@ -174,31 +213,37 @@ type MockLogEvent struct {
 }
 
 func (m *MockLogEvent) Err(err error) LogEvent {
-	return m
+	args := m.Called(err)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Str(key, value string) LogEvent {
-	return m
+	args := m.Called(key, value)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Int(key string, value int) LogEvent {
-	return m
+	args := m.Called(key, value)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Bool(key string, value bool) LogEvent {
-	return m
+	args := m.Called(key, value)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Dur(key string, value time.Duration) LogEvent {
-	return m
+	args := m.Called(key, value)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Float64(key string, value float64) LogEvent {
-	return m
+	args := m.Called(key, value)
+	return args.Get(0).(LogEvent)
 }
 
 func (m *MockLogEvent) Msg(msg string) {
-	// No-op for tests
+	m.Called(msg)
 }
 
 // MockValidationPort mocks the ValidationPort interface
@@ -259,6 +304,22 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
+	
+	// Set up lenient mock expectations for logger
+	mockLogEvent := &MockLogEvent{}
+	mockLogger.On("Debug").Return(mockLogEvent).Maybe()
+	mockLogger.On("Info").Return(mockLogEvent).Maybe()
+	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
+	mockLogger.On("Error").Return(mockLogEvent).Maybe()
+	
+	// Set up lenient mock expectations for log event methods
+	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Int", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Bool", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
+	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
 
 	service := NewNotificationService(
 		mockEmailSender,
@@ -307,6 +368,10 @@ func TestSendNotification_InvalidRequest_ReturnsError(t *testing.T) {
 	mockQueueConsumer := &MockQueueConsumer{}
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
+	mockLogger := &MockLoggerPort{}
+	
+	// Set up lenient logger mock
+	setupLenientLoggerMock(mockLogger)
 
 	service := NewNotificationService(
 		mockEmailSender,
@@ -314,7 +379,7 @@ func TestSendNotification_InvalidRequest_ReturnsError(t *testing.T) {
 		mockTemplateRenderer,
 		mockStorageRepo,
 		&MockNotificationPublisher{},
-		&MockLoggerPort{},
+		mockLogger,
 		&MockValidationPort{},
 		&MockConfigPort{},
 	)
@@ -347,6 +412,9 @@ func TestSendNotification_EmailSendingFails_ReturnsError(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
+	
+	// Set up lenient logger mock
+	setupLenientLoggerMock(mockLogger)
 
 	service := NewNotificationService(
 		mockEmailSender,
@@ -524,6 +592,9 @@ func TestHandleMessage_Success(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
+	
+	// Set up lenient logger mock
+	setupLenientLoggerMock(mockLogger)
 
 	service := NewNotificationService(
 		mockEmailSender,
@@ -583,6 +654,9 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
+	
+	// Set up lenient logger mock
+	setupLenientLoggerMock(mockLogger)
 
 	service := NewNotificationService(
 		mockEmailSender,

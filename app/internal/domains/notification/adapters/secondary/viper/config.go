@@ -1,6 +1,7 @@
 package viper
 
 import (
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validation"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 )
 
@@ -16,6 +17,7 @@ type ViperConfigAdapter struct {
 	reminderNotificationBodyTemplate  string
 	reminderEmailTemplate             string
 	reminderMessageContent            string
+	validator                         *validation.ConfigValidator
 }
 
 // NewViperConfigAdapter creates a new configuration adapter with default values
@@ -31,6 +33,7 @@ func NewViperConfigAdapter() secondary.ConfigPort {
 		reminderNotificationBodyTemplate:  "",
 		reminderEmailTemplate:             "/templates/reminder_email_template.html",
 		reminderMessageContent:            "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
+		validator:                         validation.NewConfigValidator(),
 	}
 }
 
@@ -47,6 +50,7 @@ func NewViperConfigAdapterWithValues(emailTemplate, serverEmail, serverName, pas
 		reminderNotificationBodyTemplate:  "",
 		reminderEmailTemplate:             "/templates/reminder_email_template.html",
 		reminderMessageContent:            "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
+		validator:                         validation.NewConfigValidator(),
 	}
 }
 
@@ -88,4 +92,25 @@ func (v *ViperConfigAdapter) GetReminderEmailTemplate() string {
 
 func (v *ViperConfigAdapter) GetReminderMessageContent() string {
 	return v.reminderMessageContent
+}
+
+// Validation methods
+
+// ValidatePasswordExchangeURL validates the password exchange URL configuration.
+func (v *ViperConfigAdapter) ValidatePasswordExchangeURL() error {
+	return v.validator.ValidatePasswordExchangeURL(v.passwordExchangeURL)
+}
+
+// ValidateServerEmail validates the server email address configuration.
+func (v *ViperConfigAdapter) ValidateServerEmail() error {
+	return v.validator.ValidateServerEmail(v.serverEmail)
+}
+
+// ValidateTemplateFormats validates all template strings for proper formatting.
+func (v *ViperConfigAdapter) ValidateTemplateFormats() error {
+	return v.validator.ValidateTemplateFormats(
+		v.initialNotificationSubject,
+		v.reminderNotificationSubject,
+		v.initialNotificationBodyTemplate,
+	)
 }
