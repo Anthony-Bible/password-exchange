@@ -286,7 +286,7 @@ func (s *SMTPSender) buildSafeEmailHeaders(fromName, fromEmail, to, subject stri
 	safeSubject := validation.SanitizeEmailHeaderValue(subject)
 
 	// Construct email headers with proper CRLF line endings
-	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
+	mimeHeaders := "MIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n"
 	emailHeaders := fmt.Sprintf("From: %s <%s>\r\nTo: %s\r\nSubject: %s\r\n%s",
 		safeFromName, safeFromEmail, safeTo, safeSubject, mimeHeaders)
 
