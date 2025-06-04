@@ -113,7 +113,7 @@ func (s *NotificationService) HandleMessage(ctx context.Context, msg QueueMessag
 
 // createNotificationRequest converts a queue message to a notification request
 func (s *NotificationService) createNotificationRequest(msg QueueMessage) NotificationRequest {
-	subject := fmt.Sprintf("Encrypted Message from Password Exchange from %s", msg.FirstName)
+	subject := fmt.Sprintf(s.config.GetInitialNotificationSubject(), msg.FirstName)
 
 	return NotificationRequest{
 		To:             msg.OtherEmail,

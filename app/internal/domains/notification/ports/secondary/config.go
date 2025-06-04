@@ -34,4 +34,47 @@ type ConfigPort interface {
 	// Returns:
 	//   - The base URL of the service (e.g., "https://password.exchange")
 	GetPasswordExchangeURL() string
+
+	// GetInitialNotificationSubject returns the subject template for initial notification emails.
+	// The template may contain format placeholders for dynamic values like sender name.
+	//
+	// Returns:
+	//   - The subject template string (e.g., "Encrypted Message from Password Exchange from %s")
+	GetInitialNotificationSubject() string
+
+	// GetReminderNotificationSubject returns the subject template for reminder notification emails.
+	// The template may contain format placeholders for dynamic values like reminder count.
+	//
+	// Returns:
+	//   - The subject template string (e.g., "Reminder: You have an unviewed encrypted message (Reminder #%d)")
+	GetReminderNotificationSubject() string
+
+	// GetInitialNotificationBodyTemplate returns the body template for initial notification emails.
+	// This can be either a file path to a template file or an inline template string.
+	// The template should support placeholders for recipient name, sender name, and URLs.
+	//
+	// Returns:
+	//   - The body template string or file path
+	GetInitialNotificationBodyTemplate() string
+
+	// GetReminderNotificationBodyTemplate returns the body template for reminder notification emails.
+	// This can be either a file path to a template file or an inline template string.
+	//
+	// Returns:
+	//   - The body template string or file path
+	GetReminderNotificationBodyTemplate() string
+
+	// GetReminderEmailTemplate returns the path to the reminder email template file.
+	// This is specifically for HTML templates used in reminder emails.
+	//
+	// Returns:
+	//   - The file path to the reminder email template (e.g., "/templates/reminder_email_template.html")
+	GetReminderEmailTemplate() string
+
+	// GetReminderMessageContent returns the content message used in reminder emails.
+	// This message explains why the decrypt link is not included in reminders.
+	//
+	// Returns:
+	//   - The reminder message content string
+	GetReminderMessageContent() string
 }

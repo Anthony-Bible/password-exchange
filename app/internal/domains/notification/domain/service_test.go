@@ -117,6 +117,36 @@ func (m *MockConfigPort) GetPasswordExchangeURL() string {
 	return args.String(0)
 }
 
+func (m *MockConfigPort) GetInitialNotificationSubject() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetReminderNotificationSubject() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetInitialNotificationBodyTemplate() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetReminderNotificationBodyTemplate() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetReminderEmailTemplate() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfigPort) GetReminderMessageContent() string {
+	args := m.Called()
+	return args.String(0)
+}
+
 // MockLoggerPort mocks the LoggerPort interface
 type MockLoggerPort struct {
 	mock.Mock
@@ -454,6 +484,7 @@ func TestCreateNotificationRequest(t *testing.T) {
 	mockConfig := &MockConfigPort{}
 	mockConfig.On("GetServerEmail").Return("server@password.exchange")
 	mockConfig.On("GetServerName").Return("Password Exchange")
+	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Password Exchange from %s")
 	
 	service := &NotificationService{
 		config: mockConfig,
@@ -529,6 +560,7 @@ func TestHandleMessage_Success(t *testing.T) {
 	// Set up config mock expectations
 	mockConfig.On("GetServerEmail").Return("server@example.com")
 	mockConfig.On("GetServerName").Return("Test Server")
+	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Test Server from %s")
 	
 	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
 
@@ -582,6 +614,7 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 	// Set up config mock expectations
 	mockConfig.On("GetServerEmail").Return("server@example.com")
 	mockConfig.On("GetServerName").Return("Test Server")
+	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Test Server from %s")
 	
 	sendError := errors.New("email sending failed")
 	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil, sendError)

@@ -261,9 +261,9 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		To:            reminderRequest.RecipientEmail,
 		From:          r.config.GetServerEmail(),
 		FromName:      r.config.GetServerName(),
-		Subject:       fmt.Sprintf("Reminder: You have an unviewed encrypted message (Reminder #%d)", reminderRequest.ReminderNumber),
+		Subject:       fmt.Sprintf(r.config.GetReminderNotificationSubject(), reminderRequest.ReminderNumber),
 		MessageURL:    reminderRequest.DecryptionURL,
-		MessageContent: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
+		MessageContent: r.config.GetReminderMessageContent(),
 	}
 
 	if r.notificationPublisher != nil {

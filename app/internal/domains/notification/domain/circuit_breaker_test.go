@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 )
 
 // Test CircuitBreaker CanExecute when closed

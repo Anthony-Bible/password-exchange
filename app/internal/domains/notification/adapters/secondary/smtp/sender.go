@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/smtp"
+	"os"
+	"strings"
 	"text/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
@@ -35,6 +37,21 @@ func NewSMTPSender(
 	}
 }
 
+// parseTemplate parses a template that can be either a file path or inline template content
+func (s *SMTPSender) parseTemplate(templateConfig string) (*template.Template, error) {
+	// Check if templateConfig starts with '/' or contains common path separators - likely a file path
+	if strings.HasPrefix(templateConfig, "/") || strings.Contains(templateConfig, "/") {
+		// Check if file exists
+		if _, err := os.Stat(templateConfig); err == nil {
+			// It's a file path and file exists
+			return template.ParseFiles(templateConfig)
+		}
+	}
+	
+	// Treat as inline template content
+	return template.New("email").Parse(templateConfig)
+}
+
 // SendEmail sends an email notification via SMTP
 func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.NotificationRequest) (*contracts.NotificationResponse, error) {
 	s.logger.Debug().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("subject", req.Subject).Msg("Sending email via SMTP")
@@ -42,9 +59,9 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	// Create SMTP authentication
 	auth := smtp.PlainAuth("", s.emailConn.User, s.emailConn.Password, s.emailConn.Host)
 	
-	// Parse email template using injected config
-	templatePath := s.config.GetEmailTemplate()
-	tmpl, err := template.ParseFiles(templatePath)
+	// Parse email template using injected config (supports both file paths and inline templates)
+	templateConfig := s.config.GetEmailTemplate()
+	tmpl, err := s.parseTemplate(templateConfig)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to parse email template")
 		return nil, fmt.Errorf("%w: %v", domain.ErrTemplateNotFound, err)
@@ -53,7 +70,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	// Prepare template data
 	passwordExchangeURL := s.config.GetPasswordExchangeURL()
 	templateData := contracts.NotificationTemplateData{
-		Body: fmt.Sprintf("Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about", 
+		Body: fmt.Sprintf(s.config.GetInitialNotificationBodyTemplate(), 
 			req.RecipientName, req.SenderName, passwordExchangeURL, passwordExchangeURL),
 		Message: req.MessageContent,
 	}

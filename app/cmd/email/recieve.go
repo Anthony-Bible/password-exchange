@@ -46,6 +46,30 @@ func (c *configAdapter) GetPasswordExchangeURL() string {
 	return "https://password.exchange"
 }
 
+func (c *configAdapter) GetInitialNotificationSubject() string {
+	return "Encrypted Message from Password Exchange from %s"
+}
+
+func (c *configAdapter) GetReminderNotificationSubject() string {
+	return "Reminder: You have an unviewed encrypted message (Reminder #%d)"
+}
+
+func (c *configAdapter) GetInitialNotificationBodyTemplate() string {
+	return "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about"
+}
+
+func (c *configAdapter) GetReminderNotificationBodyTemplate() string {
+	return ""
+}
+
+func (c *configAdapter) GetReminderEmailTemplate() string {
+	return "/templates/reminder_email_template.html"
+}
+
+func (c *configAdapter) GetReminderMessageContent() string {
+	return "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message."
+}
+
 // Simple logger adapter using existing zerolog
 type loggerAdapter struct {
 	logger zerolog.Logger

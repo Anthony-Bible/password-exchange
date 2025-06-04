@@ -23,6 +23,10 @@ func createTestMocks() (*MockStorageRepository, *MockNotificationPublisher, *Moc
 	mockConfig.On("GetServerName").Return("Test Server")
 	mockConfig.On("GetEmailTemplate").Return("/templates/email_template.html")
 	mockConfig.On("GetPasswordExchangeURL").Return("https://test.password.exchange")
+	mockConfig.On("GetReminderNotificationSubject").Return("Reminder %d: You have an unviewed encrypted message")
+	mockConfig.On("GetInitialNotificationSubject").Return("You have an encrypted message")
+	mockConfig.On("GetReminderMessageContent").Return("You have an unviewed encrypted message. Please check it.")
+	mockConfig.On("GetInitialNotificationBodyTemplate").Return("You have received an encrypted message from {{.SenderName}}")
 	
 	// No default storage expectations - set up as needed in individual tests
 	
