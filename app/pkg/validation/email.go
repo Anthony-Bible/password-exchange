@@ -124,6 +124,7 @@ func SanitizeEmailHeaderValue(value string) string {
 	sanitized = strings.ReplaceAll(sanitized, "\t", " ") // Replace tabs with spaces
 	sanitized = strings.ReplaceAll(sanitized, "\v", "")  // Remove vertical tabs
 	sanitized = strings.ReplaceAll(sanitized, "\f", "")  // Remove form feeds
+	sanitized = strings.ReplaceAll(sanitized, "\b", "")  // Remove backspace characters
 	
 	return sanitized
 }
