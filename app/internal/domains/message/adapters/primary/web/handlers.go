@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
@@ -57,7 +58,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		Passphrase:       c.PostForm("other_lastname"),
 		AdditionalInfo:   c.PostForm("other_information"),
 		Captcha:          c.PostForm("h-captcha-response"),
-		SendNotification: strings.ToLower(c.PostForm("color")) == "blue" && c.PostForm("skipEmail") == "",
+		SendNotification: webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")) && c.PostForm("skipEmail") == "",
 		SkipEmail:        c.PostForm("skipEmail") != "",
 		MaxViewCount:     maxViewCount,
 	}
@@ -217,4 +218,18 @@ func (h *MessageHandler) render404(c *gin.Context) {
 	c.HTML(http.StatusNotFound, "404.html", gin.H{
 		"Title": "Not Found - Password Exchange",
 	})
+}
+
+// webAntiSpamCheck validates antispam answer for web form (converts string questionId to int)
+func webAntiSpamCheck(questionIDStr, answer string) bool {
+	if questionIDStr == "" || answer == "" {
+		return false
+	}
+	
+	questionID, err := strconv.Atoi(questionIDStr)
+	if err != nil {
+		return false
+	}
+	
+	return middleware.IsValidAntiSpamAnswer(&questionID, answer)
 }

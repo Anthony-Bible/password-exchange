@@ -80,6 +80,8 @@ definitions:
       passphrase:
         maxLength: 500
         type: string
+      questionId:
+        type: integer
       recipient:
         $ref: '#/definitions/models.Recipient'
       sendNotification:

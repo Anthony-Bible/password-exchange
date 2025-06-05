@@ -13,6 +13,7 @@ type MessageSubmissionRequest struct {
 	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
 	SendNotification bool       `json:"sendNotification"`
 	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
+	QuestionID       *int       `json:"questionId,omitempty"`
 	MaxViewCount     int        `json:"maxViewCount,omitempty" validate:"min=0,max=100"`
 }
 
