@@ -261,7 +261,7 @@
             </div>
 
             <!-- Cloudflare Turnstile -->
-            <div class="section-group">
+            <div id="turnstile-section" class="section-group">
                 <h5 class="section-title">Security Verification</h5>
                 <div class="row">
                     <div class="col-12">
@@ -362,7 +362,8 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
     
     // Elements that should be hidden when email is disabled
-    const emailDependentElements = [senderSection, recipientSection, verificationSection];
+    const turnstileSection = document.getElementById('turnstile-section');
+    const emailDependentElements = [senderSection, recipientSection, verificationSection, turnstileSection];
     
     // Initialize tooltips
     const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -395,6 +396,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 field.classList.remove('is-invalid');
             }
         });
+        
+        // Reset Turnstile when email is disabled
+        if (!emailEnabled) {
+            turnstileToken = null;
+            document.getElementById('turnstile-error').style.display = 'none';
+            if (window.turnstile) {
+                window.turnstile.reset();
+            }
+        }
         
         // Visual indicators are now handled by showing/hiding entire sections
     }
@@ -447,8 +457,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Validate Turnstile token
-        if (!turnstileToken) {
+        // Validate Turnstile token (only required when email notifications are enabled)
+        const emailEnabled = emailToggle.checked;
+        if (emailEnabled && !turnstileToken) {
             document.getElementById('turnstile-error').textContent = 'Please complete the security verification.';
             document.getElementById('turnstile-error').style.display = 'block';
             isValid = false;
