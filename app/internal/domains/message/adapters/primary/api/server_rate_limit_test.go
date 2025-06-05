@@ -32,11 +32,14 @@ func TestServerRateLimiting(t *testing.T) {
 
 		// Set up mock to expect up to 10 calls (the rate limit) with flexible matching
 		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
-			return req.Content == "test message" && req.SendNotification == false
+			return req.Content == "test message" && req.SendNotification == false && req.RecipientName == "Jane Smith"
 		})).Return(mockResponse, nil).Times(10)
 
 		requestBody := map[string]interface{}{
 			"content":          "test message",
+			"recipient": map[string]interface{}{
+				"name": "Jane Smith",
+			},
 			"sendNotification": false,
 		}
 		bodyBytes, _ := json.Marshal(requestBody)

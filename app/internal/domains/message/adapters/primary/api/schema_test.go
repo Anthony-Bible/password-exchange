@@ -103,6 +103,9 @@ func TestMessageSubmissionRequestSchema(t *testing.T) {
 			name: "minimal valid request",
 			request: &models.MessageSubmissionRequest{
 				Content:          "Test message",
+				Recipient: &models.Recipient{
+					Name:  "Jane Smith",
+				},
 				SendNotification: false,
 			},
 			valid: true,
