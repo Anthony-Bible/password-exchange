@@ -36,6 +36,7 @@ func TestValidateMessageSubmission(t *testing.T) {
 				},
 				SendNotification: true,
 				AntiSpamAnswer:   "blue",
+				QuestionID:       intPtr(0),
 			},
 			expectErrors: false,
 		},
@@ -253,6 +254,7 @@ func TestValidateMessageSubmission(t *testing.T) {
 				},
 				SendNotification: true,
 				AntiSpamAnswer:   "BLUE",
+				QuestionID:       intPtr(0),
 			},
 			expectErrors: false,
 		},
@@ -270,6 +272,7 @@ func TestValidateMessageSubmission(t *testing.T) {
 				},
 				SendNotification: true,
 				AntiSpamAnswer:   "  blue  ",
+				QuestionID:       intPtr(0),
 			},
 			expectErrors: false,
 		},
@@ -401,19 +404,49 @@ func TestValidateStruct(t *testing.T) {
 
 func TestAntiSpamValidation(t *testing.T) {
 	tests := []struct {
-		name     string
-		answer   string
-		expected bool
+		name       string
+		questionId *int
+		answer     string
+		expected   bool
 	}{
-		{"correct answer lowercase", "blue", true},
-		{"correct answer uppercase", "BLUE", true},
-		{"correct answer mixed case", "Blue", true},
-		{"correct answer with whitespace", "  blue  ", true},
-		{"wrong answer", "red", false},
-		{"wrong answer", "green", false},
-		{"empty answer", "", false},
-		{"partial answer", "blu", false},
-		{"answer with extra text", "blue color", false},
+		// Question 0: What color is the sky?
+		{"question 0 correct answer lowercase", intPtr(0), "blue", true},
+		{"question 0 correct answer uppercase", intPtr(0), "BLUE", true},
+		{"question 0 correct answer mixed case", intPtr(0), "Blue", true},
+		{"question 0 correct answer with whitespace", intPtr(0), "  blue  ", true},
+		{"question 0 wrong answer", intPtr(0), "red", false},
+		{"question 0 wrong answer green", intPtr(0), "green", false},
+		
+		// Question 1: What is 2 + 2?
+		{"question 1 correct numeric", intPtr(1), "4", true},
+		{"question 1 correct word", intPtr(1), "four", true},
+		{"question 1 wrong answer", intPtr(1), "5", false},
+		
+		// Question 2: How many days are in a week?
+		{"question 2 correct numeric", intPtr(2), "7", true},
+		{"question 2 correct word", intPtr(2), "seven", true},
+		{"question 2 wrong answer", intPtr(2), "6", false},
+		
+		// Question 3: What animal says meow?
+		{"question 3 correct singular", intPtr(3), "cat", true},
+		{"question 3 correct plural", intPtr(3), "cats", true},
+		{"question 3 wrong answer", intPtr(3), "dog", false},
+		
+		// Question 4: What do you use to write?
+		{"question 4 correct", intPtr(4), "pen", true},
+		{"question 4 wrong answer", intPtr(4), "car", false},
+		
+		// Question 5: How many legs does a dog have?
+		{"question 5 correct numeric", intPtr(5), "4", true},
+		{"question 5 correct word", intPtr(5), "four", true},
+		{"question 5 wrong answer", intPtr(5), "3", false},
+		
+		// Edge cases
+		{"empty answer", intPtr(0), "", false},
+		{"partial answer", intPtr(0), "blu", false},
+		{"answer with extra text", intPtr(0), "blue color", false},
+		{"invalid question id", intPtr(99), "blue", false},
+		{"nil question id defaults to 0", nil, "blue", true},
 	}
 
 	for _, tt := range tests {
@@ -431,6 +464,7 @@ func TestAntiSpamValidation(t *testing.T) {
 				},
 				SendNotification: true,
 				AntiSpamAnswer:   tt.answer,
+				QuestionID:       tt.questionId,
 			}
 
 			errors := ValidateMessageSubmission(req)
@@ -449,4 +483,9 @@ func TestAntiSpamValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Helper function to create int pointer
+func intPtr(i int) *int {
+	return &i
 }

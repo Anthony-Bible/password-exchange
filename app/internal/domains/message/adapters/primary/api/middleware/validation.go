@@ -72,12 +72,6 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		}
 	}
 	
-	// Always require recipient name
-	if req.Recipient == nil {
-		errors["recipient"] = "Recipient information is required"
-	} else if req.Recipient.Name == "" {
-		errors["recipient.name"] = "Recipient name is required"
-	}
 	
 	// Conditional validation for notifications
 	if req.SendNotification {
@@ -99,6 +93,9 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		if req.Recipient == nil {
 			errors["recipient"] = "Recipient information is required when notifications are enabled"
 		} else {
+			if req.Recipient.Name == "" {
+				errors["recipient.name"] = "Recipient name is required when notifications are enabled"
+			}
 			if req.Recipient.Email == "" {
 				errors["recipient.email"] = "Recipient email is required when notifications are enabled"
 			} else if recipientErrors := ValidateStruct(req.Recipient); recipientErrors != nil {
@@ -111,7 +108,7 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		// Anti-spam validation
 		if req.AntiSpamAnswer == "" {
 			errors["antiSpamAnswer"] = "Anti-spam answer is required when notifications are enabled"
-		} else if strings.ToLower(strings.TrimSpace(req.AntiSpamAnswer)) != "blue" {
+		} else if !IsValidAntiSpamAnswer(req.QuestionID, req.AntiSpamAnswer) {
 			errors["antiSpamAnswer"] = "Invalid anti-spam answer"
 		}
 	}
@@ -193,4 +190,37 @@ func getValidationErrorMessage(fe validator.FieldError) string {
 	default:
 		return fmt.Sprintf("Validation failed for %s", fe.Field())
 	}
+}
+
+// IsValidAntiSpamAnswer validates the anti-spam answer based on question ID
+func IsValidAntiSpamAnswer(questionID *int, answer string) bool {
+	if questionID == nil {
+		// Default to question 0 if not provided (backward compatibility)
+		defaultID := 0
+		questionID = &defaultID
+	}
+	
+	// Define the question-answer mapping
+	validAnswers := map[int][]string{
+		0: {"blue"},                    // What color is the sky?
+		1: {"4", "four"},               // What is 2 + 2?
+		2: {"7", "seven"},              // How many days are in a week?
+		3: {"cat", "cats"},             // What animal says meow?
+		4: {"pen"},                     // What do you use to write?
+		5: {"4", "four"},               // How many legs does a dog have?
+	}
+	
+	answers, exists := validAnswers[*questionID]
+	if !exists {
+		return false
+	}
+	
+	userAnswer := strings.ToLower(strings.TrimSpace(answer))
+	for _, validAnswer := range answers {
+		if userAnswer == validAnswer {
+			return true
+		}
+	}
+	
+	return false
 }

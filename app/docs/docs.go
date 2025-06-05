@@ -364,6 +364,9 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 500
                 },
+                "questionId": {
+                    "type": "integer"
+                },
                 "recipient": {
                     "$ref": "#/definitions/models.Recipient"
                 },

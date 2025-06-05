@@ -218,11 +218,11 @@
                                    id="color"
                                    class="form-control" 
                                    name="color" 
-                                   pattern="[ ]*(red|blue|orange|green)[ ]*" 
                                    aria-describedby="colorHelp colorError">
                             <div id="colorHelp" class="form-text">
-                                What color is the sky? (blue, green, red, or orange)
+                                <span id="antispam-question"></span>
                             </div>
+                            <input type="hidden" id="question-id" name="questionId" value="">
                             <div id="colorError" class="invalid-feedback"></div>
                         </div>
                     </div>
@@ -287,6 +287,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    
+    // Antispam question rotation system (questions only, answers validated server-side)
+    const antispamQuestions = [
+        "What color is the sky? (blue, green, red, or orange)",
+        "What is 2 + 2?",
+        "How many days are in a week?", 
+        "What animal says meow?",
+        "What do you use to write? (pen, car, house, or tree)",
+        "How many legs does a dog have?"
+    ];
+    
+    // Select question based on current hour (rotates every hour)
+    const now = new Date();
+    const questionIndex = now.getHours() % antispamQuestions.length;
+    
+    // Set the question and question ID
+    document.getElementById('antispam-question').textContent = antispamQuestions[questionIndex];
+    document.getElementById('question-id').value = questionIndex;
     const form = document.getElementById('password-form');
     const emailToggle = document.getElementById('enableEmail');
     const senderSection = document.getElementById('sender-section');
@@ -435,6 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     email: document.getElementById('other_email').value.trim()
                 };
                 payload.antiSpamAnswer = document.getElementById('color').value.trim();
+                payload.questionId = parseInt(document.getElementById('question-id').value);
             }
             
             // Make API call
