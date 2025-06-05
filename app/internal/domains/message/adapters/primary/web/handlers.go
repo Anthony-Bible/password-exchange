@@ -58,8 +58,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		Passphrase:       c.PostForm("other_lastname"),
 		AdditionalInfo:   c.PostForm("other_information"),
 		Captcha:          c.PostForm("h-captcha-response"),
-		SendNotification: webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")) && c.PostForm("skipEmail") == "",
-		SkipEmail:        c.PostForm("skipEmail") != "",
+		SendNotification: c.PostForm("enableEmail") != "" && webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")),
 		MaxViewCount:     maxViewCount,
 	}
 

@@ -16,7 +16,6 @@ type MessageSubmissionRequest struct {
 	Captcha          string
 	TurnstileToken   string
 	SendNotification bool
-	SkipEmail        bool
 	MaxViewCount     int
 }
 

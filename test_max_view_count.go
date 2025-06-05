@@ -121,7 +121,6 @@ func TestMaxViewCount_ConfigDefault(t *testing.T) {
 		Content:     "test content",
 		SenderName:  "Test User",
 		SenderEmail: "test@example.com",
-		SkipEmail:   true,
 		MaxViewCount: 0, // Not set - should use config default
 	}
 
@@ -164,7 +163,6 @@ func TestMaxViewCount_CustomValue(t *testing.T) {
 		Content:      "test content",
 		SenderName:   "Test User", 
 		SenderEmail:  "test@example.com",
-		SkipEmail:    true,
 		MaxViewCount: 25, // Custom value - should override config default
 	}
 
@@ -205,7 +203,6 @@ func TestMaxViewCount_ValidationFailure(t *testing.T) {
 				Content:      "test content",
 				SenderName:   "Test User",
 				SenderEmail:  "test@example.com", 
-				SkipEmail:    true,
 				MaxViewCount: tc.maxViewCount,
 			}
 
