@@ -58,6 +58,9 @@ func TestEmailNotificationFlow(t *testing.T) {
 			name: "successful message submission without email notification",
 			request: &models.MessageSubmissionRequest{
 				Content:          "Test secret message",
+				Recipient: &models.Recipient{
+					Name:  "Jane Smith",
+				},
 				SendNotification: false,
 			},
 			mockServiceResponse: &domain.MessageSubmissionResponse{
@@ -397,7 +400,7 @@ func TestConditionalValidationFlow(t *testing.T) {
 			name:             "notification disabled - minimal data required",
 			sendNotification: false,
 			includeSender:    false,
-			includeRecipient: false,
+			includeRecipient: true, // Recipient name now always required
 			includeAntiSpam:  false,
 			expectSuccess:    true,
 		},
@@ -438,6 +441,14 @@ func TestConditionalValidationFlow(t *testing.T) {
 			sendNotification: true,
 			includeSender:    true,
 			includeRecipient: true,
+			includeAntiSpam:  false,
+			expectSuccess:    false,
+		},
+		{
+			name:             "missing recipient - always required",
+			sendNotification: false,
+			includeSender:    false,
+			includeRecipient: false,
 			includeAntiSpam:  false,
 			expectSuccess:    false,
 		},

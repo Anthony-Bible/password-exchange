@@ -72,6 +72,13 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		}
 	}
 	
+	// Always require recipient name
+	if req.Recipient == nil {
+		errors["recipient"] = "Recipient information is required"
+	} else if req.Recipient.Name == "" {
+		errors["recipient.name"] = "Recipient name is required"
+	}
+	
 	// Conditional validation for notifications
 	if req.SendNotification {
 		if req.Sender == nil {
@@ -92,9 +99,6 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		if req.Recipient == nil {
 			errors["recipient"] = "Recipient information is required when notifications are enabled"
 		} else {
-			if req.Recipient.Name == "" {
-				errors["recipient.name"] = "Recipient name is required when notifications are enabled"
-			}
 			if req.Recipient.Email == "" {
 				errors["recipient.email"] = "Recipient email is required when notifications are enabled"
 			} else if recipientErrors := ValidateStruct(req.Recipient); recipientErrors != nil {

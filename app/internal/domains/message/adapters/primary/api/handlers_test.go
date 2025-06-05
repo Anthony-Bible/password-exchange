@@ -117,9 +117,12 @@ func TestSubmitMessage_ValidationError(t *testing.T) {
 	// Request with missing required fields for notification
 	requestBody := models.MessageSubmissionRequest{
 		Content:          "Test message",
+		Recipient: &models.Recipient{
+			Name:  "Jane Smith",
+		},
 		SendNotification: true,
 		AntiSpamAnswer:   "blue",
-		// Missing sender and recipient
+		// Missing sender
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)

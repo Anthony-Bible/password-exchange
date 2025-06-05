@@ -25,7 +25,7 @@ type Sender struct {
 // Recipient represents recipient information for message submission
 type Recipient struct {
 	Name  string `json:"name" validate:"required,min=1,max=100"`
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email" validate:"omitempty,email"`
 }
 
 // MessageSubmissionResponse represents the response to a message submission

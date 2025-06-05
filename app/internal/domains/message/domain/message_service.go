@@ -236,6 +236,11 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		}
 	}
 
+	// Always require recipient name
+	if strings.TrimSpace(req.RecipientName) == "" {
+		return fmt.Errorf("recipient name is required")
+	}
+
 	// Only validate sender information if email notifications are enabled
 	if !req.SkipEmail {
 		if strings.TrimSpace(req.SenderName) == "" {
@@ -255,10 +260,6 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 	if req.SendNotification {
 		if strings.TrimSpace(req.RecipientEmail) == "" {
 			return fmt.Errorf("recipient email is required when sending notifications")
-		}
-
-		if strings.TrimSpace(req.RecipientName) == "" {
-			return fmt.Errorf("recipient name is required when sending notifications")
 		}
 
 		// Basic email validation for recipient
