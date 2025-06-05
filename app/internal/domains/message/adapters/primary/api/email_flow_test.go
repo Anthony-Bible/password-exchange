@@ -26,7 +26,6 @@ func TestEmailNotificationFlow(t *testing.T) {
 		expectedStatusCode      int
 		expectedNotificationSent bool
 		expectServiceCalled     bool
-		expectedSkipEmail       bool
 	}{
 		{
 			name: "successful message submission with email notification",
@@ -52,7 +51,6 @@ func TestEmailNotificationFlow(t *testing.T) {
 			expectedStatusCode:      http.StatusCreated,
 			expectedNotificationSent: true,
 			expectServiceCalled:     true,
-			expectedSkipEmail:       false,
 		},
 		{
 			name: "successful message submission without email notification",
@@ -60,6 +58,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 				Content:          "Test secret message",
 				Recipient: &models.Recipient{
 					Name:  "Jane Smith",
+					Email: "jane@example.com",
 				},
 				SendNotification: false,
 			},
@@ -72,7 +71,6 @@ func TestEmailNotificationFlow(t *testing.T) {
 			expectedStatusCode:      http.StatusCreated,
 			expectedNotificationSent: false,
 			expectServiceCalled:     true,
-			expectedSkipEmail:       true,
 		},
 		{
 			name: "email notification enabled but service fails",
@@ -98,7 +96,6 @@ func TestEmailNotificationFlow(t *testing.T) {
 			expectedStatusCode:      http.StatusCreated,
 			expectedNotificationSent: false, // Email failed
 			expectServiceCalled:     true,
-			expectedSkipEmail:       false,
 		},
 		{
 			name: "missing sender information when notification enabled",
@@ -188,7 +185,6 @@ func TestEmailNotificationFlow(t *testing.T) {
 				mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 					// Verify the domain request is correctly mapped
 					assert.Equal(t, tt.request.Content, req.Content)
-					assert.Equal(t, tt.expectedSkipEmail, req.SkipEmail)
 					assert.Equal(t, tt.request.SendNotification, req.SendNotification)
 
 					if tt.request.Sender != nil {

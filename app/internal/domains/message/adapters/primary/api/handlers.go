@@ -69,7 +69,6 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		Captcha:          req.AntiSpamAnswer,
 		TurnstileToken:   req.TurnstileToken,
 		SendNotification: req.SendNotification,
-		SkipEmail:        !req.SendNotification,
 		MaxViewCount:     req.MaxViewCount,
 	}
 

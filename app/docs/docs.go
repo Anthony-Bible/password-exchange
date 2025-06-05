@@ -408,8 +408,7 @@ const docTemplate = `{
         "models.Recipient": {
             "type": "object",
             "required": [
-                "email",
-                "name"
+                "email"
             ],
             "properties": {
                 "email": {

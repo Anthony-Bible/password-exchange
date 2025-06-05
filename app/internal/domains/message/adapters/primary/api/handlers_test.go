@@ -62,7 +62,6 @@ func TestSubmitMessage_Success(t *testing.T) {
 		AdditionalInfo:   "Additional info",
 		Captcha:          "blue",
 		SendNotification: true,
-		SkipEmail:        false,
 	}
 
 	expectedResponse := &domain.MessageSubmissionResponse{
@@ -257,7 +256,6 @@ func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
 		RecipientName:    "Jane Doe",
 		RecipientEmail:   "jane@example.com",
 		SendNotification: true,
-		SkipEmail:        false,
 		Captcha:          "blue",
 		MaxViewCount:     25, // Custom view count
 	}
@@ -328,7 +326,6 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 					RecipientName:    "Jane Doe", 
 					RecipientEmail:   "jane@example.com",
 					SendNotification: true,
-					SkipEmail:        false,
 					Captcha:          "blue",
 					MaxViewCount:     tc.maxViewCount,
 				}
