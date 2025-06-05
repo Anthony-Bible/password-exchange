@@ -260,11 +260,29 @@
                 </div>
             </div>
 
+            <!-- Cloudflare Turnstile -->
+            <div class="section-group">
+                <h5 class="section-title">Security Verification</h5>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group mb-3">
+                            <div class="cf-turnstile" 
+                                 data-sitekey="0x4AAAAAABgIcIPaICA7z6Yf" 
+                                 data-callback="onTurnstileSuccess"
+                                 data-error-callback="onTurnstileError"
+                                 data-expired-callback="onTurnstileExpired">
+                            </div>
+                            <div id="turnstile-error" class="invalid-feedback" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Submit Button -->
             <div class="row">
                 <div class="col-12">
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-success btn-lg">
+                        <button type="submit" class="btn btn-success btn-lg" id="submit-button" disabled>
                             <i class="fas fa-lock me-2"></i>
                             Create Secure Link
                         </button>
@@ -286,6 +304,29 @@
 </div>
 
 <script>
+// Cloudflare Turnstile callback functions
+let turnstileToken = null;
+
+function onTurnstileSuccess(token) {
+    turnstileToken = token;
+    document.getElementById('submit-button').disabled = false;
+    document.getElementById('turnstile-error').style.display = 'none';
+}
+
+function onTurnstileError() {
+    turnstileToken = null;
+    document.getElementById('submit-button').disabled = true;
+    document.getElementById('turnstile-error').textContent = 'Verification failed. Please try again.';
+    document.getElementById('turnstile-error').style.display = 'block';
+}
+
+function onTurnstileExpired() {
+    turnstileToken = null;
+    document.getElementById('submit-button').disabled = true;
+    document.getElementById('turnstile-error').textContent = 'Verification expired. Please complete the challenge again.';
+    document.getElementById('turnstile-error').style.display = 'block';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     
     // Antispam question rotation system (questions only, answers validated server-side)
@@ -406,6 +447,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Validate Turnstile token
+        if (!turnstileToken) {
+            document.getElementById('turnstile-error').textContent = 'Please complete the security verification.';
+            document.getElementById('turnstile-error').style.display = 'block';
+            isValid = false;
+        }
+
         if (!isValid) {
             // Focus first invalid field
             const firstInvalid = form.querySelector('.is-invalid');
@@ -427,7 +475,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const emailEnabled = emailToggle.checked;
             const payload = {
                 content: document.getElementById('form_message').value.trim(),
-                sendNotification: emailEnabled
+                sendNotification: emailEnabled,
+                turnstileToken: turnstileToken
             };
             
             // Add max view count if provided
@@ -501,6 +550,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateEmailDependentFields();
                 form.classList.remove('was-validated');
                 
+                // Reset Turnstile
+                turnstileToken = null;
+                document.getElementById('submit-button').disabled = true;
+                if (window.turnstile) {
+                    window.turnstile.reset();
+                }
+                
                 // Scroll to success message
                 successDiv.scrollIntoView({ behavior: 'smooth' });
                 
@@ -540,6 +596,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Re-enable submit button
             submitButton.disabled = false;
             submitButton.innerHTML = originalButtonText;
+            
+            // Reset Turnstile on error (user needs to complete challenge again)
+            if (!document.getElementById('success').innerHTML) {
+                turnstileToken = null;
+                document.getElementById('submit-button').disabled = true;
+                if (window.turnstile) {
+                    window.turnstile.reset();
+                }
+            }
         }
         
         form.classList.add('was-validated');

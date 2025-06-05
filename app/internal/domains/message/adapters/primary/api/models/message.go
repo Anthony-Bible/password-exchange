@@ -15,6 +15,7 @@ type MessageSubmissionRequest struct {
 	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
 	QuestionID       *int       `json:"questionId,omitempty"`
 	MaxViewCount     int        `json:"maxViewCount,omitempty" validate:"min=0,max=100"`
+	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
 }
 
 // Sender represents sender information for message submission

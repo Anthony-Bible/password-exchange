@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 	"time"
@@ -66,6 +67,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		Passphrase:       req.Passphrase,
 		AdditionalInfo:   req.AdditionalInfo,
 		Captcha:          req.AntiSpamAnswer,
+		TurnstileToken:   req.TurnstileToken,
 		SendNotification: req.SendNotification,
 		SkipEmail:        !req.SendNotification,
 		MaxViewCount:     req.MaxViewCount,
@@ -81,8 +83,12 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		domainReq.RecipientEmail = req.Recipient.Email
 	}
 
+	// Add remote IP to context for Turnstile validation
+	remoteIP := c.ClientIP()
+	ctxWithIP := context.WithValue(ctx, "RemoteIP", remoteIP)
+
 	// Submit the message
-	response, err := h.messageService.SubmitMessage(ctx, domainReq)
+	response, err := h.messageService.SubmitMessage(ctxWithIP, domainReq)
 	if err != nil {
 		log.Error().
 			Err(err).
