@@ -309,20 +309,32 @@ let turnstileToken = null;
 
 function onTurnstileSuccess(token) {
     turnstileToken = token;
-    document.getElementById('submit-button').disabled = false;
+    // Only enable submit button if email notifications are enabled (requiring Turnstile)
+    const emailEnabled = document.getElementById('enableEmail').checked;
+    if (emailEnabled) {
+        document.getElementById('submit-button').disabled = false;
+    }
     document.getElementById('turnstile-error').style.display = 'none';
 }
 
 function onTurnstileError() {
     turnstileToken = null;
-    document.getElementById('submit-button').disabled = true;
+    // Only disable submit button if email notifications are enabled (requiring Turnstile)
+    const emailEnabled = document.getElementById('enableEmail').checked;
+    if (emailEnabled) {
+        document.getElementById('submit-button').disabled = true;
+    }
     document.getElementById('turnstile-error').textContent = 'Verification failed. Please try again.';
     document.getElementById('turnstile-error').style.display = 'block';
 }
 
 function onTurnstileExpired() {
     turnstileToken = null;
-    document.getElementById('submit-button').disabled = true;
+    // Only disable submit button if email notifications are enabled (requiring Turnstile)
+    const emailEnabled = document.getElementById('enableEmail').checked;
+    if (emailEnabled) {
+        document.getElementById('submit-button').disabled = true;
+    }
     document.getElementById('turnstile-error').textContent = 'Verification expired. Please complete the challenge again.';
     document.getElementById('turnstile-error').style.display = 'block';
 }
@@ -374,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle email toggle
     function updateEmailDependentFields() {
         const emailEnabled = emailToggle.checked;
+        const submitButton = document.getElementById('submit-button');
         
         // Show/hide email-dependent sections
         emailDependentElements.forEach(element => {
@@ -404,6 +417,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (window.turnstile) {
                 window.turnstile.reset();
             }
+            // Enable submit button when email notifications are disabled (no Turnstile required)
+            submitButton.disabled = false;
+        } else {
+            // Disable submit button when email is enabled until Turnstile is completed
+            submitButton.disabled = !turnstileToken;
         }
         
         // Visual indicators are now handled by showing/hiding entire sections
@@ -563,10 +581,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Reset Turnstile
                 turnstileToken = null;
-                document.getElementById('submit-button').disabled = true;
                 if (window.turnstile) {
                     window.turnstile.reset();
                 }
+                // Update submit button state based on email notification setting
+                updateEmailDependentFields();
                 
                 // Scroll to success message
                 successDiv.scrollIntoView({ behavior: 'smooth' });
@@ -604,18 +623,19 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             document.querySelector('.messages').scrollIntoView({ behavior: 'smooth' });
         } finally {
-            // Re-enable submit button
-            submitButton.disabled = false;
+            // Restore button text
             submitButton.innerHTML = originalButtonText;
             
             // Reset Turnstile on error (user needs to complete challenge again)
             if (!document.getElementById('success').innerHTML) {
                 turnstileToken = null;
-                document.getElementById('submit-button').disabled = true;
                 if (window.turnstile) {
                     window.turnstile.reset();
                 }
             }
+            
+            // Update submit button state based on email notification setting
+            updateEmailDependentFields();
         }
         
         form.classList.add('was-validated');
