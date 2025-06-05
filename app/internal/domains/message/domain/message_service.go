@@ -50,30 +50,34 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 		return nil, fmt.Errorf("%w: %v", ErrInvalidMessageRequest, err)
 	}
 
-	// Validate Turnstile token
-	if strings.TrimSpace(req.TurnstileToken) == "" {
-		log.Error().Msg("Missing Turnstile token")
-		return nil, fmt.Errorf("%w: missing Turnstile token", ErrInvalidMessageRequest)
-	}
-
-	// Extract remote IP from context if available
-	remoteIP := ""
-	if ip := ctx.Value("RemoteIP"); ip != nil {
-		if ipStr, ok := ip.(string); ok {
-			remoteIP = ipStr
+	// Validate Turnstile token only if sending email notifications
+	if req.SendNotification {
+		if strings.TrimSpace(req.TurnstileToken) == "" {
+			log.Error().Msg("Missing Turnstile token for email notification")
+			return nil, fmt.Errorf("%w: missing Turnstile token", ErrInvalidMessageRequest)
 		}
-	}
 
-	valid, err := s.turnstileValidator.ValidateToken(ctx, req.TurnstileToken, remoteIP)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to validate Turnstile token")
-		return nil, fmt.Errorf("%w: turnstile validation error: %v", ErrInvalidMessageRequest, err)
+		// Extract remote IP from context if available
+		remoteIP := ""
+		if ip := ctx.Value("RemoteIP"); ip != nil {
+			if ipStr, ok := ip.(string); ok {
+				remoteIP = ipStr
+			}
+		}
+
+		valid, err := s.turnstileValidator.ValidateToken(ctx, req.TurnstileToken, remoteIP)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to validate Turnstile token")
+			return nil, fmt.Errorf("%w: turnstile validation error: %v", ErrInvalidMessageRequest, err)
+		}
+		if !valid {
+			log.Warn().Msg("Turnstile token validation failed")
+			return nil, fmt.Errorf("%w: turnstile validation failed", ErrInvalidMessageRequest)
+		}
+		log.Debug().Msg("Turnstile token validated successfully")
+	} else {
+		log.Debug().Msg("Skipping Turnstile validation - email notifications disabled")
 	}
-	if !valid {
-		log.Warn().Msg("Turnstile token validation failed")
-		return nil, fmt.Errorf("%w: turnstile validation failed", ErrInvalidMessageRequest)
-	}
-	log.Debug().Msg("Turnstile token validated successfully")
 	// Generate encryption key
 	encryptionKey, err := s.encryptionService.GenerateKey(ctx, 32)
 	if err != nil {

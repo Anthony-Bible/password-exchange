@@ -441,12 +441,12 @@ func TestConditionalValidationFlow(t *testing.T) {
 			expectSuccess:    false,
 		},
 		{
-			name:             "missing recipient - always required",
+			name:             "missing recipient - optional when notifications disabled",
 			sendNotification: false,
 			includeSender:    false,
 			includeRecipient: false,
 			includeAntiSpam:  false,
-			expectSuccess:    false,
+			expectSuccess:    true,
 		},
 	}
 
