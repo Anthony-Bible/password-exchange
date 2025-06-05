@@ -14,6 +14,7 @@ type MessageSubmissionRequest struct {
 	Passphrase       string
 	AdditionalInfo   string
 	Captcha          string
+	TurnstileToken   string
 	SendNotification bool
 	SkipEmail        bool
 	MaxViewCount     int
@@ -115,6 +116,11 @@ type PasswordHasher interface {
 // URLBuilder defines the interface for building message URLs
 type URLBuilder interface {
 	BuildDecryptURL(messageID string, encryptionKey []byte) string
+}
+
+// TurnstileValidator defines the interface for Cloudflare Turnstile validation
+type TurnstileValidator interface {
+	ValidateToken(ctx context.Context, token string, remoteIP string) (bool, error)
 }
 
 // WebRenderer defines the interface for rendering web responses

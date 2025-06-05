@@ -18,6 +18,7 @@ type MessageService struct {
 	notificationService NotificationService
 	passwordHasher      PasswordHasher
 	urlBuilder          URLBuilder
+	turnstileValidator  TurnstileValidator
 }
 
 // NewMessageService creates a new message service
@@ -27,6 +28,7 @@ func NewMessageService(
 	notificationService NotificationService,
 	passwordHasher PasswordHasher,
 	urlBuilder URLBuilder,
+	turnstileValidator TurnstileValidator,
 ) *MessageService {
 	return &MessageService{
 		encryptionService:   encryptionService,
@@ -34,6 +36,7 @@ func NewMessageService(
 		notificationService: notificationService,
 		passwordHasher:      passwordHasher,
 		urlBuilder:          urlBuilder,
+		turnstileValidator:  turnstileValidator,
 	}
 }
 
@@ -45,6 +48,28 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 	if err := s.validateSubmissionRequest(req); err != nil {
 		log.Error().Err(err).Msg("Invalid message submission request")
 		return nil, fmt.Errorf("%w: %v", ErrInvalidMessageRequest, err)
+	}
+
+	// Validate Turnstile token if provided
+	if strings.TrimSpace(req.TurnstileToken) != "" {
+		// Extract remote IP from context if available
+		remoteIP := ""
+		if ip := ctx.Value("RemoteIP"); ip != nil {
+			if ipStr, ok := ip.(string); ok {
+				remoteIP = ipStr
+			}
+		}
+
+		valid, err := s.turnstileValidator.ValidateToken(ctx, req.TurnstileToken, remoteIP)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to validate Turnstile token")
+			return nil, fmt.Errorf("%w: turnstile validation error: %v", ErrInvalidMessageRequest, err)
+		}
+		if !valid {
+			log.Warn().Msg("Turnstile token validation failed")
+			return nil, fmt.Errorf("%w: turnstile validation failed", ErrInvalidMessageRequest)
+		}
+		log.Debug().Msg("Turnstile token validated successfully")
 	}
 
 	// Generate encryption key

@@ -375,6 +375,10 @@ const docTemplate = `{
                 },
                 "sender": {
                     "$ref": "#/definitions/models.Sender"
+                },
+                "turnstileToken": {
+                    "type": "string",
+                    "maxLength": 2048
                 }
             }
         },

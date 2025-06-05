@@ -88,6 +88,9 @@ definitions:
         type: boolean
       sender:
         $ref: '#/definitions/models.Sender'
+      turnstileToken:
+        maxLength: 2048
+        type: string
     required:
     - content
     type: object

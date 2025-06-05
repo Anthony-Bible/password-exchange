@@ -10,6 +10,7 @@ import (
 	rabbitMQAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/rabbitmq"
 	bcryptAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/bcrypt"
 	urlAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/url"
+	httpAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/http"
 	webAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/web"
 	"github.com/rs/zerolog/log"
 )
@@ -67,6 +68,9 @@ func (conf Config) startHexagonalServer() {
 	}
 	urlBuilder := urlAdapter.NewURLBuilder(siteHost)
 	
+	// Create Turnstile validator
+	turnstileValidator := httpAdapter.NewTurnstileValidator(conf.TurnstileSecret)
+	
 	// Create message service (domain)
 	messageService := messageDomain.NewMessageService(
 		encryptionClient,
@@ -74,6 +78,7 @@ func (conf Config) startHexagonalServer() {
 		notificationPublisher,
 		passwordHasher,
 		urlBuilder,
+		turnstileValidator,
 	)
 	
 	// Create web server (primary adapter)
