@@ -465,15 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Validate color field pattern
-        const colorField = document.getElementById('color');
-        if (colorField.hasAttribute('required') && colorField.value) {
-            const pattern = new RegExp(colorField.getAttribute('pattern'));
-            if (!pattern.test(colorField.value)) {
-                colorField.classList.add('is-invalid');
-                isValid = false;
-            }
-        }
+        // Color field validation is handled server-side since antispam questions vary
         
         // Validate Turnstile token (only required when email notifications are enabled)
         const emailEnabled = emailToggle.checked;
