@@ -143,6 +143,9 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		}
 		storageAdapter := mysql.NewMySQLAdapter(dbConfig)
 		if mysqlAdapter, ok := storageAdapter.(*mysql.MySQLAdapter); ok {
+			// Set up defer before attempting connection
+			defer mysqlAdapter.Close()
+			
 			if err := mysqlAdapter.Connect(); err != nil {
 				log.Error().
 					Err(err).
@@ -152,7 +155,6 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 					Msg("Failed to connect to database")
 				return
 			}
-			defer mysqlAdapter.Close()
 		}
 
 		// Initialize storage service

@@ -37,6 +37,7 @@ func (m *MySQLAdapter) Connect() error {
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
+		db.Close() // Close connection if ping fails to prevent leak
 		log.Error().Err(err).Msg("Failed to ping MySQL database")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
