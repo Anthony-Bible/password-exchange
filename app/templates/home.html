@@ -548,12 +548,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         </h5>
                         <hr>
                         <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control font-monospace" 
+                        <div class="position-relative mb-3">
+                            <input type="text" class="form-control font-monospace pe-5" 
                                    value="${result.webUrl}" 
                                    id="secure-url" readonly>
-                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
-                                <i class="fas fa-copy"></i> Copy
+                            <button class="btn position-absolute top-50 end-0 translate-middle-y me-2 p-1" 
+                                    type="button" onclick="copyToClipboard()" 
+                                    style="border: none; background: none; color: #6c757d; z-index: 10;"
+                                    onmouseover="this.style.color='#495057'" 
+                                    onmouseout="this.style.color='#6c757d'"
+                                    title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
                             </button>
                         </div>
                         ${result.notificationSent ? 
