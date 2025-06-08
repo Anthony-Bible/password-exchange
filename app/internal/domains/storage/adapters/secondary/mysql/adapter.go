@@ -35,15 +35,9 @@ func (m *MySQLAdapter) Connect() error {
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
 
-	// Use defer to ensure connection is closed if we don't successfully assign it
-	defer func() {
-		if m.db == nil {
-			db.Close()
-		}
-	}()
-
 	// Test the connection
 	if err := db.Ping(); err != nil {
+		db.Close() // Close connection if ping fails to prevent leak
 		log.Error().Err(err).Msg("Failed to ping MySQL database")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
