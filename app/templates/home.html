@@ -548,17 +548,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         </h5>
                         <hr>
                         <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
-                        <div class="position-relative mb-3">
+                        <div class="input-group mb-3">
                             <input type="text" class="form-control font-monospace" 
                                    value="${result.webUrl}" 
-                                   id="secure-url" readonly
-                                   style="padding-right: 50px;">
-                            <button class="btn btn-sm position-absolute" 
+                                   id="secure-url" readonly>
+                            <button class="btn btn-outline-secondary" 
                                     type="button" onclick="copyToClipboard()" 
-                                    title="Copy to clipboard"
-                                    style="top: 50%; right: 8px; transform: translateY(-50%); z-index: 10; background: transparent; border: none; color: #6c757d; padding: 4px 8px;"
-                                    onmouseover="this.style.color='#495057'; this.style.backgroundColor='rgba(0,0,0,0.05)'" 
-                                    onmouseout="this.style.color='#6c757d'; this.style.backgroundColor='transparent'">
+                                    title="Copy to clipboard">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
@@ -651,19 +647,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show feedback
             const copyButton = event.target.closest('button');
             const originalText = copyButton.innerHTML;
-            const originalBg = copyButton.style.backgroundColor;
-            const originalColor = copyButton.style.color;
-            
             copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
-            copyButton.style.backgroundColor = '#198754';
-            copyButton.style.color = '#fff';
-            copyButton.style.borderColor = '#198754';
+            copyButton.classList.remove('btn-outline-secondary');
+            copyButton.classList.add('btn-success');
             
             setTimeout(() => {
                 copyButton.innerHTML = originalText;
-                copyButton.style.backgroundColor = originalBg;
-                copyButton.style.color = originalColor;
-                copyButton.style.borderColor = '#e9ecef';
+                copyButton.classList.remove('btn-success');
+                copyButton.classList.add('btn-outline-secondary');
             }, 2000);
             
         } catch (err) {
