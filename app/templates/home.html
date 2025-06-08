@@ -548,13 +548,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         </h5>
                         <hr>
                         <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
-                        <div class="input-group mb-3">
+                        <div class="input-group mb-3" style="border-radius: 12px; overflow: hidden;">
                             <input type="text" class="form-control font-monospace" 
                                    value="${result.webUrl}" 
-                                   id="secure-url" readonly>
-                            <button class="btn btn-outline-secondary" 
+                                   id="secure-url" readonly
+                                   style="border-right: none !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;">
+                            <button class="btn" 
                                     type="button" onclick="copyToClipboard()" 
-                                    title="Copy to clipboard">
+                                    title="Copy to clipboard"
+                                    style="border: 2px solid #e9ecef !important; border-left: none !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-top-right-radius: 12px !important; border-bottom-right-radius: 12px !important; background: #f8f9fa !important; color: #6c757d !important; transform: none !important;"
+                                    onmouseover="this.style.backgroundColor='#e9ecef'; this.style.color='#495057'; this.style.transform='none'"
+                                    onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.color='#6c757d'; this.style.transform='none'">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
@@ -647,14 +651,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show feedback
             const copyButton = event.target.closest('button');
             const originalText = copyButton.innerHTML;
+            const originalBg = copyButton.style.backgroundColor;
+            const originalColor = copyButton.style.color;
+            
             copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
-            copyButton.classList.remove('btn-outline-secondary');
-            copyButton.classList.add('btn-success');
+            copyButton.style.backgroundColor = '#198754';
+            copyButton.style.color = '#fff';
+            copyButton.style.borderColor = '#198754';
             
             setTimeout(() => {
                 copyButton.innerHTML = originalText;
-                copyButton.classList.remove('btn-success');
-                copyButton.classList.add('btn-outline-secondary');
+                copyButton.style.backgroundColor = originalBg;
+                copyButton.style.color = originalColor;
+                copyButton.style.borderColor = '#e9ecef';
             }, 2000);
             
         } catch (err) {
