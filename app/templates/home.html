@@ -548,17 +548,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         </h5>
                         <hr>
                         <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
-                        <div class="input-group mb-3" style="border-radius: 12px; overflow: hidden;">
+                        <div class="position-relative mb-3">
                             <input type="text" class="form-control font-monospace" 
                                    value="${result.webUrl}" 
                                    id="secure-url" readonly
-                                   style="border-right: none !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;">
-                            <button class="btn" 
+                                   style="padding-right: 50px;">
+                            <button class="btn btn-sm position-absolute" 
                                     type="button" onclick="copyToClipboard()" 
                                     title="Copy to clipboard"
-                                    style="border: 2px solid #e9ecef !important; border-left: none !important; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; border-top-right-radius: 12px !important; border-bottom-right-radius: 12px !important; background: #f8f9fa !important; color: #6c757d !important; transform: none !important;"
-                                    onmouseover="this.style.backgroundColor='#e9ecef'; this.style.color='#495057'; this.style.transform='none'"
-                                    onmouseout="this.style.backgroundColor='#f8f9fa'; this.style.color='#6c757d'; this.style.transform='none'">
+                                    style="top: 50%; right: 8px; transform: translateY(-50%); z-index: 10; background: transparent; border: none; color: #6c757d; padding: 4px 8px;"
+                                    onmouseover="this.style.color='#495057'; this.style.backgroundColor='rgba(0,0,0,0.05)'" 
+                                    onmouseout="this.style.color='#6c757d'; this.style.backgroundColor='transparent'">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
