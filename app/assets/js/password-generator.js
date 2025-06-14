@@ -144,7 +144,7 @@ function generatePassphrase(wordCount, includeNumbers, includeSymbols, separator
     
     // Optionally add numbers
     if (includeNumbers) {
-        const numCount = Math.floor(Math.random() * 3) + 1; // 1-3 numbers
+        const numCount = getUnbiasedRandomIndex(3) + 1; // 1-3 numbers
         for (let i = 0; i < numCount; i++) {
             passphrase += numbers[getUnbiasedRandomIndex(numbers.length)];
         }
@@ -152,7 +152,7 @@ function generatePassphrase(wordCount, includeNumbers, includeSymbols, separator
     
     // Optionally add symbols
     if (includeSymbols) {
-        const symCount = Math.floor(Math.random() * 2) + 1; // 1-2 symbols
+        const symCount = getUnbiasedRandomIndex(2) + 1; // 1-2 symbols
         for (let i = 0; i < symCount; i++) {
             passphrase += symbols[getUnbiasedRandomIndex(symbols.length)];
         }
