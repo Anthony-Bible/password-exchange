@@ -240,10 +240,19 @@
                                 <p class="mb-0">{{ . }}</p>
                             </div>
                             {{ end }}
-                            <label for="form_message" class="form-label">
-                                Password or Secret Message
-                                <span class="text-danger">*</span>
-                            </label>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <label for="form_message" class="form-label mb-0">
+                                    Password or Secret Message
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <button type="button" 
+                                        class="btn btn-outline-primary btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#passwordGeneratorModal">
+                                    <i class="fas fa-key me-1"></i>
+                                    Generate Password
+                                </button>
+                            </div>
                             <textarea id="form_message" 
                                       name="content" 
                                       class="form-control" 
@@ -292,6 +301,253 @@
             </div>
 
         </form>
+
+        <!-- Password Generator Modal -->
+        <div class="modal fade" id="passwordGeneratorModal" tabindex="-1" aria-labelledby="passwordGeneratorModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="passwordGeneratorModalLabel">
+                            <i class="fas fa-key me-2"></i>
+                            Password Generator
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <label for="modal-password-length" class="form-label">Length</label>
+                                <input type="range" 
+                                       class="form-range" 
+                                       id="modal-password-length" 
+                                       min="8" 
+                                       max="128" 
+                                       value="16"
+                                       aria-describedby="modalLengthValue">
+                                <div id="modalLengthValue" class="form-text text-center fw-bold">16</div>
+                            </div>
+                            <div class="col-md-9">
+                                <div class="row">
+                                    <div class="col-sm-6 col-lg-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="modal-include-uppercase" 
+                                                   checked>
+                                            <label class="form-check-label" for="modal-include-uppercase">
+                                                Uppercase (A-Z)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="modal-include-lowercase" 
+                                                   checked>
+                                            <label class="form-check-label" for="modal-include-lowercase">
+                                                Lowercase (a-z)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="modal-include-numbers" 
+                                                   checked>
+                                            <label class="form-check-label" for="modal-include-numbers">
+                                                Numbers (0-9)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-lg-3 mb-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="modal-include-symbols">
+                                            <label class="form-check-label" for="modal-include-symbols">
+                                                Symbols (!@#$...)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Character Exclusion Options -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   id="exclude-ambiguous">
+                                            <label class="form-check-label" for="exclude-ambiguous">
+                                                <span class="me-2">Exclude ambiguous characters</span>
+                                                <small class="text-muted">(0O, l1I)</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Password Type Options -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="passwordType" id="random-password" value="random" checked>
+                                    <label class="form-check-label" for="random-password">Random</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="passwordType" id="passphrase-password" value="passphrase">
+                                    <label class="form-check-label" for="passphrase-password">Passphrase</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Passphrase Options -->
+                        <div class="row mb-3" id="passphrase-options" style="display: none;">
+                            <div class="col-md-4">
+                                <label for="passphrase-word-count" class="form-label">Number of Words</label>
+                                <input type="range" 
+                                       class="form-range" 
+                                       id="passphrase-word-count" 
+                                       min="3" 
+                                       max="8" 
+                                       value="4"
+                                       aria-describedby="passphraseWordCountValue">
+                                <div id="passphraseWordCountValue" class="form-text text-center fw-bold">4</div>
+                                <div class="wordlist-status mt-1"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="passphrase-separator" class="form-label">Word Separator</label>
+                                <select class="form-select" id="passphrase-separator">
+                                    <option value="-" selected>Dash (-)</option>
+                                    <option value="_">Underscore (_)</option>
+                                    <option value=".">Period (.)</option>
+                                    <option value=" ">Space ( )</option>
+                                    <option value="">None</option>
+                                    <option value="custom">Custom...</option>
+                                </select>
+                                <input type="text" 
+                                       class="form-control mt-2" 
+                                       id="custom-separator" 
+                                       placeholder="Enter custom separator" 
+                                       maxlength="3"
+                                       style="display: none;">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="include-numbers-passphrase">
+                                    <label class="form-check-label" for="include-numbers-passphrase">
+                                        Include Numbers
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="include-symbols-passphrase">
+                                    <label class="form-check-label" for="include-symbols-passphrase">
+                                        Include Symbols
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <button type="button" 
+                                        class="btn btn-primary" 
+                                        id="modal-generate-password">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    Generate Password
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-info ms-2" 
+                                        id="modal-generate-multiple"
+                                        title="Generate 5 options to choose from">
+                                    <i class="fas fa-list me-2"></i>
+                                    Generate Options
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="generated-password-section" style="display: none;">
+                            <div class="col-12">
+                                <label for="generated-password" class="form-label fw-bold">Generated Password:</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" 
+                                           class="form-control font-monospace" 
+                                           id="generated-password" 
+                                           readonly>
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary" 
+                                            id="copy-password-btn"
+                                            title="Copy to clipboard">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Password Strength Meter -->
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted mb-1">Password Strength:</label>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar" 
+                                             id="strength-bar" 
+                                             role="progressbar" 
+                                             style="width: 0%" 
+                                             aria-valuenow="0" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small id="strength-text" class="text-muted">No password generated</small>
+                                        <small id="entropy-text" class="text-muted"></small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Password Analysis -->
+                                <div id="password-analysis" class="small text-muted">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div id="char-types" class="mb-1"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div id="security-features" class="mb-1"></div>
+                                        </div>
+                                    </div>
+                                    <div class="wordlist-status mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Multiple Password Options -->
+                        <div class="row" id="password-options-section" style="display: none;">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Choose from options:</label>
+                                <div id="password-options-list" class="list-group">
+                                    <!-- Options will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>
+                            Close
+                        </button>
+                        <button type="button" 
+                                class="btn btn-success" 
+                                id="insert-password-btn"
+                                style="display: none;">
+                            <i class="fas fa-arrow-down me-2"></i>
+                            Insert into Message
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="row mt-4">
             <div class="col-12">
@@ -684,6 +940,9 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Failed to copy URL to clipboard');
         }
     };
+    
+    // Initialize password generator functionality
+    initializePasswordGenerator();
 });
 </script>
 
