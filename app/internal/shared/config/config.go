@@ -77,7 +77,7 @@ type PassConfig struct {
 	DatabaseDevService    string `mapstructure:"databasedevservice"`
 	Loglevel              string `mapstructure:"loglevel"`
 	RunningEnvironment    string `mapstructure:"runningenvironment"`
-	TurnstileSecret       string `mapstructure:"turnstilesecret"`
+	TurnstileSecret       string `mapstructure:"turnstile_secret"`
 	DefaultMaxViewCount   int    `mapstructure:"defaultmaxviewcount"`
 	DbPort                int    `mapstructure:"dbport"`
 	EmailPort             int    `mapstructure:"emailport"`
