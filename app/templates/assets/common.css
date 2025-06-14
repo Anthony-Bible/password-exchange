@@ -773,6 +773,31 @@ body.modal-open {
     overflow-y: auto;
 }
 
+/* Ensure modal appears properly above all content */
+.modal {
+    z-index: 1055 !important;
+}
+
+.modal-backdrop {
+    z-index: 1050 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Ensure modal content has higher z-index than main container */
+.modal-dialog {
+    z-index: 1060 !important;
+    position: relative;
+}
+
+.modal-content {
+    z-index: 1065 !important;
+    position: relative;
+    background: #fff !important;
+    border: none !important;
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
 /* Enhanced Bootstrap tooltip styling */
 .tooltip {
     z-index: 10000 !important;
