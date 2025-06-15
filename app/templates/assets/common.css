@@ -40,10 +40,35 @@
     z-index: 1;
 }
 
+/* Fix Bootstrap modal positioning conflicts */
+.modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 1055 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 1050 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
 .form-control, .btn, .form-check-input {
     pointer-events: auto !important;
     z-index: 2 !important;
     position: relative !important;
+}
+
+/* But allow modal buttons to work properly */
+.modal .btn {
+    position: relative !important;
+    z-index: auto !important;
 }
 
 /* Enhanced page title styling */
