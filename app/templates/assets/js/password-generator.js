@@ -59,7 +59,7 @@ async function loadEFFWordList() {
     showWordlistStatus('loading');
     
     try {
-        const response = await fetch('./eff_large_wordlist.txt');
+        const response = await fetch('./assets/eff_large_wordlist.txt');
         if (!response.ok) {
             throw new Error(`Failed to fetch wordlist: ${response.status} ${response.statusText}`);
         }
