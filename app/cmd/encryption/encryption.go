@@ -5,11 +5,15 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package encryption
 
 import (
-	"fmt"
+	"context" // Added
+	"log"     // Added
+	"os"      // Added
 	"reflect"
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config" // Added
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging" // Added
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,23 +21,44 @@ import (
 // encryptionCmd represents the encryption command
 var encryptionCmd = &cobra.Command{
 	Use:   "encryption",
-	Short: "Component to do the encryption",
-	Long: `
-and usage of using your command. For example:
+	Short: "Starts the encryption service.", // Updated
+	Long:  `Starts the gRPC server for the encryption service, which handles message encryption and decryption.`, // Updated
+	Run: func(cmdcobra *cobra.Command, args []string) { // Renamed cmd to cmdcobra
+		appFullConfig, err := config.LoadConfig()
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to load application configuration: %v", err)
+		}
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("encryption called")
-		var cfg Config
-		bindenvs(cfg)
-		viper.Unmarshal(&cfg.PassConfig)
-		cfg.startServer()
+		serviceLogger, err := logging.NewBridgeLogger(appFullConfig.Log, appFullConfig.EnableSlog, "encryption-service")
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to initialize logger: %v", err)
+		}
+		serviceLogger.Info(context.Background(), "Encryption command initiated, logger active")
+
+		var cmdLocalConfig Config // This is the Config from encryption2.go
+
+		// The existing bindenvs and Unmarshal logic.
+		// Note: The original `viper.Unmarshal(&cfg.PassConfig)` was very specific.
+		// The new version `viper.Unmarshal(&cmdLocalConfig)` assumes `Config` struct in encryption2.go
+		// is structured to be unmarshalled directly or `PassConfig` is squashed and other fields are handled.
+		// This was part of the prompt's new content for encryption.go.
+		bindenvs(cmdLocalConfig) // Call existing bindenvs
+		if err := viper.Unmarshal(&cmdLocalConfig); err != nil {
+			serviceLogger.Error(context.Background(), "Failed to unmarshal command-specific config for encryption", "error", err)
+			os.Exit(1)
+		}
+		// TODO: Review if cmdLocalConfig.Channel needs specific initialization here.
+
+		if err := cmdLocalConfig.startServer(serviceLogger); err != nil {
+			serviceLogger.Error(context.Background(), "Encryption service command execution failed", "error", err)
+			os.Exit(1)
+		}
+		serviceLogger.Info(context.Background(), "Encryption service command completed successfully.")
 	},
 }
 
 // this is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
+// Keeping existing bindenvs function
 func bindenvs(iface interface{}, parts ...string) {
 	ifv := reflect.ValueOf(iface)
 	if ifv.Kind() == reflect.Ptr {

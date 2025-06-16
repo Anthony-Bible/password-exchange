@@ -1,11 +1,13 @@
 package database
 
 import (
+	"context"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	storageGRPC "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/primary/grpc"
 	storageMySQL "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/ports"
+	// "github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -13,12 +15,12 @@ type Config struct {
 }
 
 
-func (conf Config) startServer() {
+func (conf Config) startServer(logger ports.Logger) error {
 	// Use hexagonal architecture
-	conf.startHexagonalServer()
+	return conf.startHexagonalServer(logger)
 }
 
-func (conf Config) startHexagonalServer() {
+func (conf Config) startHexagonalServer(logger ports.Logger) error {
 	address := "0.0.0.0:50051"
 	
 	// Create database configuration from PassConfig
@@ -36,12 +38,14 @@ func (conf Config) startHexagonalServer() {
 	storageService := storageDomain.NewStorageService(mysqlAdapter)
 	
 	// Create gRPC server (primary adapter)
-	grpcServer := storageGRPC.NewGRPCServer(storageService, address)
+	grpcServer := storageGRPC.NewGRPCServer(storageService, address, logger) // New line
 	
 	// Start the server
-	log.Info().Str("address", address).Msg("Starting storage service with hexagonal architecture")
+	logger.Info(context.Background(), "Starting storage service with hexagonal architecture", "address", address)
 	if err := grpcServer.Start(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start hexagonal storage server")
+		logger.Error(context.Background(), "Failed to start hexagonal storage server", "error", err)
+		return err
 	}
+	return nil
 }
 

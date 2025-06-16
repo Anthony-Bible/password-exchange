@@ -5,11 +5,15 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package database
 
 import (
-	"fmt"
+	"context"
+	"log" // For critical startup errors
+	"os"  // For os.Exit
 	"reflect"
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,12 +28,35 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("database called")
-		var cfg Config
+	Run: func(cmdCobra *cobra.Command, args []string) { // Renamed cmd to cmdCobra to avoid conflict with package name
+		appFullConfig, err := config.LoadConfig()
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to load application configuration: %v", err)
+		}
+
+		// Initialize the new logger
+		serviceLogger, err := logging.NewBridgeLogger(appFullConfig.Log, appFullConfig.EnableSlog, "database-service")
+		if err != nil {
+			log.Fatalf("CRITICAL: Failed to initialize logger: %v", err)
+		}
+		serviceLogger.Info(context.Background(), "Database command initiated, logger active")
+
+		var cfg Config // This is the local Config type defined in database2.go
+
+		// The existing bindenvs and Unmarshal logic for the command's specific config (cfg.PassConfig)
+		// It's assumed that `bindenvs` correctly sets up viper for the subsequent Unmarshal into cfg.PassConfig
 		bindenvs(cfg)
-		viper.Unmarshal(&cfg.PassConfig)
-		cfg.startServer()
+		if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
+			 serviceLogger.Error(context.Background(), "Failed to unmarshal PassConfig specific to database command", "error", err)
+			 os.Exit(1)
+		}
+
+		// Call startServer with the logger
+		if err := cfg.startServer(serviceLogger); err != nil {
+			serviceLogger.Error(context.Background(), "Database service command execution failed", "error", err)
+			os.Exit(1)
+		}
+		serviceLogger.Info(context.Background(), "Database service command completed successfully.")
 	},
 }
 
