@@ -6,11 +6,45 @@ import (
 
 var AppConfig PassConfig
 
+// EmailConfig holds all email-related settings.
+type EmailConfig struct {
+	Templates EmailTemplates `mapstructure:"templates"`
+	Subjects  EmailSubjects  `mapstructure:"subjects"`
+	Body      EmailBody      `mapstructure:"body"`
+	Sender    EmailSender    `mapstructure:"sender"`
+	URL       string         `mapstructure:"url"`
+}
+
+// EmailTemplates defines paths or inline content for email templates.
+type EmailTemplates struct {
+	Initial  string `mapstructure:"initial"`
+	Reminder string `mapstructure:"reminder"`
+}
+
+// EmailSubjects defines the subject lines for different emails.
+type EmailSubjects struct {
+	Initial  string `mapstructure:"initial"`
+	Reminder string `mapstructure:"reminder"`
+}
+
+// EmailBody defines the body content for different emails.
+type EmailBody struct {
+	Initial  string `mapstructure:"initial"`
+	Reminder string `mapstructure:"reminder"`
+}
+
+// EmailSender defines the sender's details.
+type EmailSender struct {
+	Email string `mapstructure:"email"`
+	Name  string `mapstructure:"name"`
+}
+
 // Config represents the complete application configuration
 type Config struct {
 	PassConfig `mapstructure:",squash"`
 	Database   domain.DatabaseConfig `mapstructure:"database"`
 	Reminder   ReminderConfig        `mapstructure:"reminder"`
+	Email      EmailConfig           `mapstructure:"email"`
 }
 
 // ReminderConfig contains configuration for the reminder email system
