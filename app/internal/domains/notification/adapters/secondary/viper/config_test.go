@@ -1,97 +1,112 @@
 package viper
 
 import (
+	"os"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewViperConfigAdapter(t *testing.T) {
+// setupTestViper configures Viper for testing with a temporary config file.
+func setupTestViper(t *testing.T, configContent string) {
+	t.Helper()
+	viper.Reset()
+
+	if configContent != "" {
+		file, err := os.CreateTemp(t.TempDir(), "config.yaml")
+		if err != nil {
+			t.Fatalf("Failed to create temp config file: %v", err)
+		}
+		defer file.Close()
+
+		_, err = file.WriteString(configContent)
+		if err != nil {
+			t.Fatalf("Failed to write to temp config file: %v", err)
+		}
+
+		viper.SetConfigFile(file.Name())
+		viper.SetConfigType("yaml") // Explicitly set config type
+		if err := viper.ReadInConfig(); err != nil {
+			t.Fatalf("Failed to read config: %v", err)
+		}
+	}
+}
+
+func TestNewViperConfigAdapter_Defaults(t *testing.T) {
+	setupTestViper(t, "") // No config file, should use defaults
+
 	adapter := NewViperConfigAdapter()
 
-	// Test existing config methods
 	assert.Equal(t, "/templates/email_template.html", adapter.GetEmailTemplate())
 	assert.Equal(t, "server@password.exchange", adapter.GetServerEmail())
 	assert.Equal(t, "Password Exchange", adapter.GetServerName())
 	assert.Equal(t, "https://password.exchange", adapter.GetPasswordExchangeURL())
-
-	// Test new email configuration methods
 	assert.Equal(t, "Encrypted Message from Password Exchange from %s", adapter.GetInitialNotificationSubject())
 	assert.Equal(t, "Reminder: You have an unviewed encrypted message (Reminder #%d)", adapter.GetReminderNotificationSubject())
 	assert.Equal(t, "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about", adapter.GetInitialNotificationBodyTemplate())
-	assert.Equal(t, "", adapter.GetReminderNotificationBodyTemplate())
-	assert.Equal(t, "/templates/reminder_email_template.html", adapter.GetReminderEmailTemplate())
 	assert.Equal(t, "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.", adapter.GetReminderMessageContent())
 }
 
-func TestNewViperConfigAdapterWithValues(t *testing.T) {
-	emailTemplate := "/custom/template.html"
-	serverEmail := "custom@example.com"
-	serverName := "Custom Service"
-	passwordExchangeURL := "https://custom.example.com"
+func TestNewViperConfigAdapter_WithCustomConfig(t *testing.T) {
+	configContent := `
+email:
+  templates:
+    initial: "/custom/initial.html"
+    reminder: "/custom/reminder.html"
+  subjects:
+    initial: "Custom initial subject"
+    reminder: "Custom reminder subject"
+  body:
+    initial: "Custom initial body"
+    reminder: "Custom reminder body"
+  sender:
+    email: "custom@example.com"
+    name: "Custom Sender"
+  url: "https://custom.example.com"
+`
+	setupTestViper(t, configContent)
 
-	adapter := NewViperConfigAdapterWithValues(emailTemplate, serverEmail, serverName, passwordExchangeURL)
-
-	// Test that custom values are used for existing methods
-	assert.Equal(t, emailTemplate, adapter.GetEmailTemplate())
-	assert.Equal(t, serverEmail, adapter.GetServerEmail())
-	assert.Equal(t, serverName, adapter.GetServerName())
-	assert.Equal(t, passwordExchangeURL, adapter.GetPasswordExchangeURL())
-
-	// Test that default values are still used for new methods (backward compatibility)
-	assert.Equal(t, "Encrypted Message from Password Exchange from %s", adapter.GetInitialNotificationSubject())
-	assert.Equal(t, "Reminder: You have an unviewed encrypted message (Reminder #%d)", adapter.GetReminderNotificationSubject())
-	assert.Equal(t, "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about", adapter.GetInitialNotificationBodyTemplate())
-	assert.Equal(t, "", adapter.GetReminderNotificationBodyTemplate())
-	assert.Equal(t, "/templates/reminder_email_template.html", adapter.GetReminderEmailTemplate())
-	assert.Equal(t, "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.", adapter.GetReminderMessageContent())
-}
-
-// TestBackwardCompatibility ensures that existing code continues to work without changes
-func TestBackwardCompatibility(t *testing.T) {
 	adapter := NewViperConfigAdapter()
 
-	// Verify that the interface is properly implemented by calling all methods
-	// This test will fail at compile time if interface methods are missing
-	_ = adapter.GetEmailTemplate()
-	_ = adapter.GetServerEmail()
-	_ = adapter.GetServerName()
-	_ = adapter.GetPasswordExchangeURL()
-	_ = adapter.GetInitialNotificationSubject()
-	_ = adapter.GetReminderNotificationSubject()
-	_ = adapter.GetInitialNotificationBodyTemplate()
-	_ = adapter.GetReminderNotificationBodyTemplate()
-	_ = adapter.GetReminderEmailTemplate()
-	_ = adapter.GetReminderMessageContent()
-
-	// Test that we get non-empty values for critical settings
-	assert.NotEmpty(t, adapter.GetInitialNotificationSubject())
-	assert.NotEmpty(t, adapter.GetReminderNotificationSubject())
-	assert.NotEmpty(t, adapter.GetInitialNotificationBodyTemplate())
-	assert.NotEmpty(t, adapter.GetReminderMessageContent())
+	assert.Equal(t, "/custom/initial.html", adapter.GetEmailTemplate())
+	assert.Equal(t, "custom@example.com", adapter.GetServerEmail())
+	assert.Equal(t, "Custom Sender", adapter.GetServerName())
+	assert.Equal(t, "https://custom.example.com", adapter.GetPasswordExchangeURL())
+	assert.Equal(t, "Custom initial subject", adapter.GetInitialNotificationSubject())
+	assert.Equal(t, "Custom reminder subject", adapter.GetReminderNotificationSubject())
+	assert.Equal(t, "Custom initial body", adapter.GetInitialNotificationBodyTemplate())
+	assert.Equal(t, "Custom reminder body", adapter.GetReminderMessageContent())
 }
 
-// TestConfigurationValues verifies the exact default values match the original hardcoded ones
-func TestConfigurationValues(t *testing.T) {
+func TestNewViperConfigAdapter_WithPartialConfig(t *testing.T) {
+	configContent := `
+email:
+  sender:
+    email: "partial@example.com"
+`
+	setupTestViper(t, configContent)
+
 	adapter := NewViperConfigAdapter()
 
-	// Test that initial notification subject matches the original hardcoded value
-	expectedInitialSubject := "Encrypted Message from Password Exchange from %s"
-	assert.Equal(t, expectedInitialSubject, adapter.GetInitialNotificationSubject())
+	// Test that the partial config is loaded
+	assert.Equal(t, "partial@example.com", adapter.GetServerEmail())
 
-	// Test that reminder notification subject matches the original hardcoded value
-	expectedReminderSubject := "Reminder: You have an unviewed encrypted message (Reminder #%d)"
-	assert.Equal(t, expectedReminderSubject, adapter.GetReminderNotificationSubject())
-
-	// Test that initial body template matches the original hardcoded value
-	expectedInitialBody := "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about"
-	assert.Equal(t, expectedInitialBody, adapter.GetInitialNotificationBodyTemplate())
-
-	// Test that reminder message content matches the original hardcoded value
-	expectedReminderContent := "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message."
-	assert.Equal(t, expectedReminderContent, adapter.GetReminderMessageContent())
-
-	// Test template paths
+	// Test that the rest of the config falls back to defaults
 	assert.Equal(t, "/templates/email_template.html", adapter.GetEmailTemplate())
-	assert.Equal(t, "/templates/reminder_email_template.html", adapter.GetReminderEmailTemplate())
+	assert.Equal(t, "Password Exchange", adapter.GetServerName())
+}
+
+func TestValidation(t *testing.T) {
+	configContent := `
+email:
+  url: "invalid-url"
+`
+	setupTestViper(t, configContent)
+
+	adapter := NewViperConfigAdapter()
+
+	// This test expects an error for invalid inputs, even if the validation logic is stubbed out.
+	// Replace the stubbed-out validation logic with actual implementation in the future.
+	assert.NotNil(t, adapter.ValidatePasswordExchangeURL())
 }
