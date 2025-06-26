@@ -118,7 +118,7 @@ func (v *ViperConfigAdapter) GetInitialNotificationBodyTemplate() string {
 }
 
 func (v *ViperConfigAdapter) GetReminderNotificationBodyTemplate() string {
-	return v.emailConfig.Body.Reminder
+	return v.emailConfig.Templates.Reminder
 }
 
 func (v *ViperConfigAdapter) GetReminderEmailTemplate() string {
