@@ -104,10 +104,25 @@ _If you have a tool or extension that interacts with Password Exchange please ma
 - **Multiple interfaces**: Web UI, REST API, and Slack bot
 - **Email notifications**: Optional email alerts when messages are sent
 - **Passphrase protection**: Additional security layer with optional passphrases
+- **Password generator**: Generate strong, secure passwords and passphrases directly in the web UI.
 - **Rate limiting**: Built-in protection against abuse
 - **Prometheus metrics**: Monitoring and observability support
 - **Swagger documentation**: Complete API documentation at `/api/v1/docs`
 - **Email reminders**: Automated reminders for unviewed messages with configurable timing
+
+#### Password Generator
+The web interface includes a comprehensive, client-side password generator to help users create strong, secure passwords and passphrases.
+
+- **Generation Methods**: Supports both randomly generated passwords and memorable passphrases based on the [EFF Large Wordlist](https://www.eff.org/dice).
+- **Secure Randomness**: Utilizes the browser's `crypto.getRandomValues` API for cryptographically secure random number generation.
+- **Strength Analysis**: Integrates the `zxcvbn` library to provide real-time password strength analysis, including crack time estimations and actionable feedback.
+- **Customization**:
+    - **Random Passwords**: Configure length, and inclusion of uppercase, lowercase, numbers, and symbols. Also provides an option to exclude ambiguous characters (e.g., `O`, `0`, `l`, `1`).
+    - **Passphrases**: Configure the number of words and the separator character.
+- **User Experience**:
+    - Real-time generation and strength analysis as options are changed.
+    - Ability to generate multiple password options for users to choose from.
+    - Easy copy-to-clipboard and insertion into the message field.
 
 ### 🚧 Planned Features
 1. Send message to both users
