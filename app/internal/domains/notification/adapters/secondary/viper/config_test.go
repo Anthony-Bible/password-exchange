@@ -106,7 +106,7 @@ email:
 
 	adapter := NewViperConfigAdapter()
 
-	// This is a simplified test. In a real scenario, you would check for a specific error.
-	// However, since the validation methods are stubbed out, we just check for nil for now.
-	assert.Nil(t, adapter.ValidatePasswordExchangeURL())
+	// This test expects an error for invalid inputs, even if the validation logic is stubbed out.
+	// Replace the stubbed-out validation logic with actual implementation in the future.
+	assert.NotNil(t, adapter.ValidatePasswordExchangeURL())
 }
