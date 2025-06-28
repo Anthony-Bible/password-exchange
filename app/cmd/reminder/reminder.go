@@ -296,7 +296,7 @@ func shutdown(fullURL, sidecarName string) bool {
 		log.Debug().Err(err).Msgf("Failed to parse URL for %s sidecar", sidecarName)
 		return false
 	}
-	req, err := http.NewRequest("POST", parsedURL.Path, nil)
+	req, err := http.NewRequest("POST", fullURL, nil)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
 		return false
