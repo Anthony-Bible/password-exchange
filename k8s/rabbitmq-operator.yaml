@@ -12,7 +12,7 @@ spec:
   service:
     type: ClusterIP
   persistence:
-    storageClassName: "hcloud-volumes"  # Use default storage class
+    storageClassName: "standard-rwo"  # Use default storage class
     storage: 1Gi
   resources:
     requests:
