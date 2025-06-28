@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -291,11 +290,6 @@ func shutdownSidecar(istioURL, linkerdURL string) {
 
 func shutdown(fullURL, sidecarName string) bool {
 	client := &http.Client{Timeout: 5 * time.Second}
-	parsedURL, err := url.Parse(fullURL)
-	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to parse URL for %s sidecar", sidecarName)
-		return false
-	}
 	req, err := http.NewRequest("POST", fullURL, nil)
 	if err != nil {
 		log.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
