@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -208,7 +209,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			Msg("Reminder email processing completed")
 		
 		// Signal Istio sidecar to shut down for cronjob completion
-		shutdownIstioSidecar()
+		shutdownSidecar("http://localhost:15020/quitquitquit", "http://localhost:4191/shutdown")
 	},
 }
 
@@ -276,32 +277,45 @@ func init() {
 	viper.BindPFlag("interval-hours", reminderCmd.Flags().Lookup("interval-hours"))
 }
 
-// shutdownIstioSidecar sends a shutdown signal to Istio sidecar proxy
-// This is necessary for cronjobs to complete properly when using Istio service mesh
-// The sidecar will continue running after the main container exits unless we explicitly shut it down
-func shutdownIstioSidecar() {
-	// Istio sidecar shutdown endpoint
-	url := "http://localhost:15020/quitquitquit"
-	
-	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("POST", url, nil)
-	if err != nil {
-		log.Debug().Err(err).Msg("Failed to create shutdown request for Istio sidecar")
+// shutdownSidecar sends a shutdown signal to the service mesh sidecar.
+// This is necessary for cronjobs to complete properly.
+func shutdownSidecar(istioURL, linkerdURL string) {
+	// Try Istio first
+	if shutdown(istioURL, "Istio") {
 		return
 	}
-	
+
+	// If Istio fails, try Linkerd
+	shutdown(linkerdURL, "Linkerd")
+}
+
+func shutdown(fullURL, sidecarName string) bool {
+	client := &http.Client{Timeout: 5 * time.Second}
+	parsedURL, err := url.Parse(fullURL)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to parse URL for %s sidecar", sidecarName)
+		return false
+	}
+	req, err := http.NewRequest("POST", parsedURL.Path, nil)
+	if err != nil {
+		log.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
+		return false
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Debug().Err(err).Msg("Failed to shutdown Istio sidecar (may not be present)")
-		return
+		log.Debug().Err(err).Msgf("Failed to shutdown %s sidecar (may not be present)", sidecarName)
+		return false
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Info().Msg("Successfully signaled Istio sidecar shutdown")
+		log.Info().Msgf("Successfully signaled %s sidecar shutdown", sidecarName)
 		// Give the sidecar a moment to shut down gracefully
 		time.Sleep(2 * time.Second)
-	} else {
-		log.Debug().Int("status", resp.StatusCode).Msg("Unexpected response from Istio sidecar shutdown endpoint")
+		return true
 	}
+
+	log.Debug().Int("status", resp.StatusCode).Msgf("Unexpected response from %s sidecar shutdown endpoint", sidecarName)
+	return false
 }
