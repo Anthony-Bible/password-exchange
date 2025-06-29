@@ -9,11 +9,26 @@ metadata:
   namespace: default
 spec:
   replicas: 3
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: stable
+            operator: In
+            values:
+            - rabbit
+  tolerations:
+  - key: stable
+    operator: Equal
+    value: rabbit
+    effect: NoSchedule
   service:
     type: ClusterIP
   persistence:
     storageClassName: "standard-rwo"  # Use default storage class
-    storage: 1Gi
+    storage: 3Gi
   resources:
     requests:
       cpu: 100m
