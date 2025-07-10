@@ -21,6 +21,15 @@ spec:
         phase: "%{PHASE}"
         version: "%{VERSION}" 
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: email
+              topologyKey: kubernetes.io/hostname
       containers:
       - envFrom:
         - secretRef:
