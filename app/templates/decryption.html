@@ -52,7 +52,15 @@
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
                     <div class="decrypted-message-box">
-                        <pre class="mb-0" id="message-content"></pre>
+                        <div class="position-relative">
+                            <pre class="mb-0" id="message-content"></pre>
+                            <button type="button" 
+                                    class="btn btn-outline-secondary btn-sm position-absolute top-0 end-0 m-2" 
+                                    id="copy-message-btn" 
+                                    title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -195,6 +203,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Add copy button event listener
+    const copyMessageBtn = document.getElementById('copy-message-btn');
+    if (copyMessageBtn) {
+        copyMessageBtn.addEventListener('click', copyMessageToClipboard);
+    }
 });
 
 // API Functions
@@ -321,6 +335,86 @@ function showPassphraseError(message) {
 
 function hidePassphraseError() {
     document.getElementById('passphrase-error').style.display = 'none';
+}
+
+// Copy message to clipboard functionality
+function copyMessageToClipboard() {
+    const messageContent = document.getElementById('message-content').textContent;
+    const copyButton = document.getElementById('copy-message-btn');
+    
+    if (!messageContent) {
+        return;
+    }
+    
+    // Try modern clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(messageContent).then(() => {
+            showCopyFeedback(copyButton);
+        }).catch(() => {
+            // Fallback to document.execCommand
+            fallbackCopyToClipboard(messageContent, copyButton);
+        });
+    } else {
+        // Fallback to document.execCommand
+        fallbackCopyToClipboard(messageContent, copyButton);
+    }
+}
+
+function fallbackCopyToClipboard(text, copyButton) {
+    // Create temporary textarea for fallback copy
+    const tempTextarea = document.createElement('textarea');
+    tempTextarea.value = text;
+    tempTextarea.style.position = 'fixed';
+    tempTextarea.style.left = '-999999px';
+    tempTextarea.style.top = '-999999px';
+    document.body.appendChild(tempTextarea);
+    
+    try {
+        tempTextarea.focus();
+        tempTextarea.select();
+        tempTextarea.setSelectionRange(0, 99999); // For mobile devices
+        
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showCopyFeedback(copyButton);
+        } else {
+            console.error('Failed to copy message');
+            showCopyErrorFeedback(copyButton);
+        }
+    } catch (err) {
+        console.error('Failed to copy message: ', err);
+        showCopyErrorFeedback(copyButton);
+    } finally {
+        document.body.removeChild(tempTextarea);
+    }
+}
+
+function showCopyFeedback(copyButton) {
+    // Visual feedback
+    const originalHTML = copyButton.innerHTML;
+    copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    copyButton.classList.remove('btn-outline-secondary');
+    copyButton.classList.add('btn-success');
+    
+    setTimeout(() => {
+        copyButton.innerHTML = originalHTML;
+        copyButton.classList.remove('btn-success');
+        copyButton.classList.add('btn-outline-secondary');
+    }, 2000);
+}
+
+function showCopyErrorFeedback(copyButton) {
+    // Visual error feedback
+    const originalHTML = copyButton.innerHTML;
+    copyButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Copy Failed';
+    copyButton.classList.remove('btn-outline-secondary');
+    copyButton.classList.add('btn-danger');
+    
+    setTimeout(() => {
+        copyButton.innerHTML = originalHTML;
+        copyButton.classList.remove('btn-danger');
+        copyButton.classList.add('btn-outline-secondary');
+    }, 2500); // Slightly longer duration for error message
 }
 </script>
 
