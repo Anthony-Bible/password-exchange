@@ -392,7 +392,7 @@ function fallbackCopyToClipboard(text, copyButton) {
 function showCopyFeedback(copyButton) {
     // Visual feedback
     const originalHTML = copyButton.innerHTML;
-    copyButton.innerHTML = '<i class="fas fa-check"></i>';
+    copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
     copyButton.classList.remove('btn-outline-secondary');
     copyButton.classList.add('btn-success');
     
@@ -400,7 +400,7 @@ function showCopyFeedback(copyButton) {
         copyButton.innerHTML = originalHTML;
         copyButton.classList.remove('btn-success');
         copyButton.classList.add('btn-outline-secondary');
-    }, 1500);
+    }, 2000);
 }
 </script>
 
