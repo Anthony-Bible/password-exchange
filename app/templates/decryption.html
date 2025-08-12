@@ -379,11 +379,11 @@ function fallbackCopyToClipboard(text, copyButton) {
             showCopyFeedback(copyButton);
         } else {
             console.error('Failed to copy message');
-            alert('Failed to copy message to clipboard');
+            showCopyErrorFeedback(copyButton);
         }
     } catch (err) {
         console.error('Failed to copy message: ', err);
-        alert('Failed to copy message to clipboard');
+        showCopyErrorFeedback(copyButton);
     } finally {
         document.body.removeChild(tempTextarea);
     }
@@ -401,6 +401,20 @@ function showCopyFeedback(copyButton) {
         copyButton.classList.remove('btn-success');
         copyButton.classList.add('btn-outline-secondary');
     }, 2000);
+}
+
+function showCopyErrorFeedback(copyButton) {
+    // Visual error feedback
+    const originalHTML = copyButton.innerHTML;
+    copyButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Copy Failed';
+    copyButton.classList.remove('btn-outline-secondary');
+    copyButton.classList.add('btn-danger');
+    
+    setTimeout(() => {
+        copyButton.innerHTML = originalHTML;
+        copyButton.classList.remove('btn-danger');
+        copyButton.classList.add('btn-outline-secondary');
+    }, 2500); // Slightly longer duration for error message
 }
 </script>
 
