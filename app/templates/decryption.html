@@ -51,16 +51,15 @@
                 
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
-                    <div class="decrypted-message-box">
-                        <div class="position-relative">
-                            <pre class="mb-0" id="message-content"></pre>
-                            <button type="button" 
-                                    class="btn btn-outline-secondary btn-sm position-absolute top-0 end-0 m-2" 
-                                    id="copy-message-btn" 
-                                    title="Copy to clipboard">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace" 
+                               id="message-content-input" readonly>
+                        <button type="button" 
+                                class="btn btn-outline-secondary" 
+                                id="copy-message-btn" 
+                                title="Copy to clipboard">
+                            <i class="fas fa-copy"></i>
+                        </button>
                     </div>
                 </div>
                 
@@ -265,7 +264,7 @@ function handleDecryptionSuccess(data) {
     }
     
     // Show decrypted message
-    document.getElementById('message-content').textContent = data.content;
+    document.getElementById('message-content-input').value = data.content;
     
     // Update view count information
     const viewCount = data.viewCount || 1;
@@ -339,7 +338,7 @@ function hidePassphraseError() {
 
 // Copy message to clipboard functionality
 function copyMessageToClipboard() {
-    const messageContent = document.getElementById('message-content').textContent;
+    const messageContent = document.getElementById('message-content-input').value;
     const copyButton = document.getElementById('copy-message-btn');
     
     if (!messageContent) {
