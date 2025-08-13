@@ -51,7 +51,7 @@
                 
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
-                    <div class="input-group">
+                    <div class="input-group mb-3">
                         <input type="text" class="form-control font-monospace" 
                                id="message-content-input" readonly>
                         <button type="button" 
@@ -336,85 +336,34 @@ function hidePassphraseError() {
     document.getElementById('passphrase-error').style.display = 'none';
 }
 
-// Copy message to clipboard functionality
+// Copy message to clipboard functionality - matches home page pattern
 function copyMessageToClipboard() {
-    const messageContent = document.getElementById('message-content-input').value;
-    const copyButton = document.getElementById('copy-message-btn');
-    
-    if (!messageContent) {
-        return;
-    }
-    
-    // Try modern clipboard API first
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(messageContent).then(() => {
-            showCopyFeedback(copyButton);
-        }).catch(() => {
-            // Fallback to document.execCommand
-            fallbackCopyToClipboard(messageContent, copyButton);
-        });
-    } else {
-        // Fallback to document.execCommand
-        fallbackCopyToClipboard(messageContent, copyButton);
-    }
-}
-
-function fallbackCopyToClipboard(text, copyButton) {
-    // Create temporary textarea for fallback copy
-    const tempTextarea = document.createElement('textarea');
-    tempTextarea.value = text;
-    tempTextarea.style.position = 'fixed';
-    tempTextarea.style.left = '-999999px';
-    tempTextarea.style.top = '-999999px';
-    document.body.appendChild(tempTextarea);
+    const messageInput = document.getElementById('message-content-input');
+    messageInput.select();
+    messageInput.setSelectionRange(0, 99999); // For mobile devices
     
     try {
-        tempTextarea.focus();
-        tempTextarea.select();
-        tempTextarea.setSelectionRange(0, 99999); // For mobile devices
+        document.execCommand('copy');
         
-        const successful = document.execCommand('copy');
-        if (successful) {
-            showCopyFeedback(copyButton);
-        } else {
-            console.error('Failed to copy message');
-            showCopyErrorFeedback(copyButton);
-        }
+        // Show feedback - matches home page pattern
+        const copyButton = document.getElementById('copy-message-btn');
+        const originalText = copyButton.innerHTML;
+        copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        copyButton.classList.remove('btn-outline-secondary');
+        copyButton.classList.add('btn-success');
+        
+        setTimeout(() => {
+            copyButton.innerHTML = originalText;
+            copyButton.classList.remove('btn-success');
+            copyButton.classList.add('btn-outline-secondary');
+        }, 2000);
+        
     } catch (err) {
-        console.error('Failed to copy message: ', err);
-        showCopyErrorFeedback(copyButton);
-    } finally {
-        document.body.removeChild(tempTextarea);
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy message to clipboard');
     }
 }
 
-function showCopyFeedback(copyButton) {
-    // Visual feedback
-    const originalHTML = copyButton.innerHTML;
-    copyButton.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    copyButton.classList.remove('btn-outline-secondary');
-    copyButton.classList.add('btn-success');
-    
-    setTimeout(() => {
-        copyButton.innerHTML = originalHTML;
-        copyButton.classList.remove('btn-success');
-        copyButton.classList.add('btn-outline-secondary');
-    }, 2000);
-}
-
-function showCopyErrorFeedback(copyButton) {
-    // Visual error feedback
-    const originalHTML = copyButton.innerHTML;
-    copyButton.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Copy Failed';
-    copyButton.classList.remove('btn-outline-secondary');
-    copyButton.classList.add('btn-danger');
-    
-    setTimeout(() => {
-        copyButton.innerHTML = originalHTML;
-        copyButton.classList.remove('btn-danger');
-        copyButton.classList.add('btn-outline-secondary');
-    }, 2500); // Slightly longer duration for error message
-}
 </script>
 
 
