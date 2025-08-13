@@ -159,7 +159,7 @@ jobs:
         if: |
           (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) && needs.determine_version.outputs.phase != ''
         with:
-          github_token: ${{ secrets.git_push_token }}
+          github_token: ${{ secrets.PUSH_SECRET}}
           repository: "Anthony-Bible/password-exchange-deploy"
           directory: ./build
           force: false # Be careful with force push
