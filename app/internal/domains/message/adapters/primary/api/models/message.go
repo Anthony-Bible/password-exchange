@@ -6,27 +6,27 @@ import (
 
 // MessageSubmissionRequest represents a REST API request to submit a new message
 type MessageSubmissionRequest struct {
-	Content          string     `json:"content" validate:"required,min=1,max=10000"`
+	Content          string     `json:"content"                  validate:"required,min=1,max=10000"`
 	Sender           *Sender    `json:"sender,omitempty"`
 	Recipient        *Recipient `json:"recipient,omitempty"`
-	Passphrase       string     `json:"passphrase,omitempty" validate:"max=500"`
+	Passphrase       string     `json:"passphrase,omitempty"     validate:"max=500"`
 	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
 	SendNotification bool       `json:"sendNotification"`
 	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
 	QuestionID       *int       `json:"questionId,omitempty"`
-	MaxViewCount     int        `json:"maxViewCount,omitempty" validate:"min=0,max=100"`
+	MaxViewCount     int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
 	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
 }
 
 // Sender represents sender information for message submission
 type Sender struct {
-	Name  string `json:"name" validate:"required,min=1,max=100"`
+	Name  string `json:"name"  validate:"required,min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
 // Recipient represents recipient information for message submission
 type Recipient struct {
-	Name  string `json:"name" validate:"min=1,max=100"`
+	Name  string `json:"name"  validate:"min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
@@ -51,7 +51,7 @@ type MessageAccessInfoResponse struct {
 
 // MessageDecryptRequest represents a request to decrypt a message
 type MessageDecryptRequest struct {
-	DecryptionKey string `json:"decryptionKey" validate:"required"`
+	DecryptionKey string `json:"decryptionKey"        validate:"required"`
 	Passphrase    string `json:"passphrase,omitempty"`
 }
 

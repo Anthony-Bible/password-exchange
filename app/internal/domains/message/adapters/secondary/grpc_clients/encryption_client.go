@@ -60,7 +60,10 @@ func (c *EncryptionClient) Encrypt(ctx context.Context, plaintext []string, key 
 		return nil, fmt.Errorf("failed to encrypt message: %w", err)
 	}
 
-	log.Debug().Int("plaintextCount", len(plaintext)).Int("ciphertextCount", len(resp.GetCiphertext())).Msg("Encrypted message successfully")
+	log.Debug().
+		Int("plaintextCount", len(plaintext)).
+		Int("ciphertextCount", len(resp.GetCiphertext())).
+		Msg("Encrypted message successfully")
 	return resp.GetCiphertext(), nil
 }
 
@@ -77,7 +80,10 @@ func (c *EncryptionClient) Decrypt(ctx context.Context, ciphertext []string, key
 		return nil, fmt.Errorf("failed to decrypt message: %w", err)
 	}
 
-	log.Debug().Int("ciphertextCount", len(ciphertext)).Int("plaintextCount", len(resp.GetPlaintext())).Msg("Decrypted message successfully")
+	log.Debug().
+		Int("ciphertextCount", len(ciphertext)).
+		Int("plaintextCount", len(resp.GetPlaintext())).
+		Msg("Decrypted message successfully")
 	return resp.GetPlaintext(), nil
 }
 

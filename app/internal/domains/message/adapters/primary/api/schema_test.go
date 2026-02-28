@@ -20,7 +20,7 @@ type OpenAPISpec struct {
 		Description string `yaml:"description"`
 		Version     string `yaml:"version"`
 	} `yaml:"info"`
-	Paths map[string]interface{} `yaml:"paths"`
+	Paths      map[string]interface{} `yaml:"paths"`
 	Components struct {
 		Schemas map[string]interface{} `yaml:"schemas"`
 	} `yaml:"components"`
@@ -102,9 +102,9 @@ func TestMessageSubmissionRequestSchema(t *testing.T) {
 		{
 			name: "minimal valid request",
 			request: &models.MessageSubmissionRequest{
-				Content:          "Test message",
+				Content: "Test message",
 				Recipient: &models.Recipient{
-					Name:  "Jane Smith",
+					Name: "Jane Smith",
 				},
 				SendNotification: false,
 			},
@@ -319,7 +319,7 @@ func TestStandardErrorResponseSchema(t *testing.T) {
 		Timestamp: time.Now(),
 		Path:      "/api/v1/messages",
 		Details: map[string]interface{}{
-			"content": "Content is required",
+			"content":      "Content is required",
 			"sender.email": "Valid email required when notifications enabled",
 		},
 	}

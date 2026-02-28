@@ -57,25 +57,25 @@ func NewPrometheusMetrics(registry *prometheus.Registry) *PrometheusMetrics {
 func PrometheusMiddleware(metrics *PrometheusMetrics) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
+
 		// Increment in-flight requests
 		metrics.RequestsInFlight.Inc()
 		defer metrics.RequestsInFlight.Dec()
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Collect metrics after request completion
 		duration := time.Since(start)
 		statusCode := c.Writer.Status()
 		method := c.Request.Method
 		endpoint := c.FullPath()
-		
+
 		// Use request path if FullPath is empty (for unmatched routes)
 		if endpoint == "" {
 			endpoint = c.Request.URL.Path
 		}
-		
+
 		// Record metrics
 		labels := []string{method, endpoint, strconv.Itoa(statusCode)}
 		metrics.RequestsTotal.WithLabelValues(labels...).Inc()

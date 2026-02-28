@@ -416,31 +416,31 @@ func TestAntiSpamValidation(t *testing.T) {
 		{"question 0 correct answer with whitespace", intPtr(0), "  blue  ", true},
 		{"question 0 wrong answer", intPtr(0), "red", false},
 		{"question 0 wrong answer green", intPtr(0), "green", false},
-		
+
 		// Question 1: What is 2 + 2?
 		{"question 1 correct numeric", intPtr(1), "4", true},
 		{"question 1 correct word", intPtr(1), "four", true},
 		{"question 1 wrong answer", intPtr(1), "5", false},
-		
+
 		// Question 2: How many days are in a week?
 		{"question 2 correct numeric", intPtr(2), "7", true},
 		{"question 2 correct word", intPtr(2), "seven", true},
 		{"question 2 wrong answer", intPtr(2), "6", false},
-		
+
 		// Question 3: What animal says meow?
 		{"question 3 correct singular", intPtr(3), "cat", true},
 		{"question 3 correct plural", intPtr(3), "cats", true},
 		{"question 3 wrong answer", intPtr(3), "dog", false},
-		
+
 		// Question 4: What do you use to write?
 		{"question 4 correct", intPtr(4), "pen", true},
 		{"question 4 wrong answer", intPtr(4), "car", false},
-		
+
 		// Question 5: How many legs does a dog have?
 		{"question 5 correct numeric", intPtr(5), "4", true},
 		{"question 5 correct word", intPtr(5), "four", true},
 		{"question 5 wrong answer", intPtr(5), "3", false},
-		
+
 		// Edge cases
 		{"empty answer", intPtr(0), "", false},
 		{"partial answer", intPtr(0), "blu", false},
@@ -472,13 +472,25 @@ func TestAntiSpamValidation(t *testing.T) {
 			if tt.expected {
 				// Should not have anti-spam error
 				if errors != nil {
-					assert.NotContains(t, errors, "antiSpamAnswer", "Should not have anti-spam error for valid answer: %s", tt.answer)
+					assert.NotContains(
+						t,
+						errors,
+						"antiSpamAnswer",
+						"Should not have anti-spam error for valid answer: %s",
+						tt.answer,
+					)
 				}
 			} else {
 				// Should have anti-spam error
 				assert.NotNil(t, errors, "Expected validation errors for invalid anti-spam answer: %s", tt.answer)
 				if errors != nil {
-					assert.Contains(t, errors, "antiSpamAnswer", "Expected anti-spam error for invalid answer: %s", tt.answer)
+					assert.Contains(
+						t,
+						errors,
+						"antiSpamAnswer",
+						"Expected anti-spam error for invalid answer: %s",
+						tt.answer,
+					)
 				}
 			}
 		})

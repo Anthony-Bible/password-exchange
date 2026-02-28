@@ -69,9 +69,9 @@ func TestNewRateLimitMiddleware(t *testing.T) {
 				req := httptest.NewRequest(http.MethodGet, "/test", nil)
 				req.Header.Set("X-Forwarded-For", "192.168.1.1") // Consistent IP
 				w := httptest.NewRecorder()
-				
+
 				router.ServeHTTP(w, req)
-				
+
 				if w.Code == http.StatusOK {
 					passed++
 				} else if w.Code == http.StatusTooManyRequests {
@@ -87,12 +87,12 @@ func TestNewRateLimitMiddleware(t *testing.T) {
 
 func TestDefaultKeyGenerator(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
-		name       string
-		clientIP   string
+		name         string
+		clientIP     string
 		forwardedFor string
-		expected   string
+		expected     string
 	}{
 		{
 			name:     "uses client IP when no forwarded header",
@@ -113,7 +113,7 @@ func TestDefaultKeyGenerator(t *testing.T) {
 			if tt.forwardedFor != "" {
 				req.Header.Set("X-Forwarded-For", tt.forwardedFor)
 			}
-			
+
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = req
@@ -126,7 +126,7 @@ func TestDefaultKeyGenerator(t *testing.T) {
 
 func TestMessageSubmissionRateLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	router := gin.New()
 	router.Use(MessageSubmissionRateLimit())
 	router.POST("/api/v1/messages", func(c *gin.Context) {
@@ -138,7 +138,7 @@ func TestMessageSubmissionRateLimit(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/messages", nil)
 		req.Header.Set("X-Forwarded-For", "192.168.1.1")
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusCreated, w.Code, "request %d should succeed", i+1)
 	}
@@ -147,14 +147,14 @@ func TestMessageSubmissionRateLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/messages", nil)
 	req.Header.Set("X-Forwarded-For", "192.168.1.1")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusTooManyRequests, w.Code, "11th request should be rate limited")
 }
 
 func TestMessageAccessRateLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	router := gin.New()
 	router.Use(MessageAccessRateLimit())
 	router.GET("/api/v1/messages/:id", func(c *gin.Context) {
@@ -166,7 +166,7 @@ func TestMessageAccessRateLimit(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/test-id", nil)
 		req.Header.Set("X-Forwarded-For", "192.168.1.1")
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "request %d should succeed", i+1)
 	}
@@ -175,14 +175,14 @@ func TestMessageAccessRateLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/messages/test-id", nil)
 	req.Header.Set("X-Forwarded-For", "192.168.1.1")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusTooManyRequests, w.Code, "101st request should be rate limited")
 }
 
 func TestMessageDecryptRateLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	router := gin.New()
 	router.Use(MessageDecryptRateLimit())
 	router.POST("/api/v1/messages/:id/decrypt", func(c *gin.Context) {
@@ -194,7 +194,7 @@ func TestMessageDecryptRateLimit(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/messages/test-id/decrypt", nil)
 		req.Header.Set("X-Forwarded-For", "192.168.1.1")
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "request %d should succeed", i+1)
 	}
@@ -203,14 +203,14 @@ func TestMessageDecryptRateLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/messages/test-id/decrypt", nil)
 	req.Header.Set("X-Forwarded-For", "192.168.1.1")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusTooManyRequests, w.Code, "21st request should be rate limited")
 }
 
 func TestHealthCheckRateLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	router := gin.New()
 	router.Use(HealthCheckRateLimit())
 	router.GET("/api/v1/health", func(c *gin.Context) {
@@ -222,7 +222,7 @@ func TestHealthCheckRateLimit(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 		req.Header.Set("X-Forwarded-For", "192.168.1.1")
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "request %d should succeed", i+1)
 	}
@@ -231,14 +231,14 @@ func TestHealthCheckRateLimit(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	req.Header.Set("X-Forwarded-For", "192.168.1.1")
 	w := httptest.NewRecorder()
-	
+
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusTooManyRequests, w.Code, "301st request should be rate limited")
 }
 
 func TestCustomRateLimitReachedHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	t.Run("creates proper JSON response for rate limit exceeded", func(t *testing.T) {
 		router := gin.New()
 		router.Use(CorrelationID()) // Add correlation ID middleware
@@ -247,22 +247,22 @@ func TestCustomRateLimitReachedHandler(t *testing.T) {
 			c.Header("X-Ratelimit-Limit", "10")
 			c.Header("X-Ratelimit-Remaining", "0")
 			c.Header("X-Ratelimit-Reset", "1640995200")
-			
+
 			// Call our custom rate limit handler
 			CustomRateLimitReachedHandler(c)
 		})
 
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
-		
+
 		assert.Equal(t, http.StatusTooManyRequests, w.Code)
-		
+
 		var response map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, "rate_limit_exceeded", response["error"])
 		assert.Equal(t, "Rate limit exceeded. Please try again later.", response["message"])
 		assert.Equal(t, "/test", response["path"])
@@ -276,12 +276,12 @@ func TestCustomRateLimitReachedHandler(t *testing.T) {
 
 func TestRateLimitWithDifferentIPs(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	config := RateLimitConfig{
 		Period: 1 * time.Hour,
 		Limit:  1, // Very restrictive for testing
 	}
-	
+
 	router := gin.New()
 	router.Use(NewRateLimitMiddleware(config))
 	router.GET("/test", func(c *gin.Context) {
@@ -290,20 +290,20 @@ func TestRateLimitWithDifferentIPs(t *testing.T) {
 
 	// Test that different IPs have separate rate limits
 	ips := []string{"192.168.1.1", "192.168.1.2", "192.168.1.3"}
-	
+
 	for _, ip := range ips {
 		req := httptest.NewRequest(http.MethodGet, "/test", nil)
 		req.Header.Set("X-Forwarded-For", ip)
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "first request from IP %s should succeed", ip)
-		
+
 		// Second request from same IP should be rate limited
 		req2 := httptest.NewRequest(http.MethodGet, "/test", nil)
 		req2.Header.Set("X-Forwarded-For", ip)
 		w2 := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w2, req2)
 		assert.Equal(t, http.StatusTooManyRequests, w2.Code, "second request from IP %s should be rate limited", ip)
 	}

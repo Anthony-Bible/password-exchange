@@ -55,14 +55,27 @@ func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 	}
 
 	// FIXED: Store recipient email in other_email field and passphrase in other_lastname field
-	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count) VALUES (?, ?, ?, ?, 0, ?)"
-	_, err := m.db.Exec(query, message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount)
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at) VALUES (?, ?, ?, ?, 0, ?, ?)"
+	_, err := m.db.Exec(
+		query,
+		message.Content,
+		message.UniqueID,
+		message.Passphrase,
+		message.RecipientEmail,
+		message.MaxViewCount,
+		expiresAt,
+	)
 	if err != nil {
 		log.Error().Err(err).Str("uniqueID", message.UniqueID).Msg("Failed to insert message")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Str("uniqueID", message.UniqueID).Int("maxViewCount", message.MaxViewCount).Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).Msg("Message stored successfully")
+	log.Info().
+		Str("uniqueID", message.UniqueID).
+		Int("maxViewCount", message.MaxViewCount).
+		Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).
+		Msg("Message stored successfully")
 	return nil
 }
 
@@ -74,11 +87,20 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
+	var expiresAt sql.NullTime
+	err := row.Scan(
+		&message.Content,
+		&message.UniqueID,
+		&message.Passphrase,
+		&message.RecipientEmail,
+		&message.ViewCount,
+		&message.MaxViewCount,
+		&expiresAt,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -86,6 +108,9 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	if expiresAt.Valid {
+		message.ExpiresAt = &expiresAt.Time
 	}
 
 	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
@@ -100,11 +125,20 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
 	row := m.db.QueryRow(query, uniqueID)
 
 	var message domain.Message
-	err := row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
+	var expiresAt sql.NullTime
+	err := row.Scan(
+		&message.Content,
+		&message.UniqueID,
+		&message.Passphrase,
+		&message.RecipientEmail,
+		&message.ViewCount,
+		&message.MaxViewCount,
+		&expiresAt,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -112,6 +146,9 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	if expiresAt.Valid {
+		message.ExpiresAt = &expiresAt.Time
 	}
 
 	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
@@ -155,11 +192,20 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	}
 
 	// Get the updated message with the new view count
-	selectQuery := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count FROM messages WHERE uniqueid = ?"
+	selectQuery := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
 	row := tx.QueryRow(selectQuery, uniqueID)
 
 	var message domain.Message
-	err = row.Scan(&message.Content, &message.UniqueID, &message.Passphrase, &message.RecipientEmail, &message.ViewCount, &message.MaxViewCount)
+	var expiresAt sql.NullTime
+	err = row.Scan(
+		&message.Content,
+		&message.UniqueID,
+		&message.Passphrase,
+		&message.RecipientEmail,
+		&message.ViewCount,
+		&message.MaxViewCount,
+		&expiresAt,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
@@ -167,6 +213,9 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 		}
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message after increment")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
+	}
+	if expiresAt.Valid {
+		message.ExpiresAt = &expiresAt.Time
 	}
 
 	// If view count has reached max view count, delete the message
@@ -177,7 +226,11 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 			log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to delete message after reaching view limit")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
-		log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Int("maxViewCount", message.MaxViewCount).Msg("Message deleted after reaching view limit")
+		log.Info().
+			Str("uniqueID", uniqueID).
+			Int("viewCount", message.ViewCount).
+			Int("maxViewCount", message.MaxViewCount).
+			Msg("Message deleted after reaching view limit")
 	}
 
 	// Commit the transaction
@@ -198,12 +251,8 @@ func (m *MySQLAdapter) DeleteExpiredMessages() error {
 		}
 	}
 
-	// This is a placeholder - would need actual expiration logic based on business rules
-	// For now, we'll assume messages older than 7 days should be deleted
-	cutoffTime := time.Now().AddDate(0, 0, -7)
-
-	query := "DELETE FROM messages WHERE created_at < ?"
-	result, err := m.db.Exec(query, cutoffTime)
+	query := "DELETE FROM messages WHERE expires_at < NOW()"
+	result, err := m.db.Exec(query)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete expired messages")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
@@ -215,7 +264,9 @@ func (m *MySQLAdapter) DeleteExpiredMessages() error {
 }
 
 // GetUnviewedMessagesForReminders retrieves messages that are unviewed and eligible for reminder emails
-func (m *MySQLAdapter) GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error) {
+func (m *MySQLAdapter) GetUnviewedMessagesForReminders(
+	olderThanHours, maxReminders, reminderIntervalHours int,
+) ([]*domain.UnviewedMessage, error) {
 	if m.db == nil {
 		if err := m.Connect(); err != nil {
 			return nil, err
@@ -277,11 +328,18 @@ func (m *MySQLAdapter) LogReminderSent(messageID int, emailAddress string) error
 
 	_, err := m.db.Exec(query, messageID, emailAddress)
 	if err != nil {
-		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Failed to log reminder sent")
+		log.Error().
+			Err(err).
+			Int("messageID", messageID).
+			Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).
+			Msg("Failed to log reminder sent")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	log.Info().Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Reminder sent logged successfully")
+	log.Info().
+		Int("messageID", messageID).
+		Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).
+		Msg("Reminder sent logged successfully")
 	return nil
 }
 

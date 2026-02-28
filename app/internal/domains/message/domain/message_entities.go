@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 // MessageSubmissionRequest represents a request to submit a new message
@@ -24,6 +25,7 @@ type MessageSubmissionResponse struct {
 	MessageID  string
 	Key        string
 	DecryptURL string
+	ExpiresAt  *time.Time
 	Success    bool
 	Error      error
 }
@@ -50,6 +52,7 @@ type MessageAccessInfo struct {
 	MessageID          string
 	Exists             bool
 	RequiresPassphrase bool
+	ExpiresAt          *time.Time
 }
 
 // MessageStorageRequest represents a request to store an encrypted message
@@ -74,6 +77,7 @@ type MessageStorageResponse struct {
 	HasPassphrase    bool
 	ViewCount        int
 	MaxViewCount     int
+	ExpiresAt        *time.Time
 }
 
 // MessageNotificationRequest represents a request to send a message notification

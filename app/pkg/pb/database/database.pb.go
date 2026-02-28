@@ -73,6 +73,7 @@ type SelectResponse struct {
 	Passphrase    string                 `protobuf:"bytes,3,opt,name=passphrase,proto3" json:"passphrase,omitempty"`
 	ViewCount     int32                  `protobuf:"varint,4,opt,name=view_count,json=viewCount,proto3" json:"view_count,omitempty"`
 	MaxViewCount  int32                  `protobuf:"varint,5,opt,name=max_view_count,json=maxViewCount,proto3" json:"max_view_count,omitempty"`
+	ExpiresAt     string                 `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // RFC3339 timestamp
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -140,6 +141,13 @@ func (x *SelectResponse) GetMaxViewCount() int32 {
 		return x.MaxViewCount
 	}
 	return 0
+}
+
+func (x *SelectResponse) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
 }
 
 type InsertRequest struct {
@@ -613,7 +621,7 @@ const file_database_proto_rawDesc = "" +
 	"\x0edatabase.proto\x12\n" +
 	"databasepb\x1a\x1bgoogle/protobuf/empty.proto\"#\n" +
 	"\rSelectRequest\x12\x12\n" +
-	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"\xa3\x01\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"\xc2\x01\n" +
 	"\x0eSelectResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +
@@ -622,7 +630,9 @@ const file_database_proto_rawDesc = "" +
 	"passphrase\x12\x1d\n" +
 	"\n" +
 	"view_count\x18\x04 \x01(\x05R\tviewCount\x12$\n" +
-	"\x0emax_view_count\x18\x05 \x01(\x05R\fmaxViewCount\"\xac\x01\n" +
+	"\x0emax_view_count\x18\x05 \x01(\x05R\fmaxViewCount\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\tR\texpiresAt\"\xac\x01\n" +
 	"\rInsertRequest\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x1e\n" +

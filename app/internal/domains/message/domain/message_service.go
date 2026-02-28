@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
@@ -41,8 +42,13 @@ func NewMessageService(
 }
 
 // SubmitMessage handles the submission of a new encrypted message
-func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissionRequest) (*MessageSubmissionResponse, error) {
-	log.Info().Str("senderEmail", validation.SanitizeEmailForLogging(req.SenderEmail)).Msg("Processing message submission")
+func (s *MessageService) SubmitMessage(
+	ctx context.Context,
+	req MessageSubmissionRequest,
+) (*MessageSubmissionResponse, error) {
+	log.Info().
+		Str("senderEmail", validation.SanitizeEmailForLogging(req.SenderEmail)).
+		Msg("Processing message submission")
 
 	// Validate the request
 	if err := s.validateSubmissionRequest(req); err != nil {
@@ -158,10 +164,12 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 		}
 	}
 
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
 	response := &MessageSubmissionResponse{
 		MessageID:  messageID,
 		DecryptURL: decryptURL,
 		Key:        base64.URLEncoding.EncodeToString(encryptionKey),
+		ExpiresAt:  &expiresAt,
 		Success:    true,
 	}
 
@@ -170,7 +178,10 @@ func (s *MessageService) SubmitMessage(ctx context.Context, req MessageSubmissio
 }
 
 // RetrieveMessage handles the retrieval and decryption of a stored message
-func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetrievalRequest) (*MessageRetrievalResponse, error) {
+func (s *MessageService) RetrieveMessage(
+	ctx context.Context,
+	req MessageRetrievalRequest,
+) (*MessageRetrievalResponse, error) {
 	log.Debug().Str("messageId", req.MessageID).Msg("Processing message retrieval")
 
 	// First, get message metadata without incrementing view count to check passphrase
@@ -205,7 +216,11 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 	}
 
 	// Decrypt the message content
-	decryptedContent, err := s.encryptionService.Decrypt(ctx, []string{storedMessage.EncryptedContent}, req.DecryptionKey)
+	decryptedContent, err := s.encryptionService.Decrypt(
+		ctx,
+		[]string{storedMessage.EncryptedContent},
+		req.DecryptionKey,
+	)
 	if err != nil {
 		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decrypt message content")
 		return nil, fmt.Errorf("%w: %v", ErrDecryptionFailed, err)
@@ -230,7 +245,10 @@ func (s *MessageService) RetrieveMessage(ctx context.Context, req MessageRetriev
 		Success:      true,
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Int("viewCount", storedMessage.ViewCount).Msg("Message retrieved successfully")
+	log.Debug().
+		Str("messageId", req.MessageID).
+		Int("viewCount", storedMessage.ViewCount).
+		Msg("Message retrieved successfully")
 	return response, nil
 }
 
@@ -252,9 +270,13 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 		MessageID:          messageID,
 		RequiresPassphrase: storedMessage.HasPassphrase,
 		Exists:             true,
+		ExpiresAt:          storedMessage.ExpiresAt,
 	}
 
-	log.Debug().Str("messageId", messageID).Bool("requiresPassphrase", accessInfo.RequiresPassphrase).Msg("Message access checked")
+	log.Debug().
+		Str("messageId", messageID).
+		Bool("requiresPassphrase", accessInfo.RequiresPassphrase).
+		Msg("Message access checked")
 	return accessInfo, nil
 }
 

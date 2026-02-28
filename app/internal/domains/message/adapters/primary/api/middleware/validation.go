@@ -17,7 +17,7 @@ var validate *validator.Validate
 
 func init() {
 	validate = validator.New()
-	
+
 	// Register custom tag name function to use json tags
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
 		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
@@ -26,7 +26,7 @@ func init() {
 		}
 		return name
 	})
-	
+
 	// Register custom validators
 	validate.RegisterValidation("required_if_notification", requiredIfNotification)
 	validate.RegisterValidation("antispam_blue", antiSpamBlue)
@@ -37,7 +37,7 @@ func ValidationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Set request size limits
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 1<<20) // 1MB limit
-		
+
 		c.Next()
 	}
 }
@@ -50,29 +50,28 @@ func ValidateStruct(s interface{}) map[string]interface{} {
 	}
 
 	errors := make(map[string]interface{})
-	
+
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, fieldError := range validationErrors {
 			fieldName := fieldError.Field()
 			errors[fieldName] = getValidationErrorMessage(fieldError)
 		}
 	}
-	
+
 	return errors
 }
 
 // ValidateMessageSubmission validates a message submission request with conditional logic
 func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]interface{} {
 	errors := make(map[string]interface{})
-	
+
 	// Basic struct validation
 	if structErrors := ValidateStruct(req); structErrors != nil {
 		for k, v := range structErrors {
 			errors[k] = v
 		}
 	}
-	
-	
+
 	// Conditional validation for notifications
 	if req.SendNotification {
 		if req.Sender == nil {
@@ -89,7 +88,7 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 				}
 			}
 		}
-		
+
 		if req.Recipient == nil {
 			errors["recipient"] = "Recipient information is required when notifications are enabled"
 		} else {
@@ -104,7 +103,7 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 				}
 			}
 		}
-		
+
 		// Anti-spam validation
 		if req.AntiSpamAnswer == "" {
 			errors["antiSpamAnswer"] = "Anti-spam answer is required when notifications are enabled"
@@ -112,11 +111,11 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 			errors["antiSpamAnswer"] = "Invalid anti-spam answer"
 		}
 	}
-	
+
 	if len(errors) == 0 {
 		return nil
 	}
-	
+
 	return errors
 }
 
@@ -126,16 +125,16 @@ func RequestTimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 		// Set a timeout on the request context
 		ctx, cancel := context.WithTimeout(c.Request.Context(), timeout)
 		defer cancel()
-		
+
 		// Replace the request context with our timeout context
 		c.Request = c.Request.WithContext(ctx)
-		
+
 		// Process the request
 		c.Next()
-		
+
 		// Check if the context was cancelled due to timeout
 		if ctx.Err() == context.DeadlineExceeded {
-			JSONErrorResponse(c, http.StatusRequestTimeout, 
+			JSONErrorResponse(c, http.StatusRequestTimeout,
 				models.ErrorCodeTimeout,
 				"Request timeout exceeded", nil)
 		}
@@ -151,18 +150,18 @@ func requiredIfNotification(fl validator.FieldLevel) bool {
 	if parent.Kind() != reflect.Struct {
 		return true
 	}
-	
+
 	// Look for SendNotification field
 	sendNotificationField := parent.FieldByName("SendNotification")
 	if !sendNotificationField.IsValid() {
 		return true
 	}
-	
+
 	// If SendNotification is true, field must not be empty
 	if sendNotificationField.Bool() {
 		return fl.Field().String() != ""
 	}
-	
+
 	return true
 }
 
@@ -199,28 +198,28 @@ func IsValidAntiSpamAnswer(questionID *int, answer string) bool {
 		defaultID := 0
 		questionID = &defaultID
 	}
-	
+
 	// Define the question-answer mapping
 	validAnswers := map[int][]string{
-		0: {"blue"},                    // What color is the sky?
-		1: {"4", "four"},               // What is 2 + 2?
-		2: {"7", "seven"},              // How many days are in a week?
-		3: {"cat", "cats"},             // What animal says meow?
-		4: {"pen"},                     // What do you use to write?
-		5: {"4", "four"},               // How many legs does a dog have?
+		0: {"blue"},        // What color is the sky?
+		1: {"4", "four"},   // What is 2 + 2?
+		2: {"7", "seven"},  // How many days are in a week?
+		3: {"cat", "cats"}, // What animal says meow?
+		4: {"pen"},         // What do you use to write?
+		5: {"4", "four"},   // How many legs does a dog have?
 	}
-	
+
 	answers, exists := validAnswers[*questionID]
 	if !exists {
 		return false
 	}
-	
+
 	userAnswer := strings.ToLower(strings.TrimSpace(answer))
 	for _, validAnswer := range answers {
 		if userAnswer == validAnswer {
 			return true
 		}
 	}
-	
+
 	return false
 }

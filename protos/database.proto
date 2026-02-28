@@ -14,6 +14,7 @@ message SelectResponse
     string passphrase = 3;
     int32 view_count = 4;
     int32 max_view_count = 5;
+    string expires_at = 6;  // RFC3339 timestamp
 }
 message InsertRequest
 {

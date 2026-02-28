@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
@@ -22,28 +23,37 @@ type MockMessageService struct {
 	mock.Mock
 }
 
-func (m *MockMessageService) SubmitMessage(ctx context.Context, req domain.MessageSubmissionRequest) (*domain.MessageSubmissionResponse, error) {
+func (m *MockMessageService) SubmitMessage(
+	ctx context.Context,
+	req domain.MessageSubmissionRequest,
+) (*domain.MessageSubmissionResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(*domain.MessageSubmissionResponse), args.Error(1)
 }
 
-func (m *MockMessageService) CheckMessageAccess(ctx context.Context, messageID string) (*domain.MessageAccessInfo, error) {
+func (m *MockMessageService) CheckMessageAccess(
+	ctx context.Context,
+	messageID string,
+) (*domain.MessageAccessInfo, error) {
 	args := m.Called(ctx, messageID)
 	return args.Get(0).(*domain.MessageAccessInfo), args.Error(1)
 }
 
-func (m *MockMessageService) RetrieveMessage(ctx context.Context, req domain.MessageRetrievalRequest) (*domain.MessageRetrievalResponse, error) {
+func (m *MockMessageService) RetrieveMessage(
+	ctx context.Context,
+	req domain.MessageRetrievalRequest,
+) (*domain.MessageRetrievalResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
 }
 
 func setupTestRouter(mockService *MockMessageService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
-	
+
 	// Create minimal metrics setup for testing
 	registry := prometheus.NewRegistry()
 	metrics := middleware.NewPrometheusMetrics(registry)
-	
+
 	return setupRouter(NewMessageAPIHandler(mockService), metrics, registry)
 }
 
@@ -115,9 +125,9 @@ func TestSubmitMessage_ValidationError(t *testing.T) {
 
 	// Request with missing required fields for notification
 	requestBody := models.MessageSubmissionRequest{
-		Content:          "Test message",
+		Content: "Test message",
 		Recipient: &models.Recipient{
-			Name:  "Jane Smith",
+			Name: "Jane Smith",
 		},
 		SendNotification: true,
 		AntiSpamAnswer:   "blue",
@@ -308,7 +318,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 		expectedStatus int
 	}{
 		{"ValidLow", 1, http.StatusCreated},
-		{"ValidMid", 50, http.StatusCreated}, 
+		{"ValidMid", 50, http.StatusCreated},
 		{"ValidHigh", 100, http.StatusCreated},
 		{"InvalidZero", 0, http.StatusCreated}, // 0 should be valid (use default)
 		{"InvalidNegative", -1, http.StatusBadRequest},
@@ -323,7 +333,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 					Content:          "Test message",
 					SenderName:       "John Doe",
 					SenderEmail:      "john@example.com",
-					RecipientName:    "Jane Doe", 
+					RecipientName:    "Jane Doe",
 					RecipientEmail:   "jane@example.com",
 					SendNotification: true,
 					Captcha:          "blue",
@@ -368,4 +378,96 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 			assert.Equal(t, tc.expectedStatus, w.Code, "Test case: %s", tc.name)
 		})
 	}
+}
+
+func TestGetMessageInfo_UsesRealExpiresAt(t *testing.T) {
+	// Verify that ExpiresAt in the response comes from the domain (DB), not time.Now()
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	fixedExpiry := time.Date(2030, 6, 15, 12, 0, 0, 0, time.UTC)
+	expectedAccessInfo := &domain.MessageAccessInfo{
+		MessageID:          "test-message-id",
+		Exists:             true,
+		RequiresPassphrase: false,
+		ExpiresAt:          &fixedExpiry,
+	}
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
+
+	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.MessageAccessInfoResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		fixedExpiry.Unix(),
+		response.ExpiresAt.Unix(),
+		"ExpiresAt should match the DB value, not be recalculated",
+	)
+}
+
+func TestSubmitMessage_UsesRealExpiresAt(t *testing.T) {
+	// Verify that ExpiresAt in the submit response comes from the domain, not time.Now()
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	fixedExpiry := time.Date(2030, 6, 15, 12, 0, 0, 0, time.UTC)
+	expectedDomainReq := domain.MessageSubmissionRequest{
+		Content:          "Test message",
+		SenderName:       "John Doe",
+		SenderEmail:      "john@example.com",
+		RecipientName:    "Jane Doe",
+		RecipientEmail:   "jane@example.com",
+		SendNotification: true,
+		Captcha:          "blue",
+	}
+	expectedResponse := &domain.MessageSubmissionResponse{
+		MessageID:  "test-message-id",
+		DecryptURL: "https://example.com/decrypt/test-message-id/key123",
+		ExpiresAt:  &fixedExpiry,
+		Success:    true,
+	}
+
+	mockService.On("SubmitMessage", mock.Anything, expectedDomainReq).Return(expectedResponse, nil)
+
+	requestBody := models.MessageSubmissionRequest{
+		Content: "Test message",
+		Sender: &models.Sender{
+			Name:  "John Doe",
+			Email: "john@example.com",
+		},
+		Recipient: &models.Recipient{
+			Name:  "Jane Doe",
+			Email: "jane@example.com",
+		},
+		SendNotification: true,
+		AntiSpamAnswer:   "blue",
+	}
+
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response models.MessageSubmissionResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		fixedExpiry.Unix(),
+		response.ExpiresAt.Unix(),
+		"ExpiresAt should match the domain value, not be recalculated",
+	)
+
+	mockService.AssertExpectations(t)
 }

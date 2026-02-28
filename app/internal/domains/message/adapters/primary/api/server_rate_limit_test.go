@@ -33,10 +33,12 @@ func TestServerRateLimiting(t *testing.T) {
 		// Set up mock to expect up to 10 calls (the rate limit) with flexible matching
 		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false && req.RecipientName == "Jane Smith"
-		})).Return(mockResponse, nil).Times(10)
+		})).
+			Return(mockResponse, nil).
+			Times(10)
 
 		requestBody := map[string]interface{}{
-			"content":          "test message",
+			"content": "test message",
 			"recipient": map[string]interface{}{
 				"name": "Jane Smith",
 			},
@@ -85,7 +87,9 @@ func TestServerRateLimiting(t *testing.T) {
 		}
 
 		// Set up mock to expect up to 100 calls (the rate limit)
-		mockService.On("CheckMessageAccess", mock.AnythingOfType("*context.timerCtx"), "test-id").Return(mockResponse, nil).Times(100)
+		mockService.On("CheckMessageAccess", mock.AnythingOfType("*context.timerCtx"), "test-id").
+			Return(mockResponse, nil).
+			Times(100)
 
 		// Test that 100 requests succeed (within rate limit)
 		for i := 0; i < 100; i++ {
@@ -124,7 +128,9 @@ func TestServerRateLimiting(t *testing.T) {
 		// Set up mock to expect up to 20 calls (the rate limit) with flexible matching
 		mockService.On("RetrieveMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageRetrievalRequest) bool {
 			return req.MessageID == "test-id"
-		})).Return(mockResponse, nil).Times(20)
+		})).
+			Return(mockResponse, nil).
+			Times(20)
 
 		requestBody := map[string]interface{}{
 			"decryptionKey": "test-key",
@@ -193,7 +199,11 @@ func TestServerRateLimiting(t *testing.T) {
 		// Each IP should be able to make 10 requests - flexible matching for 3 IPs × 10 requests
 		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false
-		})).Return(mockResponse, nil).Times(30) // 3 IPs × 10 requests
+		})).
+			Return(mockResponse, nil).
+			Times(30)
+
+			// 3 IPs × 10 requests
 
 		requestBody := map[string]interface{}{
 			"content":          "test message",
@@ -242,7 +252,9 @@ func TestServerRateLimiting(t *testing.T) {
 
 		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false
-		})).Return(mockResponse, nil).Times(10)
+		})).
+			Return(mockResponse, nil).
+			Times(10)
 
 		requestBody := map[string]interface{}{
 			"content":          "test message",
