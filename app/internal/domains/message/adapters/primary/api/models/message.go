@@ -32,21 +32,23 @@ type Recipient struct {
 
 // MessageSubmissionResponse represents the response to a message submission
 type MessageSubmissionResponse struct {
-	MessageID        string    `json:"messageId"`
-	DecryptURL       string    `json:"decryptUrl"`
-	Key              string    `json:"key"`
-	WebURL           string    `json:"webUrl"`
-	ExpiresAt        time.Time `json:"expiresAt"`
-	NotificationSent bool      `json:"notificationSent"`
+	MessageID  string `json:"messageId"`
+	DecryptURL string `json:"decryptUrl"`
+	Key        string `json:"key"`
+	WebURL     string `json:"webUrl"`
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt        *time.Time `json:"expiresAt"`
+	NotificationSent bool       `json:"notificationSent"`
 }
 
 // MessageAccessInfoResponse represents information about message access requirements
 type MessageAccessInfoResponse struct {
-	MessageID          string    `json:"messageId"`
-	Exists             bool      `json:"exists"`
-	RequiresPassphrase bool      `json:"requiresPassphrase"`
-	HasBeenAccessed    bool      `json:"hasBeenAccessed"`
-	ExpiresAt          time.Time `json:"expiresAt"`
+	MessageID          string `json:"messageId"`
+	Exists             bool   `json:"exists"`
+	RequiresPassphrase bool   `json:"requiresPassphrase"`
+	HasBeenAccessed    bool   `json:"hasBeenAccessed"`
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
 // MessageDecryptRequest represents a request to decrypt a message

@@ -144,11 +144,12 @@ func TestMessageSubmissionRequestSchema(t *testing.T) {
 }
 
 func TestMessageSubmissionResponseSchema(t *testing.T) {
+	expiry := time.Now().Add(24 * time.Hour)
 	response := &models.MessageSubmissionResponse{
 		MessageID:        "123e4567-e89b-12d3-a456-426614174000",
 		DecryptURL:       "https://api.password.exchange/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt?key=YWJjZGVmZ2hpams=",
 		WebURL:           "https://password.exchange/decrypt/123e4567-e89b-12d3-a456-426614174000/YWJjZGVmZ2hpams=",
-		ExpiresAt:        time.Now().Add(24 * time.Hour),
+		ExpiresAt:        &expiry,
 		NotificationSent: true,
 	}
 
@@ -170,12 +171,13 @@ func TestMessageSubmissionResponseSchema(t *testing.T) {
 }
 
 func TestMessageAccessInfoResponseSchema(t *testing.T) {
+	expiry := time.Now().Add(24 * time.Hour)
 	response := &models.MessageAccessInfoResponse{
 		MessageID:          "123e4567-e89b-12d3-a456-426614174000",
 		Exists:             true,
 		RequiresPassphrase: true,
 		HasBeenAccessed:    false,
-		ExpiresAt:          time.Now().Add(24 * time.Hour),
+		ExpiresAt:          &expiry,
 	}
 
 	// Test JSON serialization

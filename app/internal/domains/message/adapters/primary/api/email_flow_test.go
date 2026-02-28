@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
@@ -17,6 +18,8 @@ import (
 
 func TestEmailNotificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+
+	fixedExpiry := time.Now().Add(7 * 24 * time.Hour)
 
 	tests := []struct {
 		name                     string
@@ -45,6 +48,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    true,
 			},
 			mockServiceError:         nil,
@@ -65,6 +69,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    true,
 			},
 			mockServiceError:         nil,
@@ -90,6 +95,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    false, // Email sending failed
 			},
 			mockServiceError:         nil,
@@ -235,6 +241,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 				assert.Equal(t, tt.expectedNotificationSent, response.NotificationSent)
 				assert.NotEmpty(t, response.DecryptURL)
 				assert.NotEmpty(t, response.WebURL)
+				require.NotNil(t, response.ExpiresAt, "ExpiresAt must be non-nil when domain provides it")
 				assert.False(t, response.ExpiresAt.IsZero())
 			} else if tt.expectedStatusCode == http.StatusBadRequest {
 				// Parse error response

@@ -308,6 +308,96 @@ func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestGetMessageInfo_NilExpiresAtIsNullInResponse(t *testing.T) {
+	// When domain returns nil ExpiresAt (legacy data), the API must return "expiresAt": null,
+	// NOT a fabricated time.Now()+TTL which would be semantically wrong.
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	expectedAccessInfo := &domain.MessageAccessInfo{
+		MessageID:          "test-message-id",
+		Exists:             true,
+		RequiresPassphrase: false,
+		ExpiresAt:          nil, // legacy message — no expiry stored in DB
+	}
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
+
+	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Check raw JSON — expiresAt must be null, not a fabricated timestamp
+	var raw map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	expiresAt, hasKey := raw["expiresAt"]
+	assert.True(t, hasKey, "expiresAt key must be present in response")
+	assert.Nil(t, expiresAt, "expiresAt must be null when domain has no expiry, not a fabricated time")
+
+	mockService.AssertExpectations(t)
+}
+
+func TestSubmitMessage_NilExpiresAtIsNullInResponse(t *testing.T) {
+	// When domain returns nil ExpiresAt on submission, the API must return "expiresAt": null,
+	// NOT time.Now()+TTL which is dead-code fallback that could mislead the caller.
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	expectedDomainReq := domain.MessageSubmissionRequest{
+		Content:          "Test message",
+		SenderName:       "John Doe",
+		SenderEmail:      "john@example.com",
+		RecipientName:    "Jane Doe",
+		RecipientEmail:   "jane@example.com",
+		SendNotification: true,
+		Captcha:          "blue",
+	}
+	expectedResponse := &domain.MessageSubmissionResponse{
+		MessageID:  "test-message-id",
+		DecryptURL: "https://example.com/decrypt/test-message-id/key123",
+		ExpiresAt:  nil, // domain somehow returned no expiry
+		Success:    true,
+	}
+
+	mockService.On("SubmitMessage", mock.Anything, expectedDomainReq).Return(expectedResponse, nil)
+
+	requestBody := models.MessageSubmissionRequest{
+		Content: "Test message",
+		Sender: &models.Sender{
+			Name:  "John Doe",
+			Email: "john@example.com",
+		},
+		Recipient: &models.Recipient{
+			Name:  "Jane Doe",
+			Email: "jane@example.com",
+		},
+		SendNotification: true,
+		AntiSpamAnswer:   "blue",
+	}
+
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	// Check raw JSON — expiresAt must be null, not a fabricated timestamp
+	var raw map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	expiresAt, hasKey := raw["expiresAt"]
+	assert.True(t, hasKey, "expiresAt key must be present in response")
+	assert.Nil(t, expiresAt, "expiresAt must be null when domain returns nil, not a fabricated time")
+
+	mockService.AssertExpectations(t)
+}
+
 func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 	mockService := new(MockMessageService)
 	router := setupTestRouter(mockService)

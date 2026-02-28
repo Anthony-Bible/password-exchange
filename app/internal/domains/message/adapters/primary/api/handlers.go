@@ -116,17 +116,13 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		return
 	}
 
-	// Build API response — use ExpiresAt from domain (set at store time), fall back to 7 days if nil
-	expiresAt := time.Now().Add(domain.DefaultMessageTTL)
-	if response.ExpiresAt != nil {
-		expiresAt = *response.ExpiresAt
-	}
+	// Build API response — pass ExpiresAt pointer directly from domain (nil for legacy messages)
 	apiResponse := models.MessageSubmissionResponse{
 		MessageID:        response.MessageID,
 		DecryptURL:       response.DecryptURL,
 		Key:              response.Key,
 		WebURL:           response.DecryptURL, // Same URL works for both
-		ExpiresAt:        expiresAt,
+		ExpiresAt:        response.ExpiresAt,
 		NotificationSent: req.SendNotification && response.Success,
 	}
 
@@ -190,17 +186,13 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 		return
 	}
 
-	// Build response — use ExpiresAt from domain (read from DB), fall back to 7 days if nil
-	expiresAt := time.Now().Add(domain.DefaultMessageTTL)
-	if accessInfo.ExpiresAt != nil {
-		expiresAt = *accessInfo.ExpiresAt
-	}
+	// Build response — pass ExpiresAt pointer directly from domain (nil for legacy messages)
 	response := models.MessageAccessInfoResponse{
 		MessageID:          messageID,
 		Exists:             accessInfo.Exists,
 		RequiresPassphrase: accessInfo.RequiresPassphrase,
 		HasBeenAccessed:    false, // TODO: Add this to domain if needed
-		ExpiresAt:          expiresAt,
+		ExpiresAt:          accessInfo.ExpiresAt,
 	}
 
 	c.JSON(http.StatusOK, response)
