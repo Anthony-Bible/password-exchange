@@ -6,52 +6,54 @@ import (
 
 // MessageSubmissionRequest represents a REST API request to submit a new message
 type MessageSubmissionRequest struct {
-	Content          string     `json:"content" validate:"required,min=1,max=10000"`
+	Content          string     `json:"content"                  validate:"required,min=1,max=10000"`
 	Sender           *Sender    `json:"sender,omitempty"`
 	Recipient        *Recipient `json:"recipient,omitempty"`
-	Passphrase       string     `json:"passphrase,omitempty" validate:"max=500"`
+	Passphrase       string     `json:"passphrase,omitempty"     validate:"max=500"`
 	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
 	SendNotification bool       `json:"sendNotification"`
 	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
 	QuestionID       *int       `json:"questionId,omitempty"`
-	MaxViewCount     int        `json:"maxViewCount,omitempty" validate:"min=0,max=100"`
+	MaxViewCount     int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
 	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
 }
 
 // Sender represents sender information for message submission
 type Sender struct {
-	Name  string `json:"name" validate:"required,min=1,max=100"`
+	Name  string `json:"name"  validate:"required,min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
 // Recipient represents recipient information for message submission
 type Recipient struct {
-	Name  string `json:"name" validate:"min=1,max=100"`
+	Name  string `json:"name"  validate:"min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
 // MessageSubmissionResponse represents the response to a message submission
 type MessageSubmissionResponse struct {
-	MessageID        string    `json:"messageId"`
-	DecryptURL       string    `json:"decryptUrl"`
-	Key              string    `json:"key"`
-	WebURL           string    `json:"webUrl"`
-	ExpiresAt        time.Time `json:"expiresAt"`
-	NotificationSent bool      `json:"notificationSent"`
+	MessageID  string `json:"messageId"`
+	DecryptURL string `json:"decryptUrl"`
+	Key        string `json:"key"`
+	WebURL     string `json:"webUrl"`
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt        *time.Time `json:"expiresAt"`
+	NotificationSent bool       `json:"notificationSent"`
 }
 
 // MessageAccessInfoResponse represents information about message access requirements
 type MessageAccessInfoResponse struct {
-	MessageID          string    `json:"messageId"`
-	Exists             bool      `json:"exists"`
-	RequiresPassphrase bool      `json:"requiresPassphrase"`
-	HasBeenAccessed    bool      `json:"hasBeenAccessed"`
-	ExpiresAt          time.Time `json:"expiresAt"`
+	MessageID          string `json:"messageId"`
+	Exists             bool   `json:"exists"`
+	RequiresPassphrase bool   `json:"requiresPassphrase"`
+	HasBeenAccessed    bool   `json:"hasBeenAccessed"`
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
 // MessageDecryptRequest represents a request to decrypt a message
 type MessageDecryptRequest struct {
-	DecryptionKey string `json:"decryptionKey" validate:"required"`
+	DecryptionKey string `json:"decryptionKey"        validate:"required"`
 	Passphrase    string `json:"passphrase,omitempty"`
 }
 

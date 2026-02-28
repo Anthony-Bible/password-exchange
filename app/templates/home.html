@@ -825,10 +825,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${result.notificationSent ? 
                             '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' : 
                             ''}
-                        <p class="mb-0 text-muted small">
-                            <i class="fas fa-clock me-1"></i>
-                            Expires: ${new Date(result.expiresAt).toLocaleString()}
-                        </p>
+                        ${result.expiresAt ?
+                            `<p class="mb-0 text-muted small">
+                                <i class="fas fa-clock me-1"></i>
+                                Expires: ${new Date(result.expiresAt).toLocaleString()}
+                            </p>` : ''}
                     </div>
                 `;
                 

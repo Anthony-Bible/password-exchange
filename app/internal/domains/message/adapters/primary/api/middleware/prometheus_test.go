@@ -20,7 +20,7 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 		// Create a new registry for isolated testing
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		router := gin.New()
 		router.Use(PrometheusMiddleware(metrics))
 		router.GET("/test", func(c *gin.Context) {
@@ -42,7 +42,7 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 	t.Run("tracks different HTTP status codes", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		router := gin.New()
 		router.Use(PrometheusMiddleware(metrics))
 		router.GET("/success", func(c *gin.Context) {
@@ -79,7 +79,7 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 	t.Run("records request duration histogram", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		router := gin.New()
 		router.Use(PrometheusMiddleware(metrics))
 		router.GET("/fast", func(c *gin.Context) {
@@ -102,12 +102,12 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 
 		// Verify histogram metrics were recorded
 		assert.Equal(t, 2, testutil.CollectAndCount(metrics.RequestDuration))
-		
+
 		// Check that duration observations were recorded by examining the histogram
 		// The histogram should have recorded observations for both endpoints
 		fastHistogram := metrics.RequestDuration.WithLabelValues("GET", "/fast")
 		slowHistogram := metrics.RequestDuration.WithLabelValues("GET", "/slow")
-		
+
 		// We can't easily get the exact count, but we can verify the histograms exist
 		assert.NotNil(t, fastHistogram)
 		assert.NotNil(t, slowHistogram)
@@ -116,7 +116,7 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 	t.Run("tracks requests in flight gauge", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		router := gin.New()
 		router.Use(PrometheusMiddleware(metrics))
 		router.GET("/test", func(c *gin.Context) {
@@ -137,28 +137,28 @@ func TestPrometheusMetricsMiddleware(t *testing.T) {
 
 func TestPrometheusMetricsEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	t.Run("exposes metrics via /metrics endpoint", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		// Record some test metrics
 		metrics.RequestsTotal.WithLabelValues("GET", "/api/v1/messages", "200").Inc()
 		metrics.RequestsTotal.WithLabelValues("POST", "/api/v1/messages", "201").Inc()
 		// Record a duration observation to make the histogram appear
 		metrics.RequestDuration.WithLabelValues("GET", "/api/v1/messages").Observe(0.1)
-		
+
 		router := gin.New()
 		router.GET("/metrics", PrometheusHandler(registry))
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
-		
+
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Contains(t, w.Header().Get("Content-Type"), "text/plain")
-		
+
 		// Verify response contains Prometheus metrics format
 		body := w.Body.String()
 		assert.Contains(t, body, "# HELP")
@@ -172,17 +172,17 @@ func TestPrometheusMetricsEndpoint(t *testing.T) {
 	t.Run("metrics endpoint works with empty metrics", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		NewPrometheusMetrics(registry) // Initialize metrics but don't record anything
-		
+
 		router := gin.New()
 		router.GET("/metrics", PrometheusHandler(registry))
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 		w := httptest.NewRecorder()
-		
+
 		router.ServeHTTP(w, req)
-		
+
 		assert.Equal(t, http.StatusOK, w.Code)
-		
+
 		body := w.Body.String()
 		assert.Contains(t, body, "# HELP")
 		assert.Contains(t, body, "# TYPE")
@@ -193,34 +193,38 @@ func TestPrometheusMetricsRegistration(t *testing.T) {
 	t.Run("registers metrics with custom registry", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
 		metrics := NewPrometheusMetrics(registry)
-		
+
 		// Record some observations to make vector metrics appear in output
 		metrics.RequestsTotal.WithLabelValues("GET", "/test", "200").Inc()
 		metrics.RequestDuration.WithLabelValues("GET", "/test").Observe(0.1)
-		
+
 		// Verify metrics are registered by attempting to gather them
 		gathered, err := registry.Gather()
 		require.NoError(t, err)
 		require.NotEmpty(t, gathered)
-		
+
 		// Check that our expected metrics are present
 		metricNames := make(map[string]bool)
 		for _, mf := range gathered {
 			metricNames[mf.GetName()] = true
 		}
-		
+
 		assert.True(t, metricNames["http_requests_total"], "http_requests_total should be registered")
-		assert.True(t, metricNames["http_request_duration_seconds"], "http_request_duration_seconds should be registered")
+		assert.True(
+			t,
+			metricNames["http_request_duration_seconds"],
+			"http_request_duration_seconds should be registered",
+		)
 		assert.True(t, metricNames["http_requests_in_flight"], "http_requests_in_flight should be registered")
 	})
 
 	t.Run("handles duplicate registration by panicking as expected", func(t *testing.T) {
 		registry := prometheus.NewRegistry()
-		
+
 		// First registration should succeed
 		metrics1 := NewPrometheusMetrics(registry)
 		assert.NotNil(t, metrics1)
-		
+
 		// Second registration to same registry should panic (expected Prometheus behavior)
 		assert.Panics(t, func() {
 			NewPrometheusMetrics(registry)

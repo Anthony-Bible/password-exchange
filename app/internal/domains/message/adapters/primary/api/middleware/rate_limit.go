@@ -45,7 +45,7 @@ func NewRateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
 	instance := limiter.New(store, rate, limiter.WithTrustForwardHeader(true))
 
 	// Return gin middleware with custom error handler
-	return ginlimiter.NewMiddleware(instance, 
+	return ginlimiter.NewMiddleware(instance,
 		ginlimiter.WithKeyGetter(config.KeyGenerator),
 		ginlimiter.WithLimitReachedHandler(CustomRateLimitReachedHandler),
 	)
@@ -92,14 +92,14 @@ func CustomRateLimitErrorHandler() gin.HandlerFunc {
 // CustomRateLimitReachedHandler creates a custom rate limit reached handler that returns JSON
 func CustomRateLimitReachedHandler(c *gin.Context) {
 	correlationID, _ := c.Get(CorrelationIDKey)
-	
+
 	errorResponse := gin.H{
 		"error":     "rate_limit_exceeded",
 		"message":   "Rate limit exceeded. Please try again later.",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"path":      c.Request.URL.Path,
 	}
-	
+
 	if correlationID != nil {
 		errorResponse["correlation_id"] = correlationID
 	}

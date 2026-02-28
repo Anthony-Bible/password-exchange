@@ -12,7 +12,7 @@ import (
 func ErrorHandler() gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered interface{}) {
 		correlationID, _ := c.Get(CorrelationIDKey)
-		
+
 		log.Error().
 			Interface("panic", recovered).
 			Interface("correlation_id", correlationID).
@@ -34,7 +34,7 @@ func ErrorHandler() gin.HandlerFunc {
 // JSONErrorResponse sends a standardized JSON error response
 func JSONErrorResponse(c *gin.Context, statusCode int, errorCode, message string, details map[string]interface{}) {
 	correlationID, _ := c.Get(CorrelationIDKey)
-	
+
 	log.Error().
 		Interface("correlation_id", correlationID).
 		Str("error_code", errorCode).

@@ -49,15 +49,27 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	// Parse and validate JSON request
 	var req models.MessageSubmissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid request format", map[string]interface{}{
-			"parse_error": err.Error(),
-		})
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusBadRequest,
+			models.ErrorCodeValidationFailed,
+			"Invalid request format",
+			map[string]interface{}{
+				"parse_error": err.Error(),
+			},
+		)
 		return
 	}
 
 	// Validate request using enhanced validation middleware
 	if validationErrors := middleware.ValidateMessageSubmission(&req); validationErrors != nil {
-		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Request validation failed", validationErrors)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusBadRequest,
+			models.ErrorCodeValidationFailed,
+			"Request validation failed",
+			validationErrors,
+		)
 		return
 	}
 
@@ -94,17 +106,23 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 			Interface("correlation_id", correlationID).
 			Msg("Failed to submit message")
 
-		middleware.JSONErrorResponse(c, http.StatusInternalServerError, models.ErrorCodeInternalError, "Failed to submit message", nil)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			models.ErrorCodeInternalError,
+			"Failed to submit message",
+			nil,
+		)
 		return
 	}
 
-	// Build API response
+	// Build API response — pass ExpiresAt pointer directly from domain (nil for legacy messages)
 	apiResponse := models.MessageSubmissionResponse{
 		MessageID:        response.MessageID,
 		DecryptURL:       response.DecryptURL,
 		Key:              response.Key,
-		WebURL:           response.DecryptURL,            // Same URL works for both
-		ExpiresAt:        time.Now().Add(24 * time.Hour), // TODO: Get from config
+		WebURL:           response.DecryptURL, // Same URL works for both
+		ExpiresAt:        response.ExpiresAt,
 		NotificationSent: req.SendNotification && response.Success,
 	}
 
@@ -147,22 +165,34 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 			Interface("correlation_id", correlationID).
 			Msg("Failed to check message access")
 
-		middleware.JSONErrorResponse(c, http.StatusInternalServerError, models.ErrorCodeInternalError, "Failed to check message access", nil)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			models.ErrorCodeInternalError,
+			"Failed to check message access",
+			nil,
+		)
 		return
 	}
 
 	if !accessInfo.Exists {
-		middleware.JSONErrorResponse(c, http.StatusNotFound, models.ErrorCodeMessageNotFound, "Message not found or has expired", nil)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusNotFound,
+			models.ErrorCodeMessageNotFound,
+			"Message not found or has expired",
+			nil,
+		)
 		return
 	}
 
-	// Build response
+	// Build response — pass ExpiresAt pointer directly from domain (nil for legacy messages)
 	response := models.MessageAccessInfoResponse{
 		MessageID:          messageID,
 		Exists:             accessInfo.Exists,
 		RequiresPassphrase: accessInfo.RequiresPassphrase,
-		HasBeenAccessed:    false,                          // TODO: Add this to domain if needed
-		ExpiresAt:          time.Now().Add(24 * time.Hour), // TODO: Get from storage
+		HasBeenAccessed:    false, // TODO: Add this to domain if needed
+		ExpiresAt:          accessInfo.ExpiresAt,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -195,16 +225,28 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	// Parse and validate JSON request
 	var req models.MessageDecryptRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid request format", map[string]interface{}{
-			"parse_error": err.Error(),
-		})
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusBadRequest,
+			models.ErrorCodeValidationFailed,
+			"Invalid request format",
+			map[string]interface{}{
+				"parse_error": err.Error(),
+			},
+		)
 		return
 	}
 
 	// Decode the encryption key
 	decryptionKey, err := base64.URLEncoding.DecodeString(req.DecryptionKey)
 	if err != nil {
-		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid decryption key format", nil)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusBadRequest,
+			models.ErrorCodeValidationFailed,
+			"Invalid decryption key format",
+			nil,
+		)
 		return
 	}
 
@@ -226,12 +268,24 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 
 		// Handle specific error types
 		if err == domain.ErrInvalidPassphrase {
-			middleware.JSONErrorResponse(c, http.StatusUnauthorized, models.ErrorCodeInvalidPassphrase, "Invalid passphrase provided", nil)
+			middleware.JSONErrorResponse(
+				c,
+				http.StatusUnauthorized,
+				models.ErrorCodeInvalidPassphrase,
+				"Invalid passphrase provided",
+				nil,
+			)
 			return
 		}
 
 		// Check for message already consumed (this would need to be added to domain errors)
-		middleware.JSONErrorResponse(c, http.StatusNotFound, models.ErrorCodeMessageNotFound, "Message not found or has expired", nil)
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusNotFound,
+			models.ErrorCodeMessageNotFound,
+			"Message not found or has expired",
+			nil,
+		)
 		return
 	}
 

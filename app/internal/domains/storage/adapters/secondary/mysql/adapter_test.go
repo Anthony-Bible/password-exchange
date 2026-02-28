@@ -9,7 +9,7 @@ import (
 )
 
 func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
-	// Test that recipient email is properly stored in other_email field
+	// Test that recipient email is properly stored in other_email field and expires_at is set
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("Error creating mock database: %v", err)
@@ -27,17 +27,115 @@ func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
 		RecipientEmail: "test@example.com",
 	}
 
-	// Expected SQL should store recipient email in other_email field
-	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, other_lastname, other_email, view_count, max_view_count\) VALUES \(\?, \?, \?, \?, 0, \?\)`).
-		WithArgs(message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount).
+	// Expected SQL should store recipient email in other_email field and include expires_at
+	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, 0, \?, \?\)`).
+		WithArgs(message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Act
 	err = adapter.InsertMessage(message)
-
 	// Assert
 	if err != nil {
 		t.Errorf("InsertMessage() error = %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
+func TestMySQLAdapter_SelectMessageByUniqueID_WithExpiresAt(t *testing.T) {
+	// Test that expires_at is properly scanned from the database
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db}
+
+	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
+
+	rows := sqlmock.NewRows([]string{"message", "uniqueid", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
+		AddRow("encrypted-content", "test-uuid-123", "test-passphrase", "test@example.com", 0, 3, expectedExpiry)
+
+	mock.ExpectQuery(`SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
+		WithArgs("test-uuid-123").
+		WillReturnRows(rows)
+
+	// Act
+	message, err := adapter.SelectMessageByUniqueID("test-uuid-123")
+	// Assert
+	if err != nil {
+		t.Errorf("SelectMessageByUniqueID() error = %v", err)
+	}
+
+	if message.ExpiresAt == nil {
+		t.Errorf("Expected ExpiresAt to be set, got nil")
+	} else if !message.ExpiresAt.Equal(expectedExpiry) {
+		t.Errorf("Expected ExpiresAt %v, got %v", expectedExpiry, *message.ExpiresAt)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
+func TestMySQLAdapter_GetMessage_WithExpiresAt(t *testing.T) {
+	// Test that expires_at is properly scanned in GetMessage
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db}
+
+	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
+
+	rows := sqlmock.NewRows([]string{"message", "uniqueid", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
+		AddRow("encrypted-content", "test-uuid-123", "", "test@example.com", 0, 5, expectedExpiry)
+
+	mock.ExpectQuery(`SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
+		WithArgs("test-uuid-123").
+		WillReturnRows(rows)
+
+	// Act
+	message, err := adapter.GetMessage("test-uuid-123")
+	// Assert
+	if err != nil {
+		t.Errorf("GetMessage() error = %v", err)
+	}
+
+	if message.ExpiresAt == nil {
+		t.Errorf("Expected ExpiresAt to be set, got nil")
+	} else if !message.ExpiresAt.Equal(expectedExpiry) {
+		t.Errorf("Expected ExpiresAt %v, got %v", expectedExpiry, *message.ExpiresAt)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
+func TestMySQLAdapter_DeleteExpiredMessages_UsesExpiresAt(t *testing.T) {
+	// Test that DeleteExpiredMessages uses expires_at column, not created_at
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db}
+
+	mock.ExpectExec(`DELETE FROM messages WHERE expires_at < NOW\(\)`).
+		WillReturnResult(sqlmock.NewResult(0, 2))
+
+	// Act
+	err = adapter.DeleteExpiredMessages()
+	// Assert
+	if err != nil {
+		t.Errorf("DeleteExpiredMessages() error = %v", err)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -62,7 +160,7 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders_WithInterval(t *testing.T)
 
 	// Expected columns for the query
 	columns := []string{"messageid", "uniqueid", "other_email", "created", "days_old"}
-	
+
 	// Mock rows with test data
 	rows := sqlmock.NewRows(columns).
 		AddRow(123, "test-uuid-123", "test@example.com", time.Now().Add(-72*time.Hour), 3).
@@ -84,7 +182,6 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders_WithInterval(t *testing.T)
 
 	// Act
 	messages, err := adapter.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours)
-
 	// Assert
 	if err != nil {
 		t.Errorf("GetUnviewedMessagesForReminders() error = %v", err)
@@ -137,8 +234,11 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders(t *testing.T) {
 		WillReturnRows(rows)
 
 	// Act
-	messages, err := adapter.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, 24) // Default 24 hour interval
-
+	messages, err := adapter.GetUnviewedMessagesForReminders(
+		olderThanHours,
+		maxReminders,
+		24,
+	) // Default 24 hour interval
 	// Assert
 	if err != nil {
 		t.Errorf("GetUnviewedMessagesForReminders() error = %v", err)
@@ -191,7 +291,6 @@ func TestMySQLAdapter_LogReminderSent(t *testing.T) {
 
 	// Act
 	err = adapter.LogReminderSent(messageID, emailAddress)
-
 	// Assert
 	if err != nil {
 		t.Errorf("LogReminderSent() error = %v", err)
@@ -225,7 +324,6 @@ func TestMySQLAdapter_GetReminderHistory(t *testing.T) {
 
 	// Act
 	history, err := adapter.GetReminderHistory(messageID)
-
 	// Assert
 	if err != nil {
 		t.Errorf("GetReminderHistory() error = %v", err)

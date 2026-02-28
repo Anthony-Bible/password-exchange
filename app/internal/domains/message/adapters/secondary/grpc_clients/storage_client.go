@@ -3,6 +3,7 @@ package grpc_clients
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
@@ -52,8 +53,27 @@ func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStor
 	return nil
 }
 
+// parseExpiresAt parses an RFC3339 timestamp string into a *time.Time, returning nil on empty or error.
+func parseExpiresAt(s string) *time.Time {
+	if s == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Str("value", s).
+			Msg("Failed to parse expires_at timestamp from storage; treating as no expiry")
+		return nil
+	}
+	return &t
+}
+
 // RetrieveMessage retrieves a stored message by ID
-func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageRetrievalStorageRequest) (*domain.MessageStorageResponse, error) {
+func (c *StorageClient) RetrieveMessage(
+	ctx context.Context,
+	req domain.MessageRetrievalStorageRequest,
+) (*domain.MessageStorageResponse, error) {
 	grpcReq := &db.SelectRequest{
 		Uuid: req.MessageID,
 	}
@@ -73,21 +93,31 @@ func (c *StorageClient) RetrieveMessage(ctx context.Context, req domain.MessageR
 		HasPassphrase:    hasPassphrase,
 		ViewCount:        int(resp.GetViewCount()),
 		MaxViewCount:     int(resp.GetMaxViewCount()),
+		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message successfully")
+	log.Debug().
+		Str("messageId", req.MessageID).
+		Bool("hasPassphrase", hasPassphrase).
+		Msg("Retrieved message successfully")
 	return response, nil
 }
 
 // GetMessage retrieves a message by its unique ID without incrementing view count
-func (c *StorageClient) GetMessage(ctx context.Context, req domain.MessageRetrievalStorageRequest) (*domain.MessageStorageResponse, error) {
+func (c *StorageClient) GetMessage(
+	ctx context.Context,
+	req domain.MessageRetrievalStorageRequest,
+) (*domain.MessageStorageResponse, error) {
 	grpcReq := &db.SelectRequest{
 		Uuid: req.MessageID,
 	}
 
 	resp, err := c.client.GetMessage(ctx, grpcReq)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve message without incrementing view count")
+		log.Error().
+			Err(err).
+			Str("messageId", req.MessageID).
+			Msg("Failed to retrieve message without incrementing view count")
 		return nil, fmt.Errorf("failed to retrieve message without incrementing view count: %w", err)
 	}
 
@@ -100,9 +130,13 @@ func (c *StorageClient) GetMessage(ctx context.Context, req domain.MessageRetrie
 		HasPassphrase:    hasPassphrase,
 		ViewCount:        int(resp.GetViewCount()),
 		MaxViewCount:     int(resp.GetMaxViewCount()),
+		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Bool("hasPassphrase", hasPassphrase).Msg("Retrieved message without incrementing view count successfully")
+	log.Debug().
+		Str("messageId", req.MessageID).
+		Bool("hasPassphrase", hasPassphrase).
+		Msg("Retrieved message without incrementing view count successfully")
 	return response, nil
 }
 

@@ -17,16 +17,16 @@ func CorrelationID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check if correlation ID is already provided in headers
 		correlationID := c.GetHeader(CorrelationIDHeader)
-		
+
 		// Generate a new one if not provided
 		if correlationID == "" {
 			correlationID = uuid.New().String()
 		}
-		
+
 		// Add to context and response headers
 		c.Set(CorrelationIDKey, correlationID)
 		c.Header(CorrelationIDHeader, correlationID)
-		
+
 		c.Next()
 	}
 }

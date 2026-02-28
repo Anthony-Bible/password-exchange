@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
@@ -18,14 +19,16 @@ import (
 func TestEmailNotificationFlow(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	fixedExpiry := time.Now().Add(7 * 24 * time.Hour)
+
 	tests := []struct {
-		name                    string
-		request                 *models.MessageSubmissionRequest
-		mockServiceResponse     *domain.MessageSubmissionResponse
-		mockServiceError        error
-		expectedStatusCode      int
+		name                     string
+		request                  *models.MessageSubmissionRequest
+		mockServiceResponse      *domain.MessageSubmissionResponse
+		mockServiceError         error
+		expectedStatusCode       int
 		expectedNotificationSent bool
-		expectServiceCalled     bool
+		expectServiceCalled      bool
 	}{
 		{
 			name: "successful message submission with email notification",
@@ -45,17 +48,18 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    true,
 			},
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusCreated,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusCreated,
 			expectedNotificationSent: true,
-			expectServiceCalled:     true,
+			expectServiceCalled:      true,
 		},
 		{
 			name: "successful message submission without email notification",
 			request: &models.MessageSubmissionRequest{
-				Content:          "Test secret message",
+				Content: "Test secret message",
 				Recipient: &models.Recipient{
 					Name:  "Jane Smith",
 					Email: "jane@example.com",
@@ -65,12 +69,13 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    true,
 			},
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusCreated,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusCreated,
 			expectedNotificationSent: false,
-			expectServiceCalled:     true,
+			expectServiceCalled:      true,
 		},
 		{
 			name: "email notification enabled but service fails",
@@ -90,12 +95,13 @@ func TestEmailNotificationFlow(t *testing.T) {
 			mockServiceResponse: &domain.MessageSubmissionResponse{
 				MessageID:  "test-message-id",
 				DecryptURL: "https://example.com/decrypt/test-message-id/key",
+				ExpiresAt:  &fixedExpiry,
 				Success:    false, // Email sending failed
 			},
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusCreated,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusCreated,
 			expectedNotificationSent: false, // Email failed
-			expectServiceCalled:     true,
+			expectServiceCalled:      true,
 		},
 		{
 			name: "missing sender information when notification enabled",
@@ -108,11 +114,11 @@ func TestEmailNotificationFlow(t *testing.T) {
 				SendNotification: true,
 				AntiSpamAnswer:   "blue",
 			},
-			mockServiceResponse:     nil,
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusBadRequest,
+			mockServiceResponse:      nil,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusBadRequest,
 			expectedNotificationSent: false,
-			expectServiceCalled:     false, // Validation should fail before service is called
+			expectServiceCalled:      false, // Validation should fail before service is called
 		},
 		{
 			name: "missing recipient information when notification enabled",
@@ -125,11 +131,11 @@ func TestEmailNotificationFlow(t *testing.T) {
 				SendNotification: true,
 				AntiSpamAnswer:   "blue",
 			},
-			mockServiceResponse:     nil,
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusBadRequest,
+			mockServiceResponse:      nil,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusBadRequest,
 			expectedNotificationSent: false,
-			expectServiceCalled:     false,
+			expectServiceCalled:      false,
 		},
 		{
 			name: "invalid anti-spam answer when notification enabled",
@@ -146,11 +152,11 @@ func TestEmailNotificationFlow(t *testing.T) {
 				SendNotification: true,
 				AntiSpamAnswer:   "red", // Wrong answer
 			},
-			mockServiceResponse:     nil,
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusBadRequest,
+			mockServiceResponse:      nil,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusBadRequest,
 			expectedNotificationSent: false,
-			expectServiceCalled:     false,
+			expectServiceCalled:      false,
 		},
 		{
 			name: "missing anti-spam answer when notification enabled",
@@ -167,11 +173,11 @@ func TestEmailNotificationFlow(t *testing.T) {
 				SendNotification: true,
 				AntiSpamAnswer:   "", // Missing answer
 			},
-			mockServiceResponse:     nil,
-			mockServiceError:        nil,
-			expectedStatusCode:      http.StatusBadRequest,
+			mockServiceResponse:      nil,
+			mockServiceError:         nil,
+			expectedStatusCode:       http.StatusBadRequest,
 			expectedNotificationSent: false,
-			expectServiceCalled:     false,
+			expectServiceCalled:      false,
 		},
 	}
 
@@ -198,7 +204,8 @@ func TestEmailNotificationFlow(t *testing.T) {
 					}
 
 					return true
-				})).Return(tt.mockServiceResponse, tt.mockServiceError)
+				})).
+					Return(tt.mockServiceResponse, tt.mockServiceError)
 			}
 
 			// Create handler
@@ -234,6 +241,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 				assert.Equal(t, tt.expectedNotificationSent, response.NotificationSent)
 				assert.NotEmpty(t, response.DecryptURL)
 				assert.NotEmpty(t, response.WebURL)
+				require.NotNil(t, response.ExpiresAt, "ExpiresAt must be non-nil when domain provides it")
 				assert.False(t, response.ExpiresAt.IsZero())
 			} else if tt.expectedStatusCode == http.StatusBadRequest {
 				// Parse error response
@@ -255,16 +263,16 @@ func TestEmailNotificationFlow(t *testing.T) {
 
 func TestEmailValidationFlow(t *testing.T) {
 	tests := []struct {
-		name                 string
-		senderEmail          string
-		recipientEmail       string
-		expectEmailErrors    bool
-		expectedErrorFields  []string
+		name                string
+		senderEmail         string
+		recipientEmail      string
+		expectEmailErrors   bool
+		expectedErrorFields []string
 	}{
 		{
-			name:             "valid email addresses",
-			senderEmail:      "john@example.com",
-			recipientEmail:   "jane@example.com",
+			name:              "valid email addresses",
+			senderEmail:       "john@example.com",
+			recipientEmail:    "jane@example.com",
 			expectEmailErrors: false,
 		},
 		{
@@ -289,16 +297,16 @@ func TestEmailValidationFlow(t *testing.T) {
 			expectedErrorFields: []string{"sender.email", "recipient.email"},
 		},
 		{
-			name:                "email with special characters",
-			senderEmail:         "test+tag@example.com",
-			recipientEmail:      "user.name@subdomain.example.org",
-			expectEmailErrors:   false,
+			name:              "email with special characters",
+			senderEmail:       "test+tag@example.com",
+			recipientEmail:    "user.name@subdomain.example.org",
+			expectEmailErrors: false,
 		},
 		{
-			name:                "email with international domain",
-			senderEmail:         "user@example.co.uk",
-			recipientEmail:      "test@example.de",
-			expectEmailErrors:   false,
+			name:              "email with international domain",
+			senderEmail:       "user@example.co.uk",
+			recipientEmail:    "test@example.de",
+			expectEmailErrors: false,
 		},
 	}
 
@@ -385,12 +393,12 @@ func TestEmailValidationFlow(t *testing.T) {
 func TestConditionalValidationFlow(t *testing.T) {
 	// Test that validation rules change based on SendNotification flag
 	tests := []struct {
-		name               string
-		sendNotification   bool
-		includeSender      bool
-		includeRecipient   bool
-		includeAntiSpam    bool
-		expectSuccess      bool
+		name             string
+		sendNotification bool
+		includeSender    bool
+		includeRecipient bool
+		includeAntiSpam  bool
+		expectSuccess    bool
 	}{
 		{
 			name:             "notification disabled - minimal data required",
