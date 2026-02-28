@@ -104,7 +104,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		DecryptURL:       response.DecryptURL,
 		Key:              response.Key,
 		WebURL:           response.DecryptURL,            // Same URL works for both
-		ExpiresAt:        time.Now().Add(24 * time.Hour), // TODO: Get from config
+		ExpiresAt:        time.Now().Add(7 * 24 * time.Hour), // Messages expire after 7 days
 		NotificationSent: req.SendNotification && response.Success,
 	}
 
@@ -162,7 +162,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 		Exists:             accessInfo.Exists,
 		RequiresPassphrase: accessInfo.RequiresPassphrase,
 		HasBeenAccessed:    false,                          // TODO: Add this to domain if needed
-		ExpiresAt:          time.Now().Add(24 * time.Hour), // TODO: Get from storage
+		ExpiresAt:          time.Now().Add(7 * 24 * time.Hour), // Messages expire after 7 days
 	}
 
 	c.JSON(http.StatusOK, response)
