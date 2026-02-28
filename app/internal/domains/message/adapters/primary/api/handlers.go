@@ -117,7 +117,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	}
 
 	// Build API response — use ExpiresAt from domain (set at store time), fall back to 7 days if nil
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	expiresAt := time.Now().Add(domain.DefaultMessageTTL)
 	if response.ExpiresAt != nil {
 		expiresAt = *response.ExpiresAt
 	}
@@ -191,7 +191,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	}
 
 	// Build response — use ExpiresAt from domain (read from DB), fall back to 7 days if nil
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	expiresAt := time.Now().Add(domain.DefaultMessageTTL)
 	if accessInfo.ExpiresAt != nil {
 		expiresAt = *accessInfo.ExpiresAt
 	}

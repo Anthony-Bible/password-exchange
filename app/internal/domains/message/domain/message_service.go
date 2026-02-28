@@ -164,7 +164,7 @@ func (s *MessageService) SubmitMessage(
 		}
 	}
 
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	expiresAt := time.Now().Add(DefaultMessageTTL)
 	response := &MessageSubmissionResponse{
 		MessageID:  messageID,
 		DecryptURL: decryptURL,

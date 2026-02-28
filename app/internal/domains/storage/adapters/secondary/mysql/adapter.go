@@ -11,6 +11,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// defaultMessageTTL is the default time-to-live for messages stored in MySQL.
+// Must match the message domain's DefaultMessageTTL.
+const defaultMessageTTL = 7 * 24 * time.Hour
+
 // MySQLAdapter implements the MessageRepository interface for MySQL
 type MySQLAdapter struct {
 	db     *sql.DB
@@ -55,7 +59,7 @@ func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 	}
 
 	// FIXED: Store recipient email in other_email field and passphrase in other_lastname field
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	expiresAt := time.Now().Add(defaultMessageTTL)
 	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at) VALUES (?, ?, ?, ?, 0, ?, ?)"
 	_, err := m.db.Exec(
 		query,

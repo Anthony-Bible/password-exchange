@@ -195,6 +195,18 @@ func (s *GRPCServer) GetReminderHistory(
 	return &database.GetReminderHistoryResponse{Entries: entries}, nil
 }
 
+// runExpiredMessageCleanup runs a background loop that periodically deletes expired messages.
+func (s *GRPCServer) runExpiredMessageCleanup() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := s.storageService.CleanupExpiredMessages(context.Background()); err != nil {
+			log.Error().Err(err).Msg("Failed to cleanup expired messages")
+		}
+	}
+}
+
 // Start starts the gRPC server
 func (s *GRPCServer) Start() error {
 	lis, err := net.Listen("tcp", s.address)
@@ -206,6 +218,9 @@ func (s *GRPCServer) Start() error {
 	grpcServer := grpc.NewServer()
 	database.RegisterDbServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
+
+	// Run expired message cleanup in the background
+	go s.runExpiredMessageCleanup()
 
 	log.Info().Str("address", s.address).Msg("Starting gRPC storage server")
 

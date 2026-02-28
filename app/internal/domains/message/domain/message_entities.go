@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// DefaultMessageTTL is the default time-to-live for messages.
+const DefaultMessageTTL = 7 * 24 * time.Hour
+
 // MessageSubmissionRequest represents a request to submit a new message
 type MessageSubmissionRequest struct {
 	Content          string
