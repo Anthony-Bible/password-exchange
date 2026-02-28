@@ -15,6 +15,31 @@ import (
 // Must match the message domain's DefaultMessageTTL.
 const defaultMessageTTL = 7 * 24 * time.Hour
 
+// selectMessageQuery is the standard SELECT statement used to retrieve a message row.
+const selectMessageQuery = "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
+
+// scanMessageRow scans a single message row into a domain.Message, handling the nullable expires_at field.
+func scanMessageRow(row *sql.Row) (*domain.Message, error) {
+	var message domain.Message
+	var expiresAt sql.NullTime
+	err := row.Scan(
+		&message.Content,
+		&message.UniqueID,
+		&message.Passphrase,
+		&message.RecipientEmail,
+		&message.ViewCount,
+		&message.MaxViewCount,
+		&expiresAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if expiresAt.Valid {
+		message.ExpiresAt = &expiresAt.Time
+	}
+	return &message, nil
+}
+
 // MySQLAdapter implements the MessageRepository interface for MySQL
 type MySQLAdapter struct {
 	db     *sql.DB
@@ -91,20 +116,7 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
-	row := m.db.QueryRow(query, uniqueID)
-
-	var message domain.Message
-	var expiresAt sql.NullTime
-	err := row.Scan(
-		&message.Content,
-		&message.UniqueID,
-		&message.Passphrase,
-		&message.RecipientEmail,
-		&message.ViewCount,
-		&message.MaxViewCount,
-		&expiresAt,
-	)
+	message, err := scanMessageRow(m.db.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -113,12 +125,9 @@ func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
-	if expiresAt.Valid {
-		message.ExpiresAt = &expiresAt.Time
-	}
 
 	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
-	return &message, nil
+	return message, nil
 }
 
 // GetMessage retrieves a message by its unique identifier without incrementing the view count
@@ -129,20 +138,7 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		}
 	}
 
-	query := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
-	row := m.db.QueryRow(query, uniqueID)
-
-	var message domain.Message
-	var expiresAt sql.NullTime
-	err := row.Scan(
-		&message.Content,
-		&message.UniqueID,
-		&message.Passphrase,
-		&message.RecipientEmail,
-		&message.ViewCount,
-		&message.MaxViewCount,
-		&expiresAt,
-	)
+	message, err := scanMessageRow(m.db.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
@@ -151,12 +147,9 @@ func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
-	if expiresAt.Valid {
-		message.ExpiresAt = &expiresAt.Time
-	}
 
 	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
-	return &message, nil
+	return message, nil
 }
 
 // IncrementViewCountAndGet atomically increments the view count and returns the message
@@ -196,20 +189,7 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	}
 
 	// Get the updated message with the new view count
-	selectQuery := "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
-	row := tx.QueryRow(selectQuery, uniqueID)
-
-	var message domain.Message
-	var expiresAt sql.NullTime
-	err = row.Scan(
-		&message.Content,
-		&message.UniqueID,
-		&message.Passphrase,
-		&message.RecipientEmail,
-		&message.ViewCount,
-		&message.MaxViewCount,
-		&expiresAt,
-	)
+	message, err := scanMessageRow(tx.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
@@ -217,9 +197,6 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 		}
 		log.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message after increment")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
-	}
-	if expiresAt.Valid {
-		message.ExpiresAt = &expiresAt.Time
 	}
 
 	// If view count has reached max view count, delete the message
@@ -244,7 +221,7 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	}
 
 	log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("View count incremented successfully")
-	return &message, nil
+	return message, nil
 }
 
 // DeleteExpiredMessages removes messages that have exceeded their TTL
