@@ -149,7 +149,7 @@ func TestSubmitMessage_ValidationError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, models.ErrorCodeValidationFailed, errorResponse.Error)
 	assert.Contains(t, errorResponse.Details, "sender")
-	assert.Contains(t, errorResponse.Details, "recipient")
+	assert.Contains(t, errorResponse.Details, "recipient.email")
 }
 
 func TestGetMessageInfo_Success(t *testing.T) {
