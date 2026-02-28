@@ -17,6 +17,6 @@ six==1.16.0
 slack-bolt==1.23.0
 slack-sdk==3.35.0
 soupsieve==2.7
-SQLAlchemy==1.4.54
+SQLAlchemy==2.0.47
 Werkzeug==3.1.6
 zipp==3.19.1
