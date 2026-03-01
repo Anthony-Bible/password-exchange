@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -11,9 +12,14 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// maxExpirationDuration is the maximum allowed expiration time (90 days).
+const maxExpirationDuration = 2160 * time.Hour
 
 // GRPCServer adapts the storage service to gRPC protocol
 type GRPCServer struct {
@@ -32,16 +38,24 @@ func NewGRPCServer(storageService primary.StorageServicePort, address string) *G
 
 // Insert handles gRPC insert requests by delegating to the storage service
 func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest) (*emptypb.Empty, error) {
+	expiresAt, err := parseExpiresAt(request.GetExpiresAt())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid expires_at: %v", err)
+	}
+	if expiresAt != nil && time.Until(*expiresAt) > maxExpirationDuration {
+		return nil, status.Errorf(codes.InvalidArgument, "expires_at exceeds maximum allowed expiration")
+	}
+
 	message := &domain.Message{
 		Content:        request.GetContent(),
 		UniqueID:       request.GetUuid(),
 		Passphrase:     request.GetPassphrase(),
 		RecipientEmail: request.GetRecipientEmail(),
 		MaxViewCount:   int(request.GetMaxViewCount()),
-		ExpiresAt:      parseExpiresAt(request.GetExpiresAt()),
+		ExpiresAt:      expiresAt,
 	}
 
-	err := s.storageService.StoreMessage(ctx, message)
+	err = s.storageService.StoreMessage(ctx, message)
 	if err != nil {
 		log.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to insert message via gRPC")
 		return nil, err
@@ -55,20 +69,18 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 	return &emptypb.Empty{}, nil
 }
 
-// parseExpiresAt parses an RFC3339 timestamp string into a *time.Time, returning nil on empty or error.
-func parseExpiresAt(s string) *time.Time {
+// parseExpiresAt parses an RFC3339 timestamp string into a *time.Time.
+// Returns nil, nil for empty string (use default TTL).
+// Returns nil, err for non-empty but un-parseable strings.
+func parseExpiresAt(s string) (*time.Time, error) {
 	if s == "" {
-		return nil
+		return nil, nil
 	}
 	t, err := time.Parse(time.RFC3339, s)
 	if err != nil {
-		log.Warn().
-			Err(err).
-			Str("value", s).
-			Msg("Failed to parse expires_at from insert request; using nil")
-		return nil
+		return nil, fmt.Errorf("parse RFC3339: %w", err)
 	}
-	return &t
+	return &t, nil
 }
 
 // formatTime formats a *time.Time as RFC3339, returning empty string for nil.

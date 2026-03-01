@@ -132,7 +132,7 @@ func (s *MessageService) SubmitMessage(
 	if req.ExpirationHours > 0 {
 		ttl = time.Duration(req.ExpirationHours) * time.Hour
 	}
-	expiresAt := time.Now().Add(ttl)
+	expiresAt := time.Now().UTC().Add(ttl)
 
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{

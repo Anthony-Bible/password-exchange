@@ -44,6 +44,42 @@ func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
 	}
 }
 
+func TestMySQLAdapter_InsertMessage_WithCustomExpiresAt(t *testing.T) {
+	// Test that a custom ExpiresAt value is passed as-is to the INSERT query
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db}
+
+	customExpiry := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	message := &domain.Message{
+		UniqueID:     "test-uuid-custom-expiry",
+		Content:      "encrypted-content",
+		Passphrase:   "",
+		MaxViewCount: 1,
+		ExpiresAt:    &customExpiry,
+	}
+
+	// The INSERT should use the exact customExpiry value, not AnyArg()
+	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, 0, \?, \?\)`).
+		WithArgs(message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount, customExpiry).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	// Act
+	err = adapter.InsertMessage(message)
+	// Assert
+	if err != nil {
+		t.Errorf("InsertMessage() error = %v", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
 func TestMySQLAdapter_SelectMessageByUniqueID_WithExpiresAt(t *testing.T) {
 	// Test that expires_at is properly scanned from the database
 	db, mock, err := sqlmock.New()
