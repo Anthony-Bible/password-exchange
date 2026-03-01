@@ -46,8 +46,10 @@ type MessageRetrievalResponse struct {
 	Content      string
 	ViewCount    int
 	MaxViewCount int
-	Success      bool
-	Error        error
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt *time.Time
+	Success   bool
+	Error     error
 }
 
 // MessageAccessInfo provides information about message access requirements

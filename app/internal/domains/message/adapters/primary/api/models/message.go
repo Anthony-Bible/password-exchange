@@ -64,6 +64,8 @@ type MessageDecryptResponse struct {
 	ViewCount    int       `json:"viewCount"`
 	MaxViewCount int       `json:"maxViewCount"`
 	DecryptedAt  time.Time `json:"decryptedAt"`
+	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
+	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
 // HealthCheckResponse represents the response to a health check

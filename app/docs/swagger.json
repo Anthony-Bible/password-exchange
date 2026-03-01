@@ -289,6 +289,7 @@
                     "type": "boolean"
                 },
                 "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "hasBeenAccessed": {
@@ -323,6 +324,10 @@
                     "type": "string"
                 },
                 "decryptedAt": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "maxViewCount": {
@@ -387,6 +392,7 @@
                     "type": "string"
                 },
                 "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "key": {

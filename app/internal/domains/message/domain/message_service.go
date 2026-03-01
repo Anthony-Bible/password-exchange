@@ -242,6 +242,7 @@ func (s *MessageService) RetrieveMessage(
 		Content:      finalContent,
 		ViewCount:    storedMessage.ViewCount,
 		MaxViewCount: storedMessage.MaxViewCount,
+		ExpiresAt:    storedMessage.ExpiresAt,
 		Success:      true,
 	}
 

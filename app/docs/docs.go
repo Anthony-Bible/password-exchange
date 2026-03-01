@@ -291,6 +291,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "hasBeenAccessed": {
@@ -325,6 +326,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "decryptedAt": {
+                    "type": "string"
+                },
+                "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "maxViewCount": {
@@ -389,6 +394,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expiresAt": {
+                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
                 },
                 "key": {
