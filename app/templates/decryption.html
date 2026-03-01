@@ -282,7 +282,7 @@ function handleDecryptionSuccess(data) {
         expiryHtml = `<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the ${maxViewCount}-view limit.`;
     }
 
-    if (data.expiresAt) {
+    if (remainingViews > 0 && data.expiresAt) {
         const expiryDate = new Date(data.expiresAt);
         const formattedDate = expiryDate.toLocaleDateString(undefined, {
             year: 'numeric', month: 'long', day: 'numeric'
