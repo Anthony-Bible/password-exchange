@@ -262,7 +262,7 @@ h2 {
 .form-check-input:hover {
     border-color: #1e40af;
     transform: scale(1.02);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.15);
 }
 
 .form-check-label {
