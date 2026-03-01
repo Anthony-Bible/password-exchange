@@ -9,7 +9,7 @@
 }
 
 /* Aurora background blobs */
-.aurora { position: fixed; border-radius: 50%; pointer-events: none; }
+.aurora { position: absolute; border-radius: 50%; pointer-events: none; z-index: -1; }
 .a1 {
     width: 900px; height: 900px;
     background: radial-gradient(circle, rgba(13,148,136,0.28) 0%, transparent 60%);
@@ -21,6 +21,14 @@
     background: radial-gradient(circle, rgba(20,184,166,0.1) 0%, transparent 70%);
     filter: blur(100px);
     bottom: -100px; right: -80px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aurora { display: none; }
+}
+@media (max-width: 768px) {
+    .a1 { width: 400px; height: 400px; filter: blur(60px); }
+    .a2 { width: 200px; height: 200px; filter: blur(50px); }
 }
 
 /* Enhanced container */
@@ -141,13 +149,13 @@ h2 {
 
 .form-control:hover {
     border-color: #1e40af;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 2px 8px rgba(30, 64, 175, 0.1);
     transform: translateY(-1px);
 }
 
 .form-control:focus {
     border-color: #1e40af;
-    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(30, 64, 175, 0.25);
     background: #fff;
     transform: translateY(-1px);
     outline: 2px solid #1e40af;
@@ -161,7 +169,7 @@ h2 {
 .nav-link:focus {
     outline: 2px solid #1e40af;
     outline-offset: 2px;
-    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(30, 64, 175, 0.25);
 }
 
 .form-label {
@@ -182,12 +190,12 @@ h2 {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 32px rgba(30, 64, 175, 0.3);
 }
 
 .btn-success:hover, .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 12px 40px rgba(30, 64, 175, 0.4);
     background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
 }
 
@@ -198,11 +206,11 @@ h2 {
     border-radius: 12px;
     text-transform: none;
     letter-spacing: normal;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 16px rgba(30, 64, 175, 0.3);
 }
 
 .btn-primary:not(.btn-lg):hover {
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px rgba(30, 64, 175, 0.4);
 }
 
 .btn-lg {
@@ -275,11 +283,6 @@ h2 {
     color: #1e40af;
     text-decoration: none;
     transition: all 0.2s ease;
-}
-
-.btn-link:hover {
-    color: #1e3a8a;
-    transform: scale(1.1);
 }
 
 /* Enhanced form text */
