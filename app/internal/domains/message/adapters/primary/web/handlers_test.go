@@ -20,12 +20,18 @@ type MockMessageService struct {
 	mock.Mock
 }
 
-func (m *MockMessageService) SubmitMessage(ctx context.Context, req domain.MessageSubmissionRequest) (*domain.MessageSubmissionResponse, error) {
+func (m *MockMessageService) SubmitMessage(
+	ctx context.Context,
+	req domain.MessageSubmissionRequest,
+) (*domain.MessageSubmissionResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(*domain.MessageSubmissionResponse), args.Error(1)
 }
 
-func (m *MockMessageService) CheckMessageAccess(ctx context.Context, messageID string) (*domain.MessageAccessInfo, error) {
+func (m *MockMessageService) CheckMessageAccess(
+	ctx context.Context,
+	messageID string,
+) (*domain.MessageAccessInfo, error) {
 	args := m.Called(ctx, messageID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -33,7 +39,10 @@ func (m *MockMessageService) CheckMessageAccess(ctx context.Context, messageID s
 	return args.Get(0).(*domain.MessageAccessInfo), args.Error(1)
 }
 
-func (m *MockMessageService) RetrieveMessage(ctx context.Context, req domain.MessageRetrievalRequest) (*domain.MessageRetrievalResponse, error) {
+func (m *MockMessageService) RetrieveMessage(
+	ctx context.Context,
+	req domain.MessageRetrievalRequest,
+) (*domain.MessageRetrievalResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -44,9 +53,9 @@ func (m *MockMessageService) RetrieveMessage(ctx context.Context, req domain.Mes
 func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 	// This test verifies the fix: DisplayDecrypted should NOT call RetrieveMessage
 	// regardless of whether a passphrase is required or not
-	
+
 	gin.SetMode(gin.TestMode)
-	
+
 	testCases := []struct {
 		name               string
 		requiresPassphrase bool
@@ -69,28 +78,28 @@ func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 			// Create a test context directly without routing
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
-			
+
 			// Create gin engine with mock templates
 			gin.SetMode(gin.TestMode)
 			engine := gin.New()
 			engine.SetHTMLTemplate(createMockTemplate())
-			
+
 			c := gin.CreateTestContextOnly(w, engine)
 			c.Request = req
 			c.Params = gin.Params{
 				{Key: "uuid", Value: messageID},
 				{Key: "key", Value: "/somekey"},
 			}
-			
+
 			// Call the handler directly
 			handler.DisplayDecrypted(c)
 
 			// The key assertion: RetrieveMessage should NEVER be called during GET request
 			mockService.AssertNotCalled(t, "RetrieveMessage", mock.Anything, mock.Anything)
-			
+
 			// Verify CheckMessageAccess was called
 			mockService.AssertCalled(t, "CheckMessageAccess", mock.Anything, messageID)
-			
+
 			mockService.AssertExpectations(t)
 		})
 	}
@@ -110,12 +119,12 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 	// Create a test context directly
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
-	
+
 	// Create gin engine with mock templates
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	engine.SetHTMLTemplate(createMockTemplate())
-	
+
 	c := gin.CreateTestContextOnly(w, engine)
 	c.Request = req
 	c.Params = gin.Params{
@@ -130,19 +139,19 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	// Should not call RetrieveMessage for non-existent message
 	mockService.AssertNotCalled(t, "RetrieveMessage", mock.Anything, mock.Anything)
-	
+
 	mockService.AssertExpectations(t)
 }
 
 func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	
+
 	testCases := []struct {
-		name                string
-		maxViewCountValue   string
-		expectedStatusCode  int
-		expectServiceCall   bool
-		expectedErrorField  string
+		name               string
+		maxViewCountValue  string
+		expectedStatusCode int
+		expectServiceCall  bool
+		expectedErrorField string
 	}{
 		{
 			name:               "ValidMaxViewCount",
@@ -215,13 +224,14 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 						expectedMaxViewCount = 100
 					}
 				}
-				
+
 				mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 					return req.MaxViewCount == expectedMaxViewCount
-				})).Return(&domain.MessageSubmissionResponse{
-					MessageID:  "test-id",
-					DecryptURL: "http://example.com/decrypt/test-id/key",
-				}, nil)
+				})).
+					Return(&domain.MessageSubmissionResponse{
+						MessageID:  "test-id",
+						DecryptURL: "http://example.com/decrypt/test-id/key",
+					}, nil)
 			}
 
 			// Create form data
@@ -253,7 +263,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 				mockService.AssertCalled(t, "SubmitMessage", mock.Anything, mock.Anything)
 			} else {
 				mockService.AssertNotCalled(t, "SubmitMessage", mock.Anything, mock.Anything)
-				
+
 				// For validation errors, check that the response contains error information
 				if tc.expectedErrorField != "" {
 					responseBody := w.Body.String()
@@ -269,9 +279,11 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 // createMockTemplate creates a simple mock template for testing
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")
-	tmpl, _ = tmpl.New("decryption.html").Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
+	tmpl, _ = tmpl.New("decryption.html").
+		Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
 	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
-	tmpl, _ = tmpl.New("home.html").Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
+	tmpl, _ = tmpl.New("home.html").
+		Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
 	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p></body></html>`)
 	return tmpl
 }

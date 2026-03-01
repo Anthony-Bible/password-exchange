@@ -1005,9 +1005,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update expiration input max attribute when unit changes
     const expirationUnitSelect = document.getElementById('expiration_unit');
     const expirationValueInput = document.getElementById('expiration_value');
-    expirationUnitSelect.addEventListener('change', function() {
-        expirationValueInput.max = this.value === 'days' ? '90' : '2160';
-    });
+    function updateExpirationMax() {
+        expirationValueInput.max = expirationUnitSelect.value === 'days' ? '90' : '2160';
+    }
+    updateExpirationMax();
+    expirationUnitSelect.addEventListener('change', updateExpirationMax);
 
     // Initialize password generator functionality
     initializePasswordGenerator();

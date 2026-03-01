@@ -29,7 +29,7 @@ func NewMessageHandler(messageService primary.MessageServicePort) *MessageHandle
 // SubmitMessage handles POST requests to submit a new message
 func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	ctx := c.Request.Context()
-	
+
 	log.Info().Msg("Processing message submission request")
 
 	// Parse max view count
@@ -62,29 +62,38 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		switch unit {
 		case "days":
 			expirationHours = parsedValue * 24
-		default: // "hours" or empty
+		case "hours", "":
 			expirationHours = parsedValue
+		default:
+			log.Error().Str("unit", unit).Msg("Invalid expiration unit")
+			h.renderErrorWithField(c, "Invalid expiration unit: must be 'hours' or 'days'", "expiration_value")
+			return
 		}
 		if expirationHours < 1 || expirationHours > domain.MaxExpirationHours {
 			log.Error().Int("hours", expirationHours).Msg("Expiration out of range")
-			h.renderErrorWithField(c, fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24), "expiration_value")
+			h.renderErrorWithField(
+				c,
+				fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24),
+				"expiration_value",
+			)
 			return
 		}
 	}
 
 	// Extract form data
 	req := domain.MessageSubmissionRequest{
-		Content:          c.PostForm("content"),
-		SenderName:       c.PostForm("firstname"),
-		SenderEmail:      c.PostForm("email"),
-		RecipientName:    c.PostForm("other_firstname"),
-		RecipientEmail:   c.PostForm("other_email"),
-		Passphrase:       c.PostForm("other_lastname"),
-		AdditionalInfo:   c.PostForm("other_information"),
-		Captcha:          c.PostForm("h-captcha-response"),
-		SendNotification: c.PostForm("enableEmail") != "" && webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")),
-		MaxViewCount:     maxViewCount,
-		ExpirationHours:  expirationHours,
+		Content:        c.PostForm("content"),
+		SenderName:     c.PostForm("firstname"),
+		SenderEmail:    c.PostForm("email"),
+		RecipientName:  c.PostForm("other_firstname"),
+		RecipientEmail: c.PostForm("other_email"),
+		Passphrase:     c.PostForm("other_lastname"),
+		AdditionalInfo: c.PostForm("other_information"),
+		Captcha:        c.PostForm("h-captcha-response"),
+		SendNotification: c.PostForm("enableEmail") != "" &&
+			webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")),
+		MaxViewCount:    maxViewCount,
+		ExpirationHours: expirationHours,
 	}
 
 	// Submit the message
@@ -122,7 +131,7 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		return
 	}
 
-	// Render decryption page 
+	// Render decryption page
 	data := gin.H{
 		"Title":       "passwordExchange Decrypted",
 		"HasPassword": accessInfo.RequiresPassphrase,
@@ -163,7 +172,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	response, err := h.messageService.RetrieveMessage(ctx, req)
 	if err != nil {
 		log.Error().Err(err).Str("messageId", messageID).Msg("Failed to retrieve message")
-		
+
 		// Check if it's a passphrase error
 		if err == domain.ErrInvalidPassphrase {
 			data := gin.H{
@@ -218,23 +227,23 @@ func (h *MessageHandler) NotFound(c *gin.Context) {
 // Helper methods
 func (h *MessageHandler) renderError(c *gin.Context, message string, err error) {
 	log.Error().Err(err).Str("message", message).Msg("Rendering error page")
-	
+
 	data := gin.H{
 		"Title":  "Error - Password Exchange",
 		"Errors": map[string]string{"general": message},
 	}
-	
+
 	c.HTML(http.StatusInternalServerError, "home.html", data)
 }
 
 func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
 	log.Error().Str("message", message).Str("field", field).Msg("Rendering validation error page")
-	
+
 	data := gin.H{
 		"Title":  "Password Exchange",
 		"Errors": map[string]string{field: message},
 	}
-	
+
 	c.HTML(http.StatusBadRequest, "home.html", data)
 }
 
@@ -249,11 +258,11 @@ func webAntiSpamCheck(questionIDStr, answer string) bool {
 	if questionIDStr == "" || answer == "" {
 		return false
 	}
-	
+
 	questionID, err := strconv.Atoi(questionIDStr)
 	if err != nil {
 		return false
 	}
-	
+
 	return middleware.IsValidAntiSpamAnswer(&questionID, answer)
 }

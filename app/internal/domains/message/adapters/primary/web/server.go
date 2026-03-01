@@ -25,21 +25,21 @@ type WebServer struct {
 func NewWebServer(messageService primary.MessageServicePort) *WebServer {
 	messageHandler := NewMessageHandler(messageService)
 	apiServer := api.NewServer(messageService)
-	
+
 	router := gin.Default()
-	
+
 	// Create template functions
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int {
 			return a - b
 		},
 	}
-	
+
 	// Load HTML templates with custom functions
 	router.SetFuncMap(funcMap)
 	router.LoadHTMLGlob("/templates/*.html")
 	router.Static("/assets", "/templates/assets")
-	
+
 	return &WebServer{
 		messageHandler: messageHandler,
 		messageService: messageService,
@@ -52,20 +52,20 @@ func NewWebServer(messageService primary.MessageServicePort) *WebServer {
 func (s *WebServer) SetupRoutes() {
 	// Setup API routes directly on the main router
 	s.setupAPIRoutes()
-	
+
 	// Static pages
 	s.router.GET("/", s.messageHandler.Home)
 	s.router.GET("/about", s.messageHandler.About)
 	s.router.GET("/confirmation", s.messageHandler.Confirmation)
-	
+
 	// Message operations
 	s.router.POST("/", s.messageHandler.SubmitMessage)
 	s.router.GET("/decrypt/:uuid/*key", s.messageHandler.DisplayDecrypted)
 	s.router.POST("/decrypt/:uuid/*key", s.messageHandler.DecryptMessage)
-	
+
 	// 404 handler
 	s.router.NoRoute(s.messageHandler.NotFound)
-	
+
 	log.Info().Msg("Web routes and API routes configured")
 }
 
@@ -73,26 +73,29 @@ func (s *WebServer) SetupRoutes() {
 func (s *WebServer) setupAPIRoutes() {
 	// Create API handler directly with the message service
 	apiHandler := api.NewMessageAPIHandler(s.messageService)
-	
+
 	// Add API middleware
 	apiGroup := s.router.Group("/api")
 	apiGroup.Use(func(c *gin.Context) {
 		// Add CORS headers
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID")
-		
+		c.Header(
+			"Access-Control-Allow-Headers",
+			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID",
+		)
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
 		c.Next()
 	})
-	
+
 	// Add correlation ID and error handling middleware
 	apiGroup.Use(middleware.CorrelationID())
 	apiGroup.Use(middleware.ErrorHandler())
-	
+
 	// API v1 routes
 	v1 := apiGroup.Group("/v1")
 	{
@@ -100,22 +103,22 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.POST("/messages", apiHandler.SubmitMessage)
 		v1.GET("/messages/:id", apiHandler.GetMessageInfo)
 		v1.POST("/messages/:id/decrypt", apiHandler.DecryptMessage)
-		
+
 		// Utility endpoints
 		v1.GET("/health", apiHandler.HealthCheck)
 		v1.GET("/info", apiHandler.APIInfo)
-		
+
 		// Documentation endpoints
 		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
-	
+
 	log.Info().Msg("API routes configured directly on main router")
 }
 
 // Start starts the web server
 func (s *WebServer) Start() error {
 	s.SetupRoutes()
-	
+
 	log.Info().Msg("Starting web server")
 	return s.router.Run() // Default port :8080
 }
