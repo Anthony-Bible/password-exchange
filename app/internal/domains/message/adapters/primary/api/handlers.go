@@ -296,6 +296,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 		ViewCount:    response.ViewCount,
 		MaxViewCount: response.MaxViewCount,
 		DecryptedAt:  time.Now(),
+		ExpiresAt:    response.ExpiresAt,
 	}
 
 	log.Debug().

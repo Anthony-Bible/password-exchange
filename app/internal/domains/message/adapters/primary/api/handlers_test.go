@@ -561,3 +561,73 @@ func TestSubmitMessage_UsesRealExpiresAt(t *testing.T) {
 
 	mockService.AssertExpectations(t)
 }
+
+func TestDecryptMessage_IncludesExpiresAt(t *testing.T) {
+	// When domain returns ExpiresAt, it must appear in the decrypt response JSON.
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	fixedExpiry := time.Date(2030, 3, 7, 12, 0, 0, 0, time.UTC)
+	mockService.On("RetrieveMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageRetrievalRequest) bool {
+		return req.MessageID == "test-message-id"
+	})).Return(&domain.MessageRetrievalResponse{
+		MessageID:    "test-message-id",
+		Content:      "secret content",
+		ViewCount:    1,
+		MaxViewCount: 5,
+		ExpiresAt:    &fixedExpiry,
+		Success:      true,
+	}, nil)
+
+	body, _ := json.Marshal(models.MessageDecryptRequest{DecryptionKey: "dGVzdGtleQ=="})
+	req, _ := http.NewRequest("POST", "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.MessageDecryptResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.NotNil(t, response.ExpiresAt, "expiresAt must be present in decrypt response")
+	assert.Equal(t, fixedExpiry.Unix(), response.ExpiresAt.Unix())
+
+	mockService.AssertExpectations(t)
+}
+
+func TestDecryptMessage_NilExpiresAtIsNullInResponse(t *testing.T) {
+	// When domain returns nil ExpiresAt (legacy message), the decrypt response must have "expiresAt": null.
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	mockService.On("RetrieveMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageRetrievalRequest) bool {
+		return req.MessageID == "test-message-id"
+	})).Return(&domain.MessageRetrievalResponse{
+		MessageID:    "test-message-id",
+		Content:      "secret content",
+		ViewCount:    1,
+		MaxViewCount: 5,
+		ExpiresAt:    nil,
+		Success:      true,
+	}, nil)
+
+	body, _ := json.Marshal(models.MessageDecryptRequest{DecryptionKey: "dGVzdGtleQ=="})
+	req, _ := http.NewRequest("POST", "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	expiresAt, hasKey := raw["expiresAt"]
+	assert.True(t, hasKey, "expiresAt key must be present in decrypt response")
+	assert.Nil(t, expiresAt, "expiresAt must be null for legacy messages")
+
+	mockService.AssertExpectations(t)
+}

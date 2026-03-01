@@ -271,17 +271,29 @@ function handleDecryptionSuccess(data) {
     const maxViewCount = data.maxViewCount || 5; // Default to 5 if not provided
     const remainingViews = Math.max(0, maxViewCount - viewCount);
     
+    let expiryHtml;
     if (remainingViews > 0) {
-        document.getElementById('view-count-text').textContent = 
+        document.getElementById('view-count-text').textContent =
             `This message has been viewed ${viewCount} time(s). It will be deleted after ${maxViewCount} views.`;
-        document.getElementById('expiry-info').innerHTML = 
-            `<strong>Important:</strong> This message will be automatically deleted after ${remainingViews} more view(s).`;
+        expiryHtml = `<strong>Important:</strong> This message will be automatically deleted after ${remainingViews} more view(s).`;
     } else {
-        document.getElementById('view-count-text').textContent = 
+        document.getElementById('view-count-text').textContent =
             'This message has reached the maximum view count and has been deleted.';
-        document.getElementById('expiry-info').innerHTML = 
-            `<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the ${maxViewCount}-view limit.`;
+        expiryHtml = `<strong>Important:</strong> This message has been permanently deleted from our servers after reaching the ${maxViewCount}-view limit.`;
     }
+
+    if (remainingViews > 0 && data.expiresAt) {
+        const expiryDate = new Date(data.expiresAt);
+        const formattedDate = expiryDate.toLocaleDateString(undefined, {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const formattedTime = expiryDate.toLocaleTimeString(undefined, {
+            hour: '2-digit', minute: '2-digit'
+        });
+        expiryHtml += ` It will also expire on <strong>${formattedDate} at ${formattedTime}</strong>.`;
+    }
+
+    document.getElementById('expiry-info').innerHTML = expiryHtml;
     
     hideAll();
     document.getElementById('decrypted-message').style.display = 'block';
