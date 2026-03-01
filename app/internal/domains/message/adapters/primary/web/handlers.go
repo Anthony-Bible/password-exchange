@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -48,6 +49,29 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		maxViewCount = parsed
 	}
 
+	// Parse expiration (value + unit → hours)
+	expirationHours := 0
+	if expirationValueStr := c.PostForm("expiration_value"); expirationValueStr != "" {
+		parsedValue, err := strconv.Atoi(expirationValueStr)
+		if err != nil {
+			log.Error().Err(err).Str("value", expirationValueStr).Msg("Invalid expiration value format")
+			h.renderErrorWithField(c, "Invalid expiration value: must be a number", "expiration_value")
+			return
+		}
+		unit := c.PostForm("expiration_unit")
+		switch unit {
+		case "days":
+			expirationHours = parsedValue * 24
+		default: // "hours" or empty
+			expirationHours = parsedValue
+		}
+		if expirationHours < 1 || expirationHours > domain.MaxExpirationHours {
+			log.Error().Int("hours", expirationHours).Msg("Expiration out of range")
+			h.renderErrorWithField(c, fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24), "expiration_value")
+			return
+		}
+	}
+
 	// Extract form data
 	req := domain.MessageSubmissionRequest{
 		Content:          c.PostForm("content"),
@@ -60,6 +84,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		Captcha:          c.PostForm("h-captcha-response"),
 		SendNotification: c.PostForm("enableEmail") != "" && webAntiSpamCheck(c.PostForm("questionId"), c.PostForm("color")),
 		MaxViewCount:     maxViewCount,
+		ExpirationHours:  expirationHours,
 	}
 
 	// Submit the message

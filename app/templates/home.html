@@ -159,6 +159,43 @@
                         </div>
                     </div>
                 </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="expiration_value" class="form-label">
+                                Expiration (Optional)
+                                <button type="button" 
+                                        class="btn btn-link btn-sm p-0 ms-1" 
+                                        data-bs-toggle="tooltip" 
+                                        title="How long until this message expires and is deleted (1 hour &ndash; 90 days)"
+                                        aria-label="Help about expiration">
+                                    <i class="fas fa-lightbulb"></i>
+                                </button>
+                            </label>
+                            {{ with .Errors.expiration_value }}
+                            <div class="alert alert-danger" role="alert">
+                                <p class="mb-0">{{ . }}</p>
+                            </div>
+                            {{ end }}
+                            <div class="input-group">
+                                <input id="expiration_value" 
+                                       type="number" 
+                                       name="expiration_value" 
+                                       class="form-control" 
+                                       placeholder="7"
+                                       min="1"
+                                       aria-describedby="expirationHelp">
+                                <select id="expiration_unit" name="expiration_unit" class="form-select" style="max-width: 110px;">
+                                    <option value="hours">Hours</option>
+                                    <option value="days" selected>Days</option>
+                                </select>
+                            </div>
+                            <div id="expirationHelp" class="form-text">
+                                Leave empty to use default (7 days)
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Recipient Information (shown when email enabled) -->
@@ -769,6 +806,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxViewCount = document.getElementById('max_view_count').value.trim();
             if (maxViewCount) {
                 payload.maxViewCount = parseInt(maxViewCount, 10);
+            }
+
+            // Add expiration hours if provided
+            const expirationValue = document.getElementById('expiration_value').value.trim();
+            if (expirationValue) {
+                const expirationUnit = document.getElementById('expiration_unit').value;
+                const multiplier = expirationUnit === 'days' ? 24 : 1;
+                payload.expirationHours = parseInt(expirationValue, 10) * multiplier;
             }
 
             // Add passphrase if provided

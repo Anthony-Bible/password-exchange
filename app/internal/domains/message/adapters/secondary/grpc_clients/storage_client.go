@@ -42,6 +42,9 @@ func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStor
 		MaxViewCount:   int32(req.MaxViewCount),
 		RecipientEmail: req.RecipientEmail,
 	}
+	if req.ExpiresAt != nil {
+		grpcReq.ExpiresAt = req.ExpiresAt.UTC().Format(time.RFC3339)
+	}
 
 	_, err := c.client.Insert(ctx, grpcReq)
 	if err != nil {

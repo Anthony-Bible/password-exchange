@@ -360,6 +360,12 @@ const docTemplate = `{
                     "maxLength": 10000,
                     "minLength": 1
                 },
+                "expirationHours": {
+                    "description": "ExpirationHours specifies a custom expiration in hours. If omitted, defaults to 7 days (168 hours).\nValid range: 1–2160 (1 hour to 90 days).",
+                    "type": "integer",
+                    "maximum": 2160,
+                    "minimum": 0
+                },
                 "maxViewCount": {
                     "type": "integer",
                     "maximum": 100,
@@ -478,6 +484,8 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Secure password sharing service that allows users to submit encrypted messages and share them through unique, one-time access URLs.\nThe service provides optional email notifications and passphrase protection for enhanced security.\n\n## Email Reminder System\n\nThe service includes an automated email reminder system that runs via scheduled jobs (CronJob in Kubernetes).\nThis system automatically sends reminder emails to recipients who haven't viewed their secure messages after\na configurable time period. The reminder system is not exposed through REST API endpoints but operates as\na background service with configurable timing, retry logic, and resilience patterns.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {

@@ -82,6 +82,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		TurnstileToken:   req.TurnstileToken,
 		SendNotification: req.SendNotification,
 		MaxViewCount:     req.MaxViewCount,
+		ExpirationHours:  req.ExpirationHours,
 	}
 
 	if req.Sender != nil {

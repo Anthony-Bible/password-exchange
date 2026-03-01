@@ -38,6 +38,7 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 		Passphrase:     request.GetPassphrase(),
 		RecipientEmail: request.GetRecipientEmail(),
 		MaxViewCount:   int(request.GetMaxViewCount()),
+		ExpiresAt:      parseExpiresAt(request.GetExpiresAt()),
 	}
 
 	err := s.storageService.StoreMessage(ctx, message)
@@ -52,6 +53,22 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 		Str("recipientEmail", validation.SanitizeEmailForLogging(request.GetRecipientEmail())).
 		Msg("Message inserted successfully via gRPC")
 	return &emptypb.Empty{}, nil
+}
+
+// parseExpiresAt parses an RFC3339 timestamp string into a *time.Time, returning nil on empty or error.
+func parseExpiresAt(s string) *time.Time {
+	if s == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		log.Warn().
+			Err(err).
+			Str("value", s).
+			Msg("Failed to parse expires_at from insert request; using nil")
+		return nil
+	}
+	return &t
 }
 
 // formatTime formats a *time.Time as RFC3339, returning empty string for nil.

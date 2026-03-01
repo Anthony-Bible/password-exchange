@@ -79,6 +79,13 @@ definitions:
         maxLength: 10000
         minLength: 1
         type: string
+      expirationHours:
+        description: |-
+          ExpirationHours specifies a custom expiration in hours. If omitted, defaults to 7 days (168 hours).
+          Valid range: 1–2160 (1 hour to 90 days).
+        maximum: 2160
+        minimum: 0
+        type: integer
       maxViewCount:
         maximum: 100
         minimum: 0
