@@ -16,7 +16,7 @@ type MessageSubmissionRequest struct {
 	QuestionID       *int       `json:"questionId,omitempty"`
 	MaxViewCount     int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
 	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
-	// ExpirationHours specifies a custom expiration in hours. If omitted, defaults to 7 days (168 hours).
+	// ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.
 	// Valid range: 1–2160 (1 hour to 90 days).
 	ExpirationHours int `json:"expirationHours,omitempty" validate:"min=0,max=2160"`
 }

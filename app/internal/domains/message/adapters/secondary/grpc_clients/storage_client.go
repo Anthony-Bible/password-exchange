@@ -66,7 +66,7 @@ func parseExpiresAt(s string) *time.Time {
 		log.Warn().
 			Err(err).
 			Str("value", s).
-			Msg("Failed to parse expires_at timestamp from storage; treating as no expiry")
+			Msg("Failed to parse expires_at timestamp from storage response; treating as no expiry")
 		return nil
 	}
 	return &t

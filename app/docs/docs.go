@@ -361,7 +361,7 @@ const docTemplate = `{
                     "minLength": 1
                 },
                 "expirationHours": {
-                    "description": "ExpirationHours specifies a custom expiration in hours. If omitted, defaults to 7 days (168 hours).\nValid range: 1–2160 (1 hour to 90 days).",
+                    "description": "ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.\nValid range: 1–2160 (1 hour to 90 days).",
                     "type": "integer",
                     "maximum": 2160,
                     "minimum": 0

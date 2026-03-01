@@ -301,9 +301,15 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 		}
 	}
 
-	// Validate expiration hours if provided
-	if req.ExpirationHours < 0 || req.ExpirationHours > MaxExpirationHours {
-		return fmt.Errorf("expiration must be between 1 hour and %d hours (%d days)", MaxExpirationHours, MaxExpirationHours/24)
+	// Validate expiration hours if provided (0 means use default TTL)
+	if req.ExpirationHours != 0 {
+		if req.ExpirationHours < 1 || req.ExpirationHours > MaxExpirationHours {
+			return fmt.Errorf(
+				"expiration must be between 1 and %d hours (%d days)",
+				MaxExpirationHours,
+				MaxExpirationHours/24,
+			)
+		}
 	}
 
 	// Only validate sender and recipient information if email notifications are enabled

@@ -178,12 +178,13 @@
                             </div>
                             {{ end }}
                             <div class="input-group">
-                                <input id="expiration_value" 
-                                       type="number" 
-                                       name="expiration_value" 
-                                       class="form-control" 
+                                <input id="expiration_value"
+                                       type="number"
+                                       name="expiration_value"
+                                       class="form-control"
                                        placeholder="7"
                                        min="1"
+                                       max="90"
                                        aria-describedby="expirationHelp">
                                 <select id="expiration_unit" name="expiration_unit" class="form-select" style="max-width: 110px;">
                                     <option value="hours">Hours</option>
@@ -768,7 +769,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Color field validation is handled server-side since antispam questions vary
-        
+
+        // Validate expiration value range (client-side, before API call)
+        const expirationValEl = document.getElementById('expiration_value');
+        const expirationValStr = expirationValEl.value.trim();
+        if (expirationValStr) {
+            const expirationUnitEl = document.getElementById('expiration_unit');
+            const mult = expirationUnitEl.value === 'days' ? 24 : 1;
+            const computedHours = parseInt(expirationValStr, 10) * mult;
+            if (isNaN(computedHours) || computedHours < 1 || computedHours > 2160) {
+                expirationValEl.classList.add('is-invalid');
+                isValid = false;
+            }
+        }
+
         // Validate Turnstile token (only required when email notifications are enabled)
         const emailEnabled = emailToggle.checked;
         if (emailEnabled && !turnstileToken) {
@@ -988,6 +1002,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
+    // Update expiration input max attribute when unit changes
+    const expirationUnitSelect = document.getElementById('expiration_unit');
+    const expirationValueInput = document.getElementById('expiration_value');
+    expirationUnitSelect.addEventListener('change', function() {
+        expirationValueInput.max = this.value === 'days' ? '90' : '2160';
+    });
+
     // Initialize password generator functionality
     initializePasswordGenerator();
 });
