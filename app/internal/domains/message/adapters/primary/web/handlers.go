@@ -61,6 +61,15 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		unit := c.PostForm("expiration_unit")
 		switch unit {
 		case "days":
+			if parsedValue > domain.MaxExpirationHours/24 {
+				log.Error().Int("days", parsedValue).Msg("Expiration out of range for days unit")
+				h.renderErrorWithField(
+					c,
+					fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24),
+					"expiration_value",
+				)
+				return
+			}
 			expirationHours = parsedValue * 24
 		case "hours", "":
 			expirationHours = parsedValue

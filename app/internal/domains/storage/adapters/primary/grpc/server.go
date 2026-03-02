@@ -42,8 +42,14 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid expires_at: %v", err)
 	}
-	if expiresAt != nil && time.Until(*expiresAt) > maxExpirationDuration {
-		return nil, status.Errorf(codes.InvalidArgument, "expires_at exceeds maximum allowed expiration")
+	if expiresAt != nil {
+		remaining := time.Until(*expiresAt)
+		if remaining <= 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "expires_at must be in the future")
+		}
+		if remaining > maxExpirationDuration {
+			return nil, status.Errorf(codes.InvalidArgument, "expires_at exceeds maximum allowed expiration")
+		}
 	}
 
 	message := &domain.Message{
