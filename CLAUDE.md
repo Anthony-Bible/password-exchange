@@ -33,7 +33,7 @@ internal/domains/{domain}/
 - `notification/`: Email notifications via RabbitMQ with complete hexagonal architecture
 
 ### Key Technologies
-- **Go 1.23+**: Main application with Cobra CLI, Gin web framework, gRPC services
+- **Go 1.24+**: Main application with Cobra CLI, Gin web framework, gRPC services
 - **Python**: Slackbot using Flask, Slack Bolt, SQLAlchemy
 - **Protocol Buffers**: Service definitions in `protos/` generate Go and Python clients
 - **RabbitMQ**: Message queue for email notifications
@@ -141,6 +141,15 @@ protoc --proto_path=protos \
 - Kubernetes secrets in `kubernetes/secrets.encrypted.yaml` (SOPS encrypted)
 - Environment variables documented in project wiki
 
+## Internal Shared Packages
+
+`app/internal/shared/` contains cross-cutting concerns used across domains:
+- `config/`: Viper-based config loading
+- `logging/`: Zerolog logger setup
+- `validation/`: Input validation utilities
+
+`app/pkg/clients/` contains the email notification client (separate from gRPC secondary adapters in domain layer).
+
 ## Hexagonal Architecture Patterns
 
 ### Domain Layer (`domain/`)
@@ -168,10 +177,11 @@ protoc --proto_path=protos \
 - Database operations centralized in database service via gRPC
 - Encryption/decryption handled by dedicated encryption service via gRPC
 - Email notifications use RabbitMQ message queue pattern
-- Testing uses mocks for ports to isolate domain logic
+- **Mocks**: Hand-written mock structs defined inline in `_test.go` files using `testify/assert` — no mockery or gomock is used
 - Slackbot OAuth tokens stored in separate database tables via SQLAlchemy
 - Contracts package (`ports/contracts/`) holds shared types to prevent circular dependencies
 - All port interfaces include comprehensive godoc documentation
+- `test-build.sh` post-processes generated `docs/docs.go` to strip `LeftDelim`/`RightDelim` fields (swag compatibility quirk)
 
 ### Adding New Features
 1. Define business logic in `domain/` layer
@@ -190,34 +200,7 @@ The notification domain demonstrates complete hexagonal architecture:
 
 ## Testing
 
-### Test-Driven Development (TDD)
-
-**MUST follow strict Test-Driven Development practices** for all code changes:
-
-1. **Red Phase**: Write failing tests first that describe the expected behavior
-2. **Green Phase**: Write minimal code to make tests pass
-3. **Refactor Phase**: Improve code while keeping tests green
-4. **Iterate**: Repeat cycle for each feature/requirement
-
-**TDD Workflow:**
-```bash
-# 1. Write failing test
-go test ./... -v  # Expect failures
-
-# 2. Write minimal implementation
-# 3. Run tests again
-go test ./... -v  # Expect success
-
-# 4. Refactor and verify tests still pass
-go test ./... -v  # Must remain green
-```
-
-**Testing Requirements:**
-- Always use test driven development
-- All new functionality MUST have tests written before implementation
-- Tests must initially fail to prove they test the right behavior
-- No code should be written without corresponding tests
-- All tests must pass before code is considered complete
+**MUST follow strict TDD**: write failing tests first, then minimal implementation, then refactor. All new functionality requires tests written before implementation.
 
 ### Build Verification
 
