@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
@@ -19,8 +19,8 @@ func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
 	tempDir := t.TempDir()
 	templateFile := filepath.Join(tempDir, "test_template.html")
 	templateContent := "Hello {{.Body}}!"
-	
-	err := os.WriteFile(templateFile, []byte(templateContent), 0644)
+
+	err := os.WriteFile(templateFile, []byte(templateContent), 0o644)
 	require.NoError(t, err)
 
 	// Create minimal SMTP sender for testing parseTemplate
@@ -64,7 +64,7 @@ func TestSMTPSender_parseTemplate_NonExistentFile(t *testing.T) {
 	// Test parsing a non-existent file path as inline template
 	nonExistentFile := "/path/that/does/not/exist/template.html"
 	tmpl, err := sender.parseTemplate(nonExistentFile)
-	
+
 	// Should treat as inline template and successfully parse since it's valid template syntax
 	assert.NoError(t, err)
 	assert.NotNil(t, tmpl)
@@ -77,7 +77,7 @@ func TestSMTPSender_parseTemplate_InvalidInlineTemplate(t *testing.T) {
 	// Test invalid inline template syntax
 	invalidTemplate := "Hello {{.Body"
 	tmpl, err := sender.parseTemplate(invalidTemplate)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, tmpl)
 }
@@ -117,7 +117,7 @@ func TestSMTPSender_parseTemplate_PathDetection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test the behavior: file paths that don't exist will be treated as inline templates
 			tmpl, err := sender.parseTemplate(tt.input)
-			
+
 			if tt.expectFilePath {
 				// For file paths that don't exist, they're treated as inline templates
 				// The non-existent path string should parse as a template successfully
@@ -291,7 +291,7 @@ func TestSMTPSender_SafeTemplateFunctions_PreventsDangerousOperations(t *testing
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := sender.parseTemplate(tt.template)
 			assert.Error(t, err, tt.reason)
-			assert.Contains(t, strings.ToLower(err.Error()), "function", 
+			assert.Contains(t, strings.ToLower(err.Error()), "function",
 				"Error should mention function issue for: %s", tt.reason)
 		})
 	}
@@ -299,7 +299,7 @@ func TestSMTPSender_SafeTemplateFunctions_PreventsDangerousOperations(t *testing
 
 func TestSMTPSender_SafeTemplateFunctions_FileAndInlineConsistency(t *testing.T) {
 	sender := &SMTPSender{}
-	
+
 	// Template content that uses safe functions
 	templateContent := `Hello {{.Name | upper}}! 
 Your message: {{.Message | html}}
@@ -322,7 +322,7 @@ URL: {{.URL | url}}`
 	// Test file template
 	tempDir := t.TempDir()
 	templateFile := filepath.Join(tempDir, "test_template.html")
-	err = os.WriteFile(templateFile, []byte(templateContent), 0644)
+	err = os.WriteFile(templateFile, []byte(templateContent), 0o644)
 	require.NoError(t, err)
 
 	fileTmpl, err := sender.parseTemplate(templateFile)
@@ -333,7 +333,7 @@ URL: {{.URL | url}}`
 	require.NoError(t, err)
 
 	// Both should produce identical output
-	assert.Equal(t, inlineBuf.String(), fileBuf.String(), 
+	assert.Equal(t, inlineBuf.String(), fileBuf.String(),
 		"File and inline templates should produce identical output")
 
 	// Verify the output contains expected safe transformations
@@ -512,7 +512,7 @@ func TestSMTPSender_validateTemplateContent_InvalidTemplates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := sender.validateTemplateContent(tt.template)
 			assert.Error(t, err, tt.reason)
-			assert.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedErr), 
+			assert.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedErr),
 				"Error should contain expected message for: %s", tt.reason)
 		})
 	}
@@ -583,23 +583,30 @@ func TestSMTPSender_validateTemplateContent_EdgeCases(t *testing.T) {
 type mockConfigPortSecure struct{}
 
 // Verify interface compliance
-var _ secondary.ConfigPort = &mockConfigPortSecure{}
-var _ secondary.LoggerPort = &mockLoggerPortSecure{}
-var _ secondary.ValidationPort = &mockValidationPortSecure{}
+var (
+	_ secondary.ConfigPort     = &mockConfigPortSecure{}
+	_ secondary.LoggerPort     = &mockLoggerPortSecure{}
+	_ secondary.ValidationPort = &mockValidationPortSecure{}
+)
 
-func (m *mockConfigPortSecure) GetServerEmail() string                         { return "test@example.com" }
-func (m *mockConfigPortSecure) GetServerName() string                          { return "Test Server" }
-func (m *mockConfigPortSecure) GetPasswordExchangeURL() string                 { return "https://test.example.com" }
-func (m *mockConfigPortSecure) GetInitialNotificationSubject() string          { return "Test Subject %s" }
-func (m *mockConfigPortSecure) GetReminderNotificationSubject() string         { return "Reminder Subject %d" }
-func (m *mockConfigPortSecure) GetEmailTemplate() string                       { return "Test template: {{.Body}}" }
-func (m *mockConfigPortSecure) GetInitialNotificationBodyTemplate() string     { return "Initial body template" }
-func (m *mockConfigPortSecure) GetReminderNotificationBodyTemplate() string    { return "Reminder body template" }
-func (m *mockConfigPortSecure) GetReminderEmailTemplate() string               { return "Reminder email template" }
-func (m *mockConfigPortSecure) GetReminderMessageContent() string              { return "Reminder message content" }
-func (m *mockConfigPortSecure) ValidatePasswordExchangeURL() error             { return nil }
-func (m *mockConfigPortSecure) ValidateServerEmail() error                     { return nil }
-func (m *mockConfigPortSecure) ValidateTemplateFormats() error                 { return nil }
+func (m *mockConfigPortSecure) GetServerEmail() string                 { return "test@example.com" }
+func (m *mockConfigPortSecure) GetServerName() string                  { return "Test Server" }
+func (m *mockConfigPortSecure) GetPasswordExchangeURL() string         { return "https://test.example.com" }
+func (m *mockConfigPortSecure) GetInitialNotificationSubject() string  { return "Test Subject %s" }
+func (m *mockConfigPortSecure) GetReminderNotificationSubject() string { return "Reminder Subject %d" }
+func (m *mockConfigPortSecure) GetEmailTemplate() string               { return "Test template: {{.Body}}" }
+func (m *mockConfigPortSecure) GetInitialNotificationBodyTemplate() string {
+	return "Initial body template"
+}
+
+func (m *mockConfigPortSecure) GetReminderNotificationBodyTemplate() string {
+	return "Reminder body template"
+}
+func (m *mockConfigPortSecure) GetReminderEmailTemplate() string   { return "Reminder email template" }
+func (m *mockConfigPortSecure) GetReminderMessageContent() string  { return "Reminder message content" }
+func (m *mockConfigPortSecure) ValidatePasswordExchangeURL() error { return nil }
+func (m *mockConfigPortSecure) ValidateServerEmail() error         { return nil }
+func (m *mockConfigPortSecure) ValidateTemplateFormats() error     { return nil }
 
 // mockLoggerPortSecure for email header testing
 type mockLoggerPortSecure struct{}
@@ -611,13 +618,13 @@ func (m *mockLoggerPortSecure) Error() contracts.LogEvent { return &mockLogEvent
 
 type mockLogEventSecure struct{}
 
-func (m *mockLogEventSecure) Str(key, val string) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Err(err error) contracts.LogEvent       { return m }
-func (m *mockLogEventSecure) Int(key string, val int) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Bool(key string, val bool) contracts.LogEvent { return m }
+func (m *mockLogEventSecure) Str(key, val string) contracts.LogEvent               { return m }
+func (m *mockLogEventSecure) Err(err error) contracts.LogEvent                     { return m }
+func (m *mockLogEventSecure) Int(key string, val int) contracts.LogEvent           { return m }
+func (m *mockLogEventSecure) Bool(key string, val bool) contracts.LogEvent         { return m }
 func (m *mockLogEventSecure) Dur(key string, val time.Duration) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Float64(key string, val float64) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Msg(msg string)                         {}
+func (m *mockLogEventSecure) Float64(key string, val float64) contracts.LogEvent   { return m }
+func (m *mockLogEventSecure) Msg(msg string)                                       {}
 
 // mockValidationPortSecure for email header testing
 type mockValidationPortSecure struct{}
@@ -721,12 +728,12 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers, err := sender.buildSafeEmailHeaders(tt.fromName, tt.fromEmail, tt.to, tt.subject)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildSafeEmailHeaders() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr {
 				if err != nil && tt.errSubstr != "" {
 					if !strings.Contains(err.Error(), tt.errSubstr) {
@@ -738,7 +745,7 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 				if headers == "" {
 					t.Error("buildSafeEmailHeaders() returned empty headers for valid input")
 				}
-				
+
 				// Verify the headers contain expected content
 				expectedPatterns := []string{
 					"From:",
@@ -747,7 +754,7 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 					"MIME-version: 1.0",
 					"Content-Type: text/html",
 				}
-				
+
 				for _, pattern := range expectedPatterns {
 					if !strings.Contains(headers, pattern) {
 						t.Errorf("buildSafeEmailHeaders() headers missing expected pattern: %q", pattern)
