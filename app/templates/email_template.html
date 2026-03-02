@@ -1,8 +1,82 @@
-<!-- template.html -->
 <!DOCTYPE html>
-<html>
-<body>
-   {{.Body}}<br/><br/>
-    <h3>Email:</h3><span>{{.Message}}</span><br/>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Exchange - Secure Message</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f4f4f4;">
+    <div style="background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); overflow: hidden;">
+
+        <!-- Header -->
+        <div style="background-color: #1e40af; padding: 30px 30px 20px; text-align: center;">
+            <h1 style="color: #fff; margin: 0; font-size: 26px; letter-spacing: 1px;">&#128274; Password Exchange</h1>
+            <p style="color: #93c5fd; margin: 8px 0 0; font-size: 14px;">Secure Message Sharing</p>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 30px;">
+
+            <!-- Greeting -->
+            <h2 style="color: #1e40af; margin: 0 0 16px;">You have a secure message!</h2>
+
+            {{if .RecipientName}}
+            <p style="margin: 0 0 12px;">Hi <strong>{{.RecipientName}}</strong>,</p>
+            {{end}}
+
+            {{if .SenderName}}
+            <p style="margin: 0 0 20px;"><strong>{{.SenderName}}</strong> has shared an encrypted message with you via Password Exchange.</p>
+            {{else}}
+            <p style="margin: 0 0 20px;">Someone has shared an encrypted message with you via Password Exchange.</p>
+            {{end}}
+
+            <!-- Security badge -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; margin: 0 0 24px;">
+                <tr>
+                    <td style="padding: 14px 16px; color: #065f46; font-size: 14px;">
+                        &#128274; <strong>End-to-end encrypted</strong> &mdash; Only you can read this message.
+                    </td>
+                </tr>
+            </table>
+
+            <!-- CTA Button -->
+            {{if .MessageURL}}
+            <div style="text-align: center; margin: 0 0 28px;">
+                <a href="{{.MessageURL}}" aria-label="View your secure message on Password Exchange" style="display: inline-block; background-color: #0d9488; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">&#128275; View Secure Message</a>
+            </div>
+            {{end}}
+
+            <!-- Legacy body/message content -->
+            {{if .Body}}
+            <div style="background-color: #f8fafc; border-left: 4px solid #1e40af; border-radius: 0 6px 6px 0; padding: 16px; margin: 0 0 20px; font-size: 14px; color: #475569;">
+                {{.Body}}
+            </div>
+            {{end}}
+
+            {{if .Message}}
+            <div style="margin: 0 0 20px; font-size: 14px;">
+                {{.Message}}
+            </div>
+            {{end}}
+
+            <!-- Security notes -->
+            <div style="background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 14px 16px; margin: 0 0 10px;">
+                <p style="margin: 0 0 8px; font-weight: bold; color: #92400e;">&#9888;&#65039; Security reminders:</p>
+                <ul style="margin: 0; padding-left: 20px; color: #78350f; font-size: 13px;">
+                    <li>The message will be permanently deleted after viewing</li>
+                    <li>Do not forward this link &mdash; it is intended only for you</li>
+                    <li>Password Exchange staff will never ask you for this link</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 20px 30px; text-align: center; font-size: 12px; color: #64748b;">
+            <p style="margin: 0 0 4px;"><strong>Password Exchange</strong> &mdash; Secure message sharing platform</p>
+            <p style="margin: 0;">This is an automated notification. If you did not expect this message, you can safely ignore it.</p>
+        </div>
+
+    </div>
 </body>
 </html>

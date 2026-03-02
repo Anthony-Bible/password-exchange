@@ -50,8 +50,11 @@ type QueueConnection struct {
 // for rendering. This struct provides the dynamic content that will be inserted
 // into email template placeholders.
 type NotificationTemplateData struct {
-	Body    string
-	Message string
+	Body          string
+	Message       string
+	SenderName    string
+	RecipientName string
+	MessageURL    string
 }
 
 // UnviewedMessage represents a message that has been sent but not yet viewed by

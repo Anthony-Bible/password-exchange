@@ -311,9 +311,12 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	// Prepare template data
 	passwordExchangeURL := s.config.GetPasswordExchangeURL()
 	templateData := contracts.NotificationTemplateData{
-		Body: fmt.Sprintf(s.config.GetInitialNotificationBodyTemplate(), 
+		Body: fmt.Sprintf(s.config.GetInitialNotificationBodyTemplate(),
 			req.RecipientName, req.SenderName, passwordExchangeURL, passwordExchangeURL),
-		Message: req.MessageContent,
+		Message:       req.MessageContent,
+		SenderName:    req.SenderName,
+		RecipientName: req.RecipientName,
+		MessageURL:    req.MessageURL,
 	}
 
 	// Build email headers with CRLF injection protection
