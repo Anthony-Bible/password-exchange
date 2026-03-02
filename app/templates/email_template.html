@@ -21,11 +21,11 @@
             <h2 style="color: #1e40af; margin: 0 0 16px;">You have a secure message!</h2>
 
             {{if .RecipientName}}
-            <p style="margin: 0 0 12px;">Hi <strong>{{.RecipientName}}</strong>,</p>
+            <p style="margin: 0 0 12px;">Hi <strong>{{.RecipientName | html}}</strong>,</p>
             {{end}}
 
             {{if .SenderName}}
-            <p style="margin: 0 0 20px;"><strong>{{.SenderName}}</strong> has shared an encrypted message with you via Password Exchange.</p>
+            <p style="margin: 0 0 20px;"><strong>{{.SenderName | html}}</strong> has shared an encrypted message with you via Password Exchange.</p>
             {{else}}
             <p style="margin: 0 0 20px;">Someone has shared an encrypted message with you via Password Exchange.</p>
             {{end}}
@@ -42,14 +42,7 @@
             <!-- CTA Button -->
             {{if .MessageURL}}
             <div style="text-align: center; margin: 0 0 28px;">
-                <a href="{{.MessageURL}}" aria-label="View your secure message on Password Exchange" style="display: inline-block; background-color: #0d9488; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">&#128275; View Secure Message</a>
-            </div>
-            {{end}}
-
-            <!-- Legacy body/message content -->
-            {{if .Body}}
-            <div style="background-color: #f8fafc; border-left: 4px solid #1e40af; border-radius: 0 6px 6px 0; padding: 16px; margin: 0 0 20px; font-size: 14px; color: #475569;">
-                {{.Body}}
+                <a href="{{.MessageURL | html}}" aria-label="View your secure message on Password Exchange" style="display: inline-block; background-color: #0d9488; color: #fff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">&#128275; View Secure Message</a>
             </div>
             {{end}}
 

@@ -45,17 +45,17 @@ func NewSMTPSender(
 func (s *SMTPSender) getSafeTemplateFunctions() template.FuncMap {
 	return template.FuncMap{
 		// String manipulation functions
-		"upper":    strings.ToUpper,
-		"lower":    strings.ToLower,
-		"title":    strings.Title,
-		"trim":     strings.TrimSpace,
-		"replace":  strings.ReplaceAll,
-		
+		"upper":   strings.ToUpper,
+		"lower":   strings.ToLower,
+		"title":   strings.Title,
+		"trim":    strings.TrimSpace,
+		"replace": strings.ReplaceAll,
+
 		// HTML escaping for security
 		"html": template.HTMLEscaper,
 		"js":   template.JSEscaper,
 		"url":  template.URLQueryEscaper,
-		
+
 		// Safe formatting
 		"printf": fmt.Sprintf,
 	}
@@ -66,8 +66,8 @@ func (s *SMTPSender) getSafeTemplateFunctions() template.FuncMap {
 func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 	// Constants for validation limits
 	const (
-		maxTemplateSize   = 10 * 1024 // 10KB
-		maxNestingDepth   = 50
+		maxTemplateSize = 10 * 1024 // 10KB
+		maxNestingDepth = 50
 	)
 
 	// Check template size
@@ -99,16 +99,16 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 	safeFunctionNames := []string{
 		"upper", "lower", "title", "trim", "replace", "html", "js", "url", "printf",
 		// Go template built-ins that are safe
-		"and", "or", "not", "len", "index", "print", "println", 
+		"and", "or", "not", "len", "index", "print", "println",
 		"if", "else", "end", "range", "with", "template", "define", "block",
 	}
-	
+
 	// Look for function calls in templates (pattern: function name followed by space/args)
 	// This pattern looks for function calls like {{func arg}} but not {{.field}} or {{.field | func}}
 	functionPattern := `\{\{(?:\s*-\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\s+[^}|]*\}\}`
 	re := regexp.MustCompile(functionPattern)
 	matches := re.FindAllStringSubmatch(templateContent, -1)
-	
+
 	for _, match := range matches {
 		if len(match) > 1 {
 			funcName := match[1]
@@ -116,7 +116,7 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 			if strings.HasPrefix(funcName, ".") {
 				continue
 			}
-			
+
 			// Check if function is in safe list
 			isSafe := false
 			for _, safeName := range safeFunctionNames {
@@ -125,7 +125,7 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 					break
 				}
 			}
-			
+
 			if !isSafe {
 				return fmt.Errorf("undefined function '%s' detected in template", funcName)
 			}
@@ -134,15 +134,15 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 
 	// Check for path traversal patterns
 	pathTraversalPatterns := []string{
-		`\.\./`,           // ../
-		`\.\.\\`,          // ..\
-		`/etc/`,           // /etc/
-		`/var/`,           // /var/
-		`/usr/`,           // /usr/
-		`/root/`,          // /root/
-		`/home/`,          // /home/
-		`C:\\\\`,          // C:\
-		`%SYSTEMROOT%`,    // %SYSTEMROOT%
+		`\.\./`,        // ../
+		`\.\.\\`,       // ..\
+		`/etc/`,        // /etc/
+		`/var/`,        // /var/
+		`/usr/`,        // /usr/
+		`/root/`,       // /root/
+		`/home/`,       // /home/
+		`C:\\\\`,       // C:\
+		`%SYSTEMROOT%`, // %SYSTEMROOT%
 	}
 
 	for _, pattern := range pathTraversalPatterns {
@@ -181,7 +181,7 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 	// Check nesting depth by counting template constructs
 	nestingLevel := 0
 	maxNesting := 0
-	
+
 	// Simple state machine to track nesting
 	i := 0
 	for i < len(templateContent) {
@@ -191,18 +191,18 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 			for j < len(templateContent)-1 && !(templateContent[j] == '}' && templateContent[j+1] == '}') {
 				j++
 			}
-			
+
 			if j < len(templateContent)-1 {
 				// Found closing tag, extract content
-				tagContent := templateContent[i+2:j]
-				
+				tagContent := templateContent[i+2 : j]
+
 				// Check if it's a block opening tag (range, if, with, define, block)
 				trimmed := strings.TrimSpace(tagContent)
-				if strings.HasPrefix(trimmed, "range ") || 
-				   strings.HasPrefix(trimmed, "if ") || 
-				   strings.HasPrefix(trimmed, "with ") ||
-				   strings.HasPrefix(trimmed, "define ") ||
-				   strings.HasPrefix(trimmed, "block ") {
+				if strings.HasPrefix(trimmed, "range ") ||
+					strings.HasPrefix(trimmed, "if ") ||
+					strings.HasPrefix(trimmed, "with ") ||
+					strings.HasPrefix(trimmed, "define ") ||
+					strings.HasPrefix(trimmed, "block ") {
 					nestingLevel++
 					if nestingLevel > maxNesting {
 						maxNesting = nestingLevel
@@ -210,7 +210,7 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 				} else if trimmed == "end" {
 					nestingLevel--
 				}
-				
+
 				i = j + 2
 			} else {
 				i++
@@ -232,9 +232,9 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 func (s *SMTPSender) parseTemplate(templateConfig string) (*template.Template, error) {
 	// Define safe template functions only
 	safeFuncs := s.getSafeTemplateFunctions()
-	
+
 	var templateContent string
-	
+
 	// Check if templateConfig starts with '/' or contains common path separators - likely a file path
 	if strings.HasPrefix(templateConfig, "/") || strings.Contains(templateConfig, "/") {
 		// Check if file exists
@@ -253,12 +253,12 @@ func (s *SMTPSender) parseTemplate(templateConfig string) (*template.Template, e
 		// Treat as inline template content
 		templateContent = templateConfig
 	}
-	
+
 	// Validate template content before parsing
 	if err := s.validateTemplateContent(templateContent); err != nil {
 		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
-	
+
 	// Parse template with safe functions
 	return template.New("email").Funcs(safeFuncs).Parse(templateContent)
 }
@@ -294,12 +294,18 @@ func (s *SMTPSender) buildSafeEmailHeaders(fromName, fromEmail, to, subject stri
 }
 
 // SendEmail sends an email notification via SMTP
-func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.NotificationRequest) (*contracts.NotificationResponse, error) {
-	s.logger.Debug().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("subject", req.Subject).Msg("Sending email via SMTP")
+func (s *SMTPSender) SendNotification(
+	ctx context.Context,
+	req contracts.NotificationRequest,
+) (*contracts.NotificationResponse, error) {
+	s.logger.Debug().
+		Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+		Str("subject", req.Subject).
+		Msg("Sending email via SMTP")
 
 	// Create SMTP authentication
 	auth := smtp.PlainAuth("", s.emailConn.User, s.emailConn.Password, s.emailConn.Host)
-	
+
 	// Parse email template using injected config (supports both file paths and inline templates)
 	templateConfig := s.config.GetEmailTemplate()
 	tmpl, err := s.parseTemplate(templateConfig)
@@ -309,10 +315,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	}
 
 	// Prepare template data
-	passwordExchangeURL := s.config.GetPasswordExchangeURL()
 	templateData := contracts.NotificationTemplateData{
-		Body: fmt.Sprintf(s.config.GetInitialNotificationBodyTemplate(),
-			req.RecipientName, req.SenderName, passwordExchangeURL, passwordExchangeURL),
 		Message:       req.MessageContent,
 		SenderName:    req.SenderName,
 		RecipientName: req.RecipientName,
@@ -329,7 +332,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	// Render template
 	body := []byte(emailHeaders)
 	buf := bytes.NewBuffer(body)
-	
+
 	err = tmpl.Execute(buf, templateData)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to execute email template")
@@ -350,13 +353,16 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 
 	// Generate a simple message ID
 	messageID := fmt.Sprintf("smtp-%d-%s", len(req.To)+len(req.Subject), req.To[:min(5, len(req.To))])
-	
+
 	response := &contracts.NotificationResponse{
 		Success:   true,
 		MessageID: messageID,
 	}
 
-	s.logger.Info().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("messageId", response.MessageID).Msg("Email sent successfully via SMTP")
+	s.logger.Info().
+		Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+		Str("messageId", response.MessageID).
+		Msg("Email sent successfully via SMTP")
 	return response, nil
 }
 
