@@ -8,6 +8,9 @@ import (
 // DefaultMessageTTL is the default time-to-live for messages.
 const DefaultMessageTTL = 7 * 24 * time.Hour
 
+// MaxExpirationHours is the maximum allowed expiration time (90 days).
+const MaxExpirationHours = 90 * 24
+
 // MessageSubmissionRequest represents a request to submit a new message
 type MessageSubmissionRequest struct {
 	Content          string
@@ -21,6 +24,9 @@ type MessageSubmissionRequest struct {
 	TurnstileToken   string
 	SendNotification bool
 	MaxViewCount     int
+	// ExpirationHours specifies a custom expiration duration in hours.
+	// If zero, DefaultMessageTTL applies. Valid range: 1–MaxExpirationHours.
+	ExpirationHours int
 }
 
 // MessageSubmissionResponse represents the response to a message submission
@@ -66,7 +72,8 @@ type MessageStorageRequest struct {
 	Content        string
 	Passphrase     string
 	MaxViewCount   int
-	RecipientEmail string // Optional, for notification purposes
+	RecipientEmail string     // Optional, for notification purposes
+	ExpiresAt      *time.Time // Optional custom expiration; nil means use default TTL
 }
 
 // MessageRetrievalStorageRequest represents a request to retrieve a stored message

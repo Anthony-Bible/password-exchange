@@ -127,12 +127,20 @@ func (s *MessageService) SubmitMessage(
 		}
 	}
 
+	// Determine TTL: use provided ExpirationHours or fall back to default
+	ttl := DefaultMessageTTL
+	if req.ExpirationHours > 0 {
+		ttl = time.Duration(req.ExpirationHours) * time.Hour
+	}
+	expiresAt := time.Now().UTC().Add(ttl)
+
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{
 		MessageID:    messageID,
 		Content:      strings.Join(encryptedContent, ""),
 		Passphrase:   hashedPassphrase,
 		MaxViewCount: maxViewCount,
+		ExpiresAt:    &expiresAt,
 	}
 
 	// Only store recipient email if email notifications are enabled
@@ -164,7 +172,6 @@ func (s *MessageService) SubmitMessage(
 		}
 	}
 
-	expiresAt := time.Now().Add(DefaultMessageTTL)
 	response := &MessageSubmissionResponse{
 		MessageID:  messageID,
 		DecryptURL: decryptURL,
@@ -291,6 +298,17 @@ func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest)
 	if req.MaxViewCount != 0 {
 		if req.MaxViewCount < 1 || req.MaxViewCount > 100 {
 			return fmt.Errorf("max view count must be between 1 and 100")
+		}
+	}
+
+	// Validate expiration hours if provided (0 means use default TTL)
+	if req.ExpirationHours != 0 {
+		if req.ExpirationHours < 1 || req.ExpirationHours > MaxExpirationHours {
+			return fmt.Errorf(
+				"expiration must be between 1 and %d hours (%d days)",
+				MaxExpirationHours,
+				MaxExpirationHours/24,
+			)
 		}
 	}
 

@@ -23,6 +23,7 @@ message InsertRequest
     string passphrase = 3;
     int32 max_view_count = 4;
     string recipient_email = 5;
+    string expires_at = 6;  // RFC3339 timestamp; empty means use server default TTL
 }
 
 message GetUnviewedMessagesRequest {

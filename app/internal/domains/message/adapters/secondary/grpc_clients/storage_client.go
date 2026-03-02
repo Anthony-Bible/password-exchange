@@ -42,6 +42,9 @@ func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStor
 		MaxViewCount:   int32(req.MaxViewCount),
 		RecipientEmail: req.RecipientEmail,
 	}
+	if req.ExpiresAt != nil {
+		grpcReq.ExpiresAt = req.ExpiresAt.UTC().Format(time.RFC3339)
+	}
 
 	_, err := c.client.Insert(ctx, grpcReq)
 	if err != nil {
@@ -63,7 +66,7 @@ func parseExpiresAt(s string) *time.Time {
 		log.Warn().
 			Err(err).
 			Str("value", s).
-			Msg("Failed to parse expires_at timestamp from storage; treating as no expiry")
+			Msg("Failed to parse expires_at timestamp from storage response; treating as no expiry")
 		return nil
 	}
 	return &t

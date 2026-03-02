@@ -84,7 +84,12 @@ func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 	}
 
 	// FIXED: Store recipient email in other_email field and passphrase in other_lastname field
-	expiresAt := time.Now().Add(defaultMessageTTL)
+	var expiresAt time.Time
+	if message.ExpiresAt != nil {
+		expiresAt = *message.ExpiresAt
+	} else {
+		expiresAt = time.Now().Add(defaultMessageTTL)
+	}
 	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at) VALUES (?, ?, ?, ?, 0, ?, ?)"
 	_, err := m.db.Exec(
 		query,
