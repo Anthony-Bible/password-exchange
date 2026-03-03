@@ -6,6 +6,7 @@ package contracts
 
 import (
 	"context"
+	"html/template"
 	"time"
 )
 
@@ -49,7 +50,7 @@ type QueueConnection struct {
 // for rendering. This struct provides the dynamic content that will be inserted
 // into email template placeholders.
 type NotificationTemplateData struct {
-	Message       string
+	Message       template.HTML
 	SenderName    string
 	RecipientName string
 	MessageURL    string
