@@ -316,6 +316,7 @@ func (s *SMTPSender) SendNotification(
 
 	// Prepare template data
 	templateData := contracts.NotificationTemplateData{
+		Body:          req.Body,
 		Message:       req.MessageContent,
 		SenderName:    req.SenderName,
 		RecipientName: req.RecipientName,
