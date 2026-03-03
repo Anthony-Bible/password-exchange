@@ -19,7 +19,7 @@ func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
 	// Create a temporary template file
 	tempDir := t.TempDir()
 	templateFile := filepath.Join(tempDir, "test_template.html")
-	templateContent := "Hello {{.Body}}!"
+	templateContent := "Hello {{.Name}}!"
 
 	err := os.WriteFile(templateFile, []byte(templateContent), 0o644)
 	require.NoError(t, err)
@@ -34,7 +34,7 @@ func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
 
 	// Verify template can be executed
 	var buf bytes.Buffer
-	data := struct{ Body string }{Body: "World"}
+	data := struct{ Name string }{Name: "World"}
 	err = tmpl.Execute(&buf, data)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", buf.String())
@@ -45,14 +45,14 @@ func TestSMTPSender_parseTemplate_InlineTemplate(t *testing.T) {
 	sender := &SMTPSender{}
 
 	// Test inline template parsing
-	inlineTemplate := "Hello {{.Body}}!"
+	inlineTemplate := "Hello {{.Name}}!"
 	tmpl, err := sender.parseTemplate(inlineTemplate)
 	require.NoError(t, err)
 	assert.NotNil(t, tmpl)
 
 	// Verify template can be executed
 	var buf bytes.Buffer
-	data := struct{ Body string }{Body: "World"}
+	data := struct{ Name string }{Name: "World"}
 	err = tmpl.Execute(&buf, data)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", buf.String())
@@ -76,7 +76,7 @@ func TestSMTPSender_parseTemplate_InvalidInlineTemplate(t *testing.T) {
 	sender := &SMTPSender{}
 
 	// Test invalid inline template syntax
-	invalidTemplate := "Hello {{.Body"
+	invalidTemplate := "Hello {{.Name"
 	tmpl, err := sender.parseTemplate(invalidTemplate)
 
 	assert.Error(t, err)
@@ -140,9 +140,11 @@ func TestSMTPSender_getSafeTemplateFunctions(t *testing.T) {
 	funcs := sender.getSafeTemplateFunctions()
 
 	// Test that all expected safe functions are present
+	// Note: html/js pipe functions were removed because html/template handles
+	// contextual escaping automatically — manual wrappers defeat auto-escaping.
 	expectedFunctions := []string{
 		"upper", "lower", "title", "trim", "replace",
-		"html", "js", "url", "printf",
+		"url", "printf",
 	}
 
 	for _, funcName := range expectedFunctions {
@@ -166,43 +168,43 @@ func TestSMTPSender_SafeTemplateFunctions_StringManipulation(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     map[string]interface{}
+		data     map[string]any
 		expected string
 	}{
 		{
 			name:     "upper function",
 			template: "{{.Text | upper}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "HELLO WORLD",
 		},
 		{
 			name:     "lower function",
 			template: "{{.Text | lower}}",
-			data:     map[string]interface{}{"Text": "HELLO WORLD"},
+			data:     map[string]any{"Text": "HELLO WORLD"},
 			expected: "hello world",
 		},
 		{
 			name:     "title function",
 			template: "{{.Text | title}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "Hello World",
 		},
 		{
 			name:     "trim function",
 			template: "{{.Text | trim}}",
-			data:     map[string]interface{}{"Text": "  hello world  "},
+			data:     map[string]any{"Text": "  hello world  "},
 			expected: "hello world",
 		},
 		{
 			name:     "replace function",
 			template: "{{replace .Text \"world\" \"universe\"}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "hello universe",
 		},
 		{
 			name:     "printf function",
 			template: "{{printf \"Hello %s, you have %d messages\" .Name .Count}}",
-			data:     map[string]interface{}{"Name": "Alice", "Count": 5},
+			data:     map[string]any{"Name": "Alice", "Count": 5},
 			expected: "Hello Alice, you have 5 messages",
 		},
 	}
@@ -220,35 +222,28 @@ func TestSMTPSender_SafeTemplateFunctions_StringManipulation(t *testing.T) {
 	}
 }
 
-func TestSMTPSender_SafeTemplateFunctions_HTMLEscaping(t *testing.T) {
+func TestSMTPSender_SafeTemplateFunctions_Escaping(t *testing.T) {
 	sender := &SMTPSender{}
 
 	tests := []struct {
 		name     string
 		template string
-		data     map[string]interface{}
+		data     map[string]any
 		expected string
 	}{
 		{
-			name:     "html escaping",
-			template: "{{.Content | html}}",
-			data:     map[string]interface{}{"Content": "<script>alert('xss')</script>"},
+			// html/template auto-escapes string fields in HTML text context.
+			name:     "auto html escaping",
+			template: "{{.Content}}",
+			data:     map[string]any{"Content": "<script>alert('xss')</script>"},
 			expected: "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;",
-		},
-		{
-			// html/template renders template.JS in HTML text context by HTML-encoding it,
-			// so the JS-escaped \' becomes \&#39; in the final output.
-			name:     "js escaping",
-			template: "{{.Content | js}}",
-			data:     map[string]interface{}{"Content": "alert('test')"},
-			expected: "alert(\\&#39;test\\&#39;)",
 		},
 		{
 			// html/template HTML-encodes the URL-encoded string in HTML text context,
 			// so '+' becomes '&#43;' in the final output.
 			name:     "url escaping",
 			template: "{{.URL | url}}",
-			data:     map[string]interface{}{"URL": "hello world & special chars"},
+			data:     map[string]any{"URL": "hello world & special chars"},
 			expected: "hello&#43;world&#43;%26&#43;special&#43;chars",
 		},
 	}
@@ -306,11 +301,11 @@ func TestSMTPSender_SafeTemplateFunctions_FileAndInlineConsistency(t *testing.T)
 	sender := &SMTPSender{}
 
 	// Template content that uses safe functions
-	templateContent := `Hello {{.Name | upper}}! 
-Your message: {{.Message | html}}
+	templateContent := `Hello {{.Name | upper}}!
+Your message: {{.Message}}
 URL: {{.URL | url}}`
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Name":    "alice",
 		"Message": "<script>alert('test')</script>",
 		"URL":     "hello world",
@@ -355,7 +350,7 @@ func TestSMTPSender_SafeTemplateFunctions_ChainedOperations(t *testing.T) {
 
 	// Test chaining multiple safe functions
 	template := `{{.Text | trim | lower | title}}`
-	data := map[string]interface{}{"Text": "  HELLO WORLD  "}
+	data := map[string]any{"Text": "  HELLO WORLD  "}
 
 	tmpl, err := sender.parseTemplate(template)
 	require.NoError(t, err)
