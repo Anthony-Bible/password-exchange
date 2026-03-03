@@ -5,16 +5,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/smtp"
 	"os"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SMTPSender implements the EmailPort using SMTP
@@ -43,17 +45,18 @@ func NewSMTPSender(
 // getSafeTemplateFunctions returns a map of safe template functions
 // Only includes essential functions needed for email templates
 func (s *SMTPSender) getSafeTemplateFunctions() template.FuncMap {
+	titler := cases.Title(language.Und, cases.NoLower)
 	return template.FuncMap{
 		// String manipulation functions
 		"upper":   strings.ToUpper,
 		"lower":   strings.ToLower,
-		"title":   strings.Title,
+		"title":   titler.String,
 		"trim":    strings.TrimSpace,
 		"replace": strings.ReplaceAll,
 
-		// HTML escaping for security
-		"html": template.HTMLEscaper,
-		"js":   template.JSEscaper,
+		// Escaping functions — return typed values so html/template does not double-encode
+		"html": func(s string) template.HTML { return template.HTML(template.HTMLEscapeString(s)) },
+		"js":   func(s string) template.JS { return template.JS(template.JSEscapeString(s)) },
 		"url":  template.URLQueryEscaper,
 
 		// Safe formatting
@@ -316,7 +319,6 @@ func (s *SMTPSender) SendNotification(
 
 	// Prepare template data
 	templateData := contracts.NotificationTemplateData{
-		Body:          req.Body,
 		Message:       req.MessageContent,
 		SenderName:    req.SenderName,
 		RecipientName: req.RecipientName,

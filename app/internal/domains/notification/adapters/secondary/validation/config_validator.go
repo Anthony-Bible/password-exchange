@@ -81,20 +81,15 @@ func (cv *ConfigValidator) ValidateServerEmail(email string) error {
 }
 
 // ValidateTemplateFormats validates template strings for proper formatting.
-func (cv *ConfigValidator) ValidateTemplateFormats(initialSubject, reminderSubject, bodyTemplate string) error {
+func (cv *ConfigValidator) ValidateTemplateFormats(initialSubject, reminderSubject string) error {
 	// Validate initial notification subject - should have one %s placeholder
 	if err := cv.validateStringTemplate(initialSubject, 1, "s"); err != nil {
 		return fmt.Errorf("initial notification subject: %w", err)
 	}
 
-	// Validate reminder notification subject - should have one %d placeholder  
+	// Validate reminder notification subject - should have one %d placeholder
 	if err := cv.validateStringTemplate(reminderSubject, 1, "d"); err != nil {
 		return fmt.Errorf("reminder notification subject: %w", err)
-	}
-
-	// Validate initial notification body template - should have multiple %s placeholders
-	if err := cv.validateStringTemplate(bodyTemplate, 4, "s"); err != nil {
-		return fmt.Errorf("initial notification body template: %w", err)
 	}
 
 	return nil
@@ -105,14 +100,14 @@ func (cv *ConfigValidator) validateStringTemplate(template string, expectedCount
 	// Create pattern to match format specifiers
 	pattern := fmt.Sprintf(`%%[#\-\+ 0]*[*]?[*]?%s`, expectedType)
 	re := regexp.MustCompile(pattern)
-	
+
 	matches := re.FindAllString(template, -1)
 	actualCount := len(matches)
-	
+
 	if actualCount != expectedCount {
-		return fmt.Errorf("template placeholder mismatch: expected %d %%%s placeholders, got %d", 
+		return fmt.Errorf("template placeholder mismatch: expected %d %%%s placeholders, got %d",
 			expectedCount, expectedType, actualCount)
 	}
-	
+
 	return nil
 }

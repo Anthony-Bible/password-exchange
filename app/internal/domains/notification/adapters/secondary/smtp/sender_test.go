@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -235,16 +236,20 @@ func TestSMTPSender_SafeTemplateFunctions_HTMLEscaping(t *testing.T) {
 			expected: "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;",
 		},
 		{
+			// html/template renders template.JS in HTML text context by HTML-encoding it,
+			// so the JS-escaped \' becomes \&#39; in the final output.
 			name:     "js escaping",
 			template: "{{.Content | js}}",
 			data:     map[string]interface{}{"Content": "alert('test')"},
-			expected: "alert(\\'test\\')",
+			expected: "alert(\\&#39;test\\&#39;)",
 		},
 		{
+			// html/template HTML-encodes the URL-encoded string in HTML text context,
+			// so '+' becomes '&#43;' in the final output.
 			name:     "url escaping",
 			template: "{{.URL | url}}",
 			data:     map[string]interface{}{"URL": "hello world & special chars"},
-			expected: "hello+world+%26+special+chars",
+			expected: "hello&#43;world&#43;%26&#43;special&#43;chars",
 		},
 	}
 
@@ -340,7 +345,9 @@ URL: {{.URL | url}}`
 	output := inlineBuf.String()
 	assert.Contains(t, output, "ALICE", "Name should be uppercased")
 	assert.Contains(t, output, "&lt;script&gt;", "HTML should be escaped")
-	assert.Contains(t, output, "hello+world", "URL should be escaped")
+	// html/template HTML-encodes the URL-encoded string in HTML text context,
+	// so '+' from URL-encoding becomes '&#43;' in the final output.
+	assert.Contains(t, output, "hello&#43;world", "URL should be escaped")
 }
 
 func TestSMTPSender_SafeTemplateFunctions_ChainedOperations(t *testing.T) {
@@ -594,9 +601,8 @@ func (m *mockConfigPortSecure) GetServerName() string                  { return 
 func (m *mockConfigPortSecure) GetPasswordExchangeURL() string         { return "https://test.example.com" }
 func (m *mockConfigPortSecure) GetInitialNotificationSubject() string  { return "Test Subject %s" }
 func (m *mockConfigPortSecure) GetReminderNotificationSubject() string { return "Reminder Subject %d" }
-func (m *mockConfigPortSecure) GetEmailTemplate() string               { return "Test template: {{.Body}}" }
-func (m *mockConfigPortSecure) GetInitialNotificationBodyTemplate() string {
-	return "Initial body template"
+func (m *mockConfigPortSecure) GetEmailTemplate() string {
+	return "{{if .RecipientName}}Hi {{.RecipientName}}{{end}} from {{.SenderName}}"
 }
 
 func (m *mockConfigPortSecure) GetReminderNotificationBodyTemplate() string {
@@ -763,4 +769,76 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSMTPSender_RenderEmailTemplate verifies that email_template.html renders correctly
+// with html/template contextual escaping: data fields appear in output, dangerous URIs
+// are blocked, and missing optional fields degrade gracefully.
+func TestSMTPSender_RenderEmailTemplate(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	require.True(t, ok, "runtime.Caller must succeed")
+	templatePath := filepath.Join(filepath.Dir(thisFile), "../../../../../../templates/email_template.html")
+
+	sender := &SMTPSender{}
+
+	t.Run("renders all personalisation fields", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		data := contracts.NotificationTemplateData{
+			RecipientName: "Jane Doe",
+			SenderName:    "John Smith",
+			MessageURL:    "https://password.exchange/m/abc123",
+			Message:       "Your encrypted message is ready.",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.Contains(t, output, "Jane Doe", "output should contain RecipientName")
+		assert.Contains(t, output, "John Smith", "output should contain SenderName")
+		assert.Contains(t, output, "https://password.exchange/m/abc123", "output should contain MessageURL")
+		assert.Contains(t, output, "Your encrypted message is ready.", "output should contain Message")
+	})
+
+	t.Run("falls back to generic message when sender and recipient are empty", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		// Reminder-style: no SenderName or RecipientName (intentional — see reminder_service.go)
+		data := contracts.NotificationTemplateData{
+			MessageURL: "https://password.exchange/m/xyz",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.Contains(t, output, "Someone has shared an encrypted message",
+			"should show generic sender message when SenderName is empty")
+		assert.NotContains(t, output, "Jane", "should not show recipient name when empty")
+	})
+
+	t.Run("blocks javascript: URI in href attribute", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		data := contracts.NotificationTemplateData{
+			RecipientName: "Alice",
+			SenderName:    "Bob",
+			MessageURL:    "javascript:alert(1)",
+			Message:       "test",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.NotContains(t, output, "javascript:", "html/template must block javascript: URI")
+		assert.Contains(t, output, "#ZgotmplZ", "html/template must replace dangerous URI with #ZgotmplZ")
+	})
 }

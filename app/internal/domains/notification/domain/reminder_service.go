@@ -48,15 +48,18 @@ const (
 // It prevents cascading failures by temporarily blocking requests when error rates are high.
 // States: Closed (normal), Open (blocking), HalfOpen (testing recovery)
 type CircuitBreaker struct {
-	failureCount    int                    // Number of consecutive failures
-	lastFailureTime time.Time              // Time of the last failure
-	state           CircuitBreakerState    // Current state of the circuit breaker
-	logger          secondary.LoggerPort   // Logger for recording state transitions
+	failureCount    int                  // Number of consecutive failures
+	lastFailureTime time.Time            // Time of the last failure
+	state           CircuitBreakerState  // Current state of the circuit breaker
+	logger          secondary.LoggerPort // Logger for recording state transitions
 }
 
 // StorageRepository defines the interface for storage operations
 type StorageRepository interface {
-	GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error)
+	GetUnviewedMessagesForReminders(
+		ctx context.Context,
+		checkAfterHours, maxReminders, reminderIntervalHours int,
+	) ([]*UnviewedMessage, error)
 	GetReminderHistory(ctx context.Context, messageID int) ([]*ReminderLogEntry, error)
 	LogReminderSent(ctx context.Context, messageID int, recipientEmail string) error
 }
@@ -77,7 +80,13 @@ type ReminderService struct {
 }
 
 // NewReminderService creates a new reminder service
-func NewReminderService(storageRepo secondary.StoragePort, notificationPublisher secondary.NotificationPort, logger secondary.LoggerPort, config secondary.ConfigPort, validation secondary.ValidationPort) *ReminderService {
+func NewReminderService(
+	storageRepo secondary.StoragePort,
+	notificationPublisher secondary.NotificationPort,
+	logger secondary.LoggerPort,
+	config secondary.ConfigPort,
+	validation secondary.ValidationPort,
+) *ReminderService {
 	return &ReminderService{
 		storageRepo:           storageRepo,
 		notificationPublisher: notificationPublisher,
@@ -135,7 +144,6 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		)
 		return err
 	}, "get_unviewed_messages")
-
 	if err != nil {
 		return fmt.Errorf("failed to get unviewed messages: %w", err)
 	}
@@ -165,7 +173,6 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		err := r.retryWithBackoff(ctx, func() error {
 			return r.ProcessMessageReminder(ctx, reminderReq)
 		}, fmt.Sprintf("process_message_%d", message.MessageID))
-
 		if err != nil {
 			errorCount++
 			r.logger.Error().
@@ -243,7 +250,6 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 		history, err = r.storageRepo.GetReminderHistory(ctx, reminderRequest.MessageID)
 		return err
 	}, fmt.Sprintf("get_reminder_history_%d", reminderRequest.MessageID))
-
 	if err != nil {
 		return fmt.Errorf("failed to get reminder history for messageID %d: %w", reminderRequest.MessageID, err)
 	}
@@ -256,20 +262,27 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	// Update reminder number in request
 	reminderRequest.ReminderNumber = reminderCount + 1
 
-	// Publish reminder notification to queue
+	// Publish reminder notification to queue.
+	// Note: SenderName and RecipientName are intentionally omitted for reminders.
+	// The email template handles missing fields gracefully via {{if .SenderName}} guards,
+	// showing a generic message instead of personalized content.
 	notificationReq := NotificationRequest{
-		To:            reminderRequest.RecipientEmail,
-		From:          r.config.GetServerEmail(),
-		FromName:      r.config.GetServerName(),
-		Subject:       fmt.Sprintf(r.config.GetReminderNotificationSubject(), reminderRequest.ReminderNumber),
-		MessageURL:    reminderRequest.DecryptionURL,
+		To:             reminderRequest.RecipientEmail,
+		From:           r.config.GetServerEmail(),
+		FromName:       r.config.GetServerName(),
+		Subject:        fmt.Sprintf(r.config.GetReminderNotificationSubject(), reminderRequest.ReminderNumber),
+		MessageURL:     reminderRequest.DecryptionURL,
 		MessageContent: r.config.GetReminderMessageContent(),
 	}
 
 	if r.notificationPublisher != nil {
 		err = r.notificationPublisher.PublishNotification(ctx, notificationReq)
 		if err != nil {
-			return fmt.Errorf("failed to publish reminder notification for messageID %d: %w", reminderRequest.MessageID, err)
+			return fmt.Errorf(
+				"failed to publish reminder notification for messageID %d: %w",
+				reminderRequest.MessageID,
+				err,
+			)
 		}
 	} else {
 		r.logger.Info().
@@ -283,7 +296,6 @@ func (r *ReminderService) ProcessMessageReminder(ctx context.Context, reminderRe
 	err = r.retryWithBackoff(ctx, func() error {
 		return r.storageRepo.LogReminderSent(ctx, reminderRequest.MessageID, reminderRequest.RecipientEmail)
 	}, fmt.Sprintf("log_reminder_sent_%d", reminderRequest.MessageID))
-
 	if err != nil {
 		return fmt.Errorf("failed to log reminder sent for messageID %d: %w", reminderRequest.MessageID, err)
 	}
@@ -320,10 +332,10 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 			// Success - record success and return
 			r.circuitBreaker.RecordSuccess()
 			if attempt > 0 {
-			r.logger.Info().
-				Str("operation", operationName).
-				Int("successfulAttempt", attempt+1).
-				Msg("Operation succeeded after retry")
+				r.logger.Info().
+					Str("operation", operationName).
+					Int("successfulAttempt", attempt+1).
+					Msg("Operation succeeded after retry")
 			}
 			return nil
 		}
@@ -391,7 +403,7 @@ func (circuitBreaker *CircuitBreaker) CanExecute() error {
 	case CircuitBreakerOpen:
 		if time.Since(circuitBreaker.lastFailureTime) > CircuitBreakerTimeout {
 			circuitBreaker.state = CircuitBreakerHalfOpen
-			
+
 			// Log state transition from OPEN to HALF_OPEN
 			if circuitBreaker.logger != nil {
 				circuitBreaker.logger.Info().
@@ -415,7 +427,7 @@ func (circuitBreaker *CircuitBreaker) RecordSuccess() {
 	oldState := circuitBreaker.state
 	circuitBreaker.failureCount = 0
 	circuitBreaker.state = CircuitBreakerClosed
-	
+
 	// Log state transition to CLOSED when coming from HALF_OPEN
 	if oldState == CircuitBreakerHalfOpen && circuitBreaker.logger != nil {
 		circuitBreaker.logger.Info().
@@ -432,7 +444,7 @@ func (circuitBreaker *CircuitBreaker) RecordFailure() {
 
 	if circuitBreaker.failureCount >= CircuitBreakerThreshold {
 		circuitBreaker.state = CircuitBreakerOpen
-		
+
 		// Log state transition to OPEN when threshold is exceeded
 		if circuitBreaker.logger != nil {
 			circuitBreaker.logger.Error().

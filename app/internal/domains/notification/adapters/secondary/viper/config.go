@@ -113,10 +113,6 @@ func (v *ViperConfigAdapter) GetReminderNotificationSubject() string {
 	return v.emailConfig.Subjects.Reminder
 }
 
-func (v *ViperConfigAdapter) GetInitialNotificationBodyTemplate() string {
-	return v.emailConfig.Body.Initial
-}
-
 func (v *ViperConfigAdapter) GetReminderNotificationBodyTemplate() string {
 	return v.emailConfig.Templates.Reminder
 }
@@ -146,6 +142,5 @@ func (v *ViperConfigAdapter) ValidateTemplateFormats() error {
 	return v.validator.ValidateTemplateFormats(
 		v.emailConfig.Subjects.Initial,
 		v.emailConfig.Subjects.Reminder,
-		v.emailConfig.Body.Initial,
 	)
 }

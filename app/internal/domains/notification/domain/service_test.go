@@ -18,7 +18,10 @@ type MockNotificationSender struct {
 	mock.Mock
 }
 
-func (m *MockNotificationSender) SendNotification(ctx context.Context, req NotificationRequest) (*NotificationResponse, error) {
+func (m *MockNotificationSender) SendNotification(
+	ctx context.Context,
+	req NotificationRequest,
+) (*NotificationResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -41,7 +44,12 @@ type MockQueueConsumer struct {
 	mock.Mock
 }
 
-func (m *MockQueueConsumer) StartConsuming(ctx context.Context, queueConn QueueConnection, handler MessageHandler, concurrency int) error {
+func (m *MockQueueConsumer) StartConsuming(
+	ctx context.Context,
+	queueConn QueueConnection,
+	handler MessageHandler,
+	concurrency int,
+) error {
 	args := m.Called(ctx, queueConn, handler, concurrency)
 	return args.Error(0)
 }
@@ -61,7 +69,11 @@ type MockTemplateRenderer struct {
 	mock.Mock
 }
 
-func (m *MockTemplateRenderer) RenderTemplate(ctx context.Context, templateName string, data NotificationTemplateData) (string, error) {
+func (m *MockTemplateRenderer) RenderTemplate(
+	ctx context.Context,
+	templateName string,
+	data NotificationTemplateData,
+) (string, error) {
 	args := m.Called(ctx, templateName, data)
 	return args.String(0), args.Error(1)
 }
@@ -71,7 +83,10 @@ type MockStorageRepository struct {
 	mock.Mock
 }
 
-func (m *MockStorageRepository) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error) {
+func (m *MockStorageRepository) GetUnviewedMessagesForReminders(
+	ctx context.Context,
+	checkAfterHours, maxReminders, reminderIntervalHours int,
+) ([]*UnviewedMessage, error) {
 	args := m.Called(ctx, checkAfterHours, maxReminders, reminderIntervalHours)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -127,11 +142,6 @@ func (m *MockConfigPort) GetReminderNotificationSubject() string {
 	return args.String(0)
 }
 
-func (m *MockConfigPort) GetInitialNotificationBodyTemplate() string {
-	args := m.Called()
-	return args.String(0)
-}
-
 func (m *MockConfigPort) GetReminderNotificationBodyTemplate() string {
 	args := m.Called()
 	return args.String(0)
@@ -174,7 +184,7 @@ func setupLenientLoggerMock(mockLogger *MockLoggerPort) *MockLogEvent {
 	mockLogger.On("Info").Return(mockLogEvent).Maybe()
 	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
 	mockLogger.On("Error").Return(mockLogEvent).Maybe()
-	
+
 	// Set up lenient mock expectations for log event methods
 	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
@@ -183,7 +193,7 @@ func setupLenientLoggerMock(mockLogger *MockLoggerPort) *MockLogEvent {
 	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
-	
+
 	return mockLogEvent
 }
 
@@ -304,14 +314,14 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
-	
+
 	// Set up lenient mock expectations for logger
 	mockLogEvent := &MockLogEvent{}
 	mockLogger.On("Debug").Return(mockLogEvent).Maybe()
 	mockLogger.On("Info").Return(mockLogEvent).Maybe()
 	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
 	mockLogger.On("Error").Return(mockLogEvent).Maybe()
-	
+
 	// Set up lenient mock expectations for log event methods
 	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
@@ -331,14 +341,14 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 		mockValidation,
 		mockConfig,
 	)
-	
+
 	ctx := context.Background()
 	req := NotificationRequest{
 		To:      "test@example.com",
 		From:    "sender@example.com",
 		Subject: "Test Subject",
 	}
-	
+
 	expectedResponse := &NotificationResponse{
 		Success:   true,
 		MessageID: "msg-123",
@@ -349,7 +359,7 @@ func TestSendNotification_ValidRequest_Success(t *testing.T) {
 	mockValidation.On("ValidateEmail", "sender@example.com").Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", "test@example.com").Return("t***@example.com")
 	mockValidation.On("SanitizeEmailForLogging", "sender@example.com").Return("s***@example.com")
-	
+
 	mockEmailSender.On("SendNotification", ctx, req).Return(expectedResponse, nil)
 
 	// Act
@@ -369,7 +379,7 @@ func TestSendNotification_InvalidRequest_ReturnsError(t *testing.T) {
 	mockTemplateRenderer := &MockTemplateRenderer{}
 	mockStorageRepo := &MockStorageRepository{}
 	mockLogger := &MockLoggerPort{}
-	
+
 	// Set up lenient logger mock
 	setupLenientLoggerMock(mockLogger)
 
@@ -383,7 +393,7 @@ func TestSendNotification_InvalidRequest_ReturnsError(t *testing.T) {
 		&MockValidationPort{},
 		&MockConfigPort{},
 	)
-	
+
 	ctx := context.Background()
 	req := NotificationRequest{
 		To:      "", // Invalid: empty recipient
@@ -412,7 +422,7 @@ func TestSendNotification_EmailSendingFails_ReturnsError(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
-	
+
 	// Set up lenient logger mock
 	setupLenientLoggerMock(mockLogger)
 
@@ -426,20 +436,20 @@ func TestSendNotification_EmailSendingFails_ReturnsError(t *testing.T) {
 		mockValidation,
 		mockConfig,
 	)
-	
+
 	ctx := context.Background()
 	req := NotificationRequest{
 		To:      "test@example.com",
 		From:    "sender@example.com",
 		Subject: "Test Subject",
 	}
-	
+
 	// Set up validation mock expectations
 	mockValidation.On("ValidateEmail", "test@example.com").Return(nil)
 	mockValidation.On("ValidateEmail", "sender@example.com").Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", "test@example.com").Return("t***@example.com")
 	mockValidation.On("SanitizeEmailForLogging", "sender@example.com").Return("s***@example.com")
-	
+
 	sendError := errors.New("email sending failed")
 	mockEmailSender.On("SendNotification", ctx, req).Return(nil, sendError)
 
@@ -456,12 +466,12 @@ func TestSendNotification_EmailSendingFails_ReturnsError(t *testing.T) {
 // Test validateNotificationRequest
 func TestValidateNotificationRequest(t *testing.T) {
 	mockValidation := &MockValidationPort{}
-	
+
 	// Set up validation mock expectations for valid emails
 	mockValidation.On("ValidateEmail", "test@example.com").Return(nil)
 	mockValidation.On("ValidateEmail", "sender@example.com").Return(nil)
 	mockValidation.On("ValidateEmail", "invalid-email").Return(errors.New("invalid email format"))
-	
+
 	service := &NotificationService{
 		validation: mockValidation,
 	}
@@ -553,7 +563,7 @@ func TestCreateNotificationRequest(t *testing.T) {
 	mockConfig.On("GetServerEmail").Return("server@password.exchange")
 	mockConfig.On("GetServerName").Return("Password Exchange")
 	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Password Exchange from %s")
-	
+
 	service := &NotificationService{
 		config: mockConfig,
 	}
@@ -592,7 +602,7 @@ func TestHandleMessage_Success(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
-	
+
 	// Set up lenient logger mock
 	setupLenientLoggerMock(mockLogger)
 
@@ -606,7 +616,7 @@ func TestHandleMessage_Success(t *testing.T) {
 		mockValidation,
 		mockConfig,
 	)
-	
+
 	ctx := context.Background()
 	queueMsg := QueueMessage{
 		FirstName:      "John",
@@ -627,13 +637,14 @@ func TestHandleMessage_Success(t *testing.T) {
 	mockValidation.On("ValidateEmail", "server@example.com").Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", "jane@example.com").Return("j***@example.com")
 	mockValidation.On("SanitizeEmailForLogging", "server@example.com").Return("s***@example.com")
-	
+
 	// Set up config mock expectations
 	mockConfig.On("GetServerEmail").Return("server@example.com")
 	mockConfig.On("GetServerName").Return("Test Server")
 	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Test Server from %s")
-	
-	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(expectedResponse, nil)
+
+	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).
+		Return(expectedResponse, nil)
 
 	// Act
 	err := service.HandleMessage(ctx, queueMsg)
@@ -654,7 +665,7 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 	mockLogger := &MockLoggerPort{}
 	mockValidation := &MockValidationPort{}
 	mockConfig := &MockConfigPort{}
-	
+
 	// Set up lenient logger mock
 	setupLenientLoggerMock(mockLogger)
 
@@ -668,7 +679,7 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 		mockValidation,
 		mockConfig,
 	)
-	
+
 	ctx := context.Background()
 	queueMsg := QueueMessage{
 		FirstName:      "John",
@@ -684,12 +695,12 @@ func TestHandleMessage_SendNotificationFails_ReturnsError(t *testing.T) {
 	mockValidation.On("ValidateEmail", "server@example.com").Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", "jane@example.com").Return("j***@example.com")
 	mockValidation.On("SanitizeEmailForLogging", "server@example.com").Return("s***@example.com")
-	
+
 	// Set up config mock expectations
 	mockConfig.On("GetServerEmail").Return("server@example.com")
 	mockConfig.On("GetServerName").Return("Test Server")
 	mockConfig.On("GetInitialNotificationSubject").Return("Encrypted Message from Test Server from %s")
-	
+
 	sendError := errors.New("email sending failed")
 	mockEmailSender.On("SendNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil, sendError)
 

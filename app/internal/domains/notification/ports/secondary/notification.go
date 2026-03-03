@@ -2,7 +2,7 @@ package secondary
 
 import (
 	"context"
-	
+
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 )
 

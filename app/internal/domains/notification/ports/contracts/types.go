@@ -14,16 +14,15 @@ import (
 // a notification email, including recipient details, message content, and
 // formatting information.
 type NotificationRequest struct {
-	To              string
-	From            string  
-	FromName        string
-	Subject         string
-	Body            string
-	MessageContent  string
-	SenderName      string
-	RecipientName   string
-	MessageURL      string
-	Hidden          string
+	To             string
+	From           string
+	FromName       string
+	Subject        string
+	MessageContent string
+	SenderName     string
+	RecipientName  string
+	MessageURL     string
+	Hidden         string
 }
 
 // NotificationResponse represents the result of a notification send operation.
@@ -39,10 +38,10 @@ type NotificationResponse struct {
 // to a message queue system (e.g., RabbitMQ). This struct encapsulates all
 // connection parameters required for queue operations.
 type QueueConnection struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
+	Host      string
+	Port      int
+	User      string
+	Password  string
 	QueueName string
 }
 
@@ -50,7 +49,6 @@ type QueueConnection struct {
 // for rendering. This struct provides the dynamic content that will be inserted
 // into email template placeholders.
 type NotificationTemplateData struct {
-	Body          string
 	Message       string
 	SenderName    string
 	RecipientName string
@@ -83,16 +81,16 @@ type ReminderLogEntry struct {
 // notification request, including sender and recipient details, message
 // content, and security information.
 type QueueMessage struct {
-	Email           string
-	FirstName       string
-	OtherFirstName  string
-	OtherLastName   string
-	OtherEmail      string
-	UniqueID        string
-	Content         string
-	URL             string
-	Hidden          string
-	Captcha         string
+	Email          string
+	FirstName      string
+	OtherFirstName string
+	OtherLastName  string
+	OtherEmail     string
+	UniqueID       string
+	Content        string
+	URL            string
+	Hidden         string
+	Captcha        string
 }
 
 // MessageHandler defines the interface for processing messages received from the notification queue.
