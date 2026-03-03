@@ -122,18 +122,6 @@ func TestSharedConfigAdapter_GetReminderNotificationSubject(t *testing.T) {
 	}
 }
 
-func TestSharedConfigAdapter_GetInitialNotificationBodyTemplate(t *testing.T) {
-	cfg := config.PassConfig{}
-	adapter := NewSharedConfigAdapter(cfg)
-
-	expected := "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about"
-	result := adapter.GetInitialNotificationBodyTemplate()
-
-	if result != expected {
-		t.Errorf("GetInitialNotificationBodyTemplate() = %q, want %q", result, expected)
-	}
-}
-
 func TestSharedConfigAdapter_GetReminderNotificationBodyTemplate(t *testing.T) {
 	cfg := config.PassConfig{}
 	adapter := NewSharedConfigAdapter(cfg)
@@ -182,7 +170,6 @@ func TestSharedConfigAdapter_ImplementsConfigPort(t *testing.T) {
 	_ = adapter.GetPasswordExchangeURL()
 	_ = adapter.GetInitialNotificationSubject()
 	_ = adapter.GetReminderNotificationSubject()
-	_ = adapter.GetInitialNotificationBodyTemplate()
 	_ = adapter.GetReminderNotificationBodyTemplate()
 	_ = adapter.GetReminderEmailTemplate()
 	_ = adapter.GetReminderMessageContent()
@@ -208,7 +195,7 @@ func TestSharedConfigAdapter_ValidatePasswordExchangeURL(t *testing.T) {
 		},
 		{
 			name:     "valid complete HTTPS URL",
-			prodHost: "https://password.exchange", 
+			prodHost: "https://password.exchange",
 			wantErr:  false, // Now valid since validator handles complete URLs
 		},
 		{
@@ -251,7 +238,7 @@ func TestSharedConfigAdapter_ValidatePasswordExchangeURL(t *testing.T) {
 
 			// This method doesn't exist yet - we need to implement it
 			err := adapter.ValidatePasswordExchangeURL()
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ValidatePasswordExchangeURL() expected error, got nil")
@@ -324,7 +311,7 @@ func TestSharedConfigAdapter_ValidateServerEmail(t *testing.T) {
 
 			// This method doesn't exist yet - we need to implement it
 			err := adapter.ValidateServerEmail()
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ValidateServerEmail() expected error, got nil")
@@ -353,30 +340,29 @@ func TestSharedConfigAdapter_ValidateTemplateFormats(t *testing.T) {
 
 // testConfigAdapter is a test implementation for testing template validation errors
 type testConfigAdapter struct {
-	initialSubject   string
-	reminderSubject  string
-	bodyTemplate     string
+	initialSubject  string
+	reminderSubject string
 }
 
-func (t *testConfigAdapter) GetEmailTemplate() string { return "/templates/email_template.html" }
-func (t *testConfigAdapter) GetServerEmail() string { return "server@password.exchange" }
-func (t *testConfigAdapter) GetServerName() string { return "Password Exchange" }
-func (t *testConfigAdapter) GetPasswordExchangeURL() string { return "https://password.exchange" }
-func (t *testConfigAdapter) GetInitialNotificationSubject() string { return t.initialSubject }
-func (t *testConfigAdapter) GetReminderNotificationSubject() string { return t.reminderSubject }
-func (t *testConfigAdapter) GetInitialNotificationBodyTemplate() string { return t.bodyTemplate }
+func (t *testConfigAdapter) GetEmailTemplate() string                    { return "/templates/email_template.html" }
+func (t *testConfigAdapter) GetServerEmail() string                      { return "server@password.exchange" }
+func (t *testConfigAdapter) GetServerName() string                       { return "Password Exchange" }
+func (t *testConfigAdapter) GetPasswordExchangeURL() string              { return "https://password.exchange" }
+func (t *testConfigAdapter) GetInitialNotificationSubject() string       { return t.initialSubject }
+func (t *testConfigAdapter) GetReminderNotificationSubject() string      { return t.reminderSubject }
 func (t *testConfigAdapter) GetReminderNotificationBodyTemplate() string { return "" }
-func (t *testConfigAdapter) GetReminderEmailTemplate() string { return "/templates/reminder_email_template.html" }
-func (t *testConfigAdapter) GetReminderMessageContent() string { return "test content" }
+func (t *testConfigAdapter) GetReminderEmailTemplate() string {
+	return "/templates/reminder_email_template.html"
+}
+func (t *testConfigAdapter) GetReminderMessageContent() string  { return "test content" }
 func (t *testConfigAdapter) ValidatePasswordExchangeURL() error { return nil }
-func (t *testConfigAdapter) ValidateServerEmail() error { return nil }
+func (t *testConfigAdapter) ValidateServerEmail() error         { return nil }
 
 func (t *testConfigAdapter) ValidateTemplateFormats() error {
 	validator := validation.NewConfigValidator()
 	return validator.ValidateTemplateFormats(
 		t.initialSubject,
 		t.reminderSubject,
-		t.bodyTemplate,
 	)
 }
 
@@ -385,7 +371,6 @@ func TestTemplateValidation_InvalidTemplates(t *testing.T) {
 		name            string
 		initialSubject  string
 		reminderSubject string
-		bodyTemplate    string
 		wantErr         bool
 		errMsg          string
 	}{
@@ -393,7 +378,6 @@ func TestTemplateValidation_InvalidTemplates(t *testing.T) {
 			name:            "invalid initial subject - no placeholders",
 			initialSubject:  "No placeholders here",
 			reminderSubject: "Reminder: You have an unviewed encrypted message (Reminder #%d)",
-			bodyTemplate:    "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about",
 			wantErr:         true,
 			errMsg:          "template placeholder mismatch",
 		},
@@ -401,15 +385,6 @@ func TestTemplateValidation_InvalidTemplates(t *testing.T) {
 			name:            "invalid reminder subject - wrong type",
 			initialSubject:  "Encrypted Message from Password Exchange from %s",
 			reminderSubject: "Reminder: You have an unviewed encrypted message (Reminder #%s)", // Should be %d
-			bodyTemplate:    "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about",
-			wantErr:         true,
-			errMsg:          "template placeholder mismatch",
-		},
-		{
-			name:            "invalid body template - missing placeholders",
-			initialSubject:  "Encrypted Message from Password Exchange from %s",
-			reminderSubject: "Reminder: You have an unviewed encrypted message (Reminder #%d)",
-			bodyTemplate:    "Hi %s, \n %s used our service", // Missing 2 placeholders
 			wantErr:         true,
 			errMsg:          "template placeholder mismatch",
 		},
@@ -420,11 +395,10 @@ func TestTemplateValidation_InvalidTemplates(t *testing.T) {
 			adapter := &testConfigAdapter{
 				initialSubject:  tt.initialSubject,
 				reminderSubject: tt.reminderSubject,
-				bodyTemplate:    tt.bodyTemplate,
 			}
 
 			err := adapter.ValidateTemplateFormats()
-			
+
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("ValidateTemplateFormats() expected error, got nil")

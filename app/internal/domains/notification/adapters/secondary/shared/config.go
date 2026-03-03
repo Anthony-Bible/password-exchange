@@ -66,11 +66,6 @@ func (c *SharedConfigAdapter) GetReminderNotificationSubject() string {
 	return "Reminder: You have an unviewed encrypted message (Reminder #%d)"
 }
 
-// GetInitialNotificationBodyTemplate returns the body template for initial notifications.
-func (c *SharedConfigAdapter) GetInitialNotificationBodyTemplate() string {
-	return "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about"
-}
-
 // GetReminderNotificationBodyTemplate returns the body template for reminder notifications.
 func (c *SharedConfigAdapter) GetReminderNotificationBodyTemplate() string {
 	return ""
@@ -103,6 +98,5 @@ func (c *SharedConfigAdapter) ValidateTemplateFormats() error {
 	return c.validator.ValidateTemplateFormats(
 		c.GetInitialNotificationSubject(),
 		c.GetReminderNotificationSubject(),
-		c.GetInitialNotificationBodyTemplate(),
 	)
 }

@@ -43,9 +43,16 @@ func TestNewViperConfigAdapter_Defaults(t *testing.T) {
 	assert.Equal(t, "Password Exchange", adapter.GetServerName())
 	assert.Equal(t, "https://password.exchange", adapter.GetPasswordExchangeURL())
 	assert.Equal(t, "Encrypted Message from Password Exchange from %s", adapter.GetInitialNotificationSubject())
-	assert.Equal(t, "Reminder: You have an unviewed encrypted message (Reminder #%d)", adapter.GetReminderNotificationSubject())
-	assert.Equal(t, "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about", adapter.GetInitialNotificationBodyTemplate())
-	assert.Equal(t, "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.", adapter.GetReminderMessageContent())
+	assert.Equal(
+		t,
+		"Reminder: You have an unviewed encrypted message (Reminder #%d)",
+		adapter.GetReminderNotificationSubject(),
+	)
+	assert.Equal(
+		t,
+		"Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
+		adapter.GetReminderMessageContent(),
+	)
 }
 
 func TestNewViperConfigAdapter_WithCustomConfig(t *testing.T) {
@@ -75,7 +82,6 @@ email:
 	assert.Equal(t, "https://custom.example.com", adapter.GetPasswordExchangeURL())
 	assert.Equal(t, "Custom initial subject", adapter.GetInitialNotificationSubject())
 	assert.Equal(t, "Custom reminder subject", adapter.GetReminderNotificationSubject())
-	assert.Equal(t, "Custom initial body", adapter.GetInitialNotificationBodyTemplate())
 	assert.Equal(t, "Custom reminder body", adapter.GetReminderMessageContent())
 }
 

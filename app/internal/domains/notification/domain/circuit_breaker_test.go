@@ -84,7 +84,7 @@ func TestCircuitBreaker_RecordFailure_AtThreshold_OpensCircuit(t *testing.T) {
 // Test retryWithBackoff success on first attempt
 func TestRetryWithBackoff_SuccessFirstAttempt_NoRetry(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
-	
+
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -102,11 +102,11 @@ func TestRetryWithBackoff_SuccessFirstAttempt_NoRetry(t *testing.T) {
 // Test retryWithBackoff with eventual success
 func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
-	
+
 	// Set up mock expectations for warning log that will be called on first failure
 	mockLogEvent := &MockLogEvent{}
 	mockInfoEvent := &MockLogEvent{}
-	
+
 	// Warn call for first failure
 	mockLogger.On("Warn").Return(mockLogEvent)
 	mockLogEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockLogEvent)
@@ -114,13 +114,13 @@ func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 	mockLogEvent.On("Int", "attempt", 1).Return(mockLogEvent)
 	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay).Return(mockLogEvent)
 	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return()
-	
+
 	// Info call for success after retry
 	mockLogger.On("Info").Return(mockInfoEvent)
 	mockInfoEvent.On("Str", "operation", "test_operation").Return(mockInfoEvent)
 	mockInfoEvent.On("Int", "successfulAttempt", 2).Return(mockInfoEvent)
 	mockInfoEvent.On("Msg", "Operation succeeded after retry").Return()
-	
+
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -141,11 +141,11 @@ func TestRetryWithBackoff_EventualSuccess_RetriesAndSucceeds(t *testing.T) {
 // Test retryWithBackoff max retries exceeded
 func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
-	
+
 	// Set up mock expectations for warning logs that will be called on each failure
 	mockLogEvent := &MockLogEvent{}
 	mockErrorEvent := &MockLogEvent{}
-	
+
 	// Warn calls for each retry attempt
 	mockLogger.On("Warn").Return(mockLogEvent).Times(MaxRetries)
 	mockLogEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockLogEvent).Times(MaxRetries)
@@ -157,14 +157,14 @@ func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay*2).Return(mockLogEvent).Once()
 	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay*4).Return(mockLogEvent).Once()
 	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return().Times(MaxRetries)
-	
+
 	// Error call when max retries exceeded
 	mockLogger.On("Error").Return(mockErrorEvent)
 	mockErrorEvent.On("Err", mock.AnythingOfType("*errors.errorString")).Return(mockErrorEvent)
 	mockErrorEvent.On("Str", "operation", "test_operation").Return(mockErrorEvent)
 	mockErrorEvent.On("Int", "maxRetries", MaxRetries).Return(mockErrorEvent)
 	mockErrorEvent.On("Msg", "Operation failed after all retry attempts").Return()
-	
+
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -183,7 +183,7 @@ func TestRetryWithBackoff_MaxRetriesExceeded_ReturnsError(t *testing.T) {
 // Test retryWithBackoff context cancellation
 func TestRetryWithBackoff_ContextCancelled_ReturnsContextError(t *testing.T) {
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
-	
+
 	// Set up mock expectations for warning log that will be called on first failure
 	mockLogEvent := &MockLogEvent{}
 	mockLogger.On("Warn").Return(mockLogEvent)
@@ -192,7 +192,7 @@ func TestRetryWithBackoff_ContextCancelled_ReturnsContextError(t *testing.T) {
 	mockLogEvent.On("Int", "attempt", 1).Return(mockLogEvent)
 	mockLogEvent.On("Dur", "retryDelay", BaseRetryDelay).Return(mockLogEvent)
 	mockLogEvent.On("Msg", "Operation failed, retrying with backoff").Return()
-	
+
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -215,14 +215,14 @@ func TestCircuitBreaker_RecordFailure_LogsWhenTransitioningToOpen(t *testing.T) 
 	// Arrange - create circuit breaker with logger
 	mockLogger := &MockLoggerPort{}
 	mockLogEvent := &MockLogEvent{}
-	
+
 	// Set up expectations for logging when transitioning to OPEN state
 	mockLogger.On("Error").Return(mockLogEvent)
 	mockLogEvent.On("Str", "state", "OPEN").Return(mockLogEvent)
 	mockLogEvent.On("Str", "reason", "threshold_exceeded").Return(mockLogEvent)
 	mockLogEvent.On("Int", "failures", CircuitBreakerThreshold).Return(mockLogEvent)
 	mockLogEvent.On("Msg", "Circuit breaker transitioned to OPEN state due to repeated failures").Return()
-	
+
 	cb := &CircuitBreaker{
 		state:        CircuitBreakerClosed,
 		failureCount: CircuitBreakerThreshold - 1,
@@ -244,14 +244,14 @@ func TestCircuitBreaker_CanExecute_LogsWhenTransitioningToHalfOpen(t *testing.T)
 	// Arrange - create circuit breaker with logger in OPEN state with expired timeout
 	mockLogger := &MockLoggerPort{}
 	mockLogEvent := &MockLogEvent{}
-	
+
 	// Set up expectations for logging when transitioning to HALF_OPEN state
 	mockLogger.On("Info").Return(mockLogEvent)
 	mockLogEvent.On("Str", "state", "HALF_OPEN").Return(mockLogEvent)
 	mockLogEvent.On("Str", "reason", "timeout_expired").Return(mockLogEvent)
 	mockLogEvent.On("Dur", "timeout", CircuitBreakerTimeout).Return(mockLogEvent)
 	mockLogEvent.On("Msg", "Circuit breaker transitioned to HALF_OPEN state after timeout").Return()
-	
+
 	cb := &CircuitBreaker{
 		state:           CircuitBreakerOpen,
 		lastFailureTime: time.Now().Add(-CircuitBreakerTimeout - time.Second),
@@ -273,13 +273,13 @@ func TestCircuitBreaker_RecordSuccess_LogsWhenTransitioningToClosed(t *testing.T
 	// Arrange - create circuit breaker with logger in HALF_OPEN state
 	mockLogger := &MockLoggerPort{}
 	mockLogEvent := &MockLogEvent{}
-	
+
 	// Set up expectations for logging when transitioning to CLOSED state
 	mockLogger.On("Info").Return(mockLogEvent)
 	mockLogEvent.On("Str", "state", "CLOSED").Return(mockLogEvent)
 	mockLogEvent.On("Str", "reason", "operation_succeeded").Return(mockLogEvent)
 	mockLogEvent.On("Msg", "Circuit breaker transitioned to CLOSED state after successful operation").Return()
-	
+
 	cb := &CircuitBreaker{
 		state:        CircuitBreakerHalfOpen,
 		failureCount: 3,
@@ -309,11 +309,11 @@ func TestCircuitBreaker_NilLogger_DoesNotPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		cb.RecordFailure()
 	})
-	
+
 	assert.NotPanics(t, func() {
 		cb.RecordSuccess()
 	})
-	
+
 	assert.NotPanics(t, func() {
 		cb.CanExecute()
 	})

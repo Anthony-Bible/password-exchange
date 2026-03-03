@@ -64,7 +64,10 @@ func NewNotificationServiceWithReminder(
 }
 
 // SendNotification sends a notification using the configured sender
-func (s *NotificationService) SendNotification(ctx context.Context, req NotificationRequest) (*NotificationResponse, error) {
+func (s *NotificationService) SendNotification(
+	ctx context.Context,
+	req NotificationRequest,
+) (*NotificationResponse, error) {
 	if err := s.validateNotificationRequest(req); err != nil {
 		s.logger.Error().Err(err).Msg("Invalid notification request")
 		return nil, fmt.Errorf("%w: %v", ErrInvalidNotificationRequest, err)
@@ -72,16 +75,26 @@ func (s *NotificationService) SendNotification(ctx context.Context, req Notifica
 
 	response, err := s.emailSender.SendNotification(ctx, req)
 	if err != nil {
-		s.logger.Error().Err(err).Str("to", s.validation.SanitizeEmailForLogging(req.To)).Msg("Failed to send notification")
+		s.logger.Error().
+			Err(err).
+			Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+			Msg("Failed to send notification")
 		return nil, fmt.Errorf("%w: %v", ErrEmailSendFailed, err)
 	}
 
-	s.logger.Info().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("messageId", response.MessageID).Msg("Notification sent successfully")
+	s.logger.Info().
+		Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+		Str("messageId", response.MessageID).
+		Msg("Notification sent successfully")
 	return response, nil
 }
 
 // StartMessageProcessing starts consuming messages from the queue
-func (s *NotificationService) StartMessageProcessing(ctx context.Context, queueConn QueueConnection, concurrency int) error {
+func (s *NotificationService) StartMessageProcessing(
+	ctx context.Context,
+	queueConn QueueConnection,
+	concurrency int,
+) error {
 	s.logger.Info().Str("queue", queueConn.QueueName).Int("concurrency", concurrency).Msg("Starting message processing")
 
 	err := s.queueConsumer.StartConsuming(ctx, queueConn, s, concurrency)
@@ -95,7 +108,10 @@ func (s *NotificationService) StartMessageProcessing(ctx context.Context, queueC
 
 // HandleMessage implements the MessageHandler interface
 func (s *NotificationService) HandleMessage(ctx context.Context, msg QueueMessage) error {
-	s.logger.Debug().Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).Str("from", msg.FirstName).Msg("Processing notification message")
+	s.logger.Debug().
+		Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).
+		Str("from", msg.FirstName).
+		Msg("Processing notification message")
 
 	// Create notification request from queue message
 	notificationReq := s.createNotificationRequest(msg)
@@ -103,11 +119,16 @@ func (s *NotificationService) HandleMessage(ctx context.Context, msg QueueMessag
 	// Send the notification
 	_, err := s.SendNotification(ctx, notificationReq)
 	if err != nil {
-		s.logger.Error().Err(err).Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).Msg("Failed to send notification for queue message")
+		s.logger.Error().
+			Err(err).
+			Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).
+			Msg("Failed to send notification for queue message")
 		return err
 	}
 
-	s.logger.Debug().Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).Msg("Successfully processed notification message")
+	s.logger.Debug().
+		Str("to", s.validation.SanitizeEmailForLogging(msg.OtherEmail)).
+		Msg("Successfully processed notification message")
 	return nil
 }
 

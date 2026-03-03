@@ -8,17 +8,16 @@ import (
 type (
 	NotificationRequest      = contracts.NotificationRequest
 	NotificationResponse     = contracts.NotificationResponse
-	QueueMessage            = contracts.QueueMessage
-	QueueConnection         = contracts.QueueConnection
-	EmailConnection         = contracts.EmailConnection
+	QueueMessage             = contracts.QueueMessage
+	QueueConnection          = contracts.QueueConnection
+	EmailConnection          = contracts.EmailConnection
 	NotificationTemplateData = contracts.NotificationTemplateData
-	UnviewedMessage         = contracts.UnviewedMessage
-	ReminderLogEntry        = contracts.ReminderLogEntry
-	ReminderRequest         = contracts.ReminderRequest
-	MessageHandler          = contracts.MessageHandler
-	LogEvent                = contracts.LogEvent
+	UnviewedMessage          = contracts.UnviewedMessage
+	ReminderLogEntry         = contracts.ReminderLogEntry
+	ReminderRequest          = contracts.ReminderRequest
+	MessageHandler           = contracts.MessageHandler
+	LogEvent                 = contracts.LogEvent
 )
-
 
 // ReminderConfig holds configuration for reminder processing.
 // Defines when and how often reminder emails are sent for unviewed messages.
@@ -28,4 +27,3 @@ type ReminderConfig struct {
 	MaxReminders    int  // Maximum reminders per message (1-10)
 	Interval        int  // Hours between subsequent reminders (1-720)
 }
-

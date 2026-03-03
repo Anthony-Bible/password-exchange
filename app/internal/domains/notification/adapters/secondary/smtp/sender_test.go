@@ -4,23 +4,24 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
 	// Create a temporary template file
 	tempDir := t.TempDir()
 	templateFile := filepath.Join(tempDir, "test_template.html")
-	templateContent := "Hello {{.Body}}!"
-	
-	err := os.WriteFile(templateFile, []byte(templateContent), 0644)
+	templateContent := "Hello {{.Name}}!"
+
+	err := os.WriteFile(templateFile, []byte(templateContent), 0o644)
 	require.NoError(t, err)
 
 	// Create minimal SMTP sender for testing parseTemplate
@@ -33,7 +34,7 @@ func TestSMTPSender_parseTemplate_FileTemplate(t *testing.T) {
 
 	// Verify template can be executed
 	var buf bytes.Buffer
-	data := struct{ Body string }{Body: "World"}
+	data := struct{ Name string }{Name: "World"}
 	err = tmpl.Execute(&buf, data)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", buf.String())
@@ -44,14 +45,14 @@ func TestSMTPSender_parseTemplate_InlineTemplate(t *testing.T) {
 	sender := &SMTPSender{}
 
 	// Test inline template parsing
-	inlineTemplate := "Hello {{.Body}}!"
+	inlineTemplate := "Hello {{.Name}}!"
 	tmpl, err := sender.parseTemplate(inlineTemplate)
 	require.NoError(t, err)
 	assert.NotNil(t, tmpl)
 
 	// Verify template can be executed
 	var buf bytes.Buffer
-	data := struct{ Body string }{Body: "World"}
+	data := struct{ Name string }{Name: "World"}
 	err = tmpl.Execute(&buf, data)
 	require.NoError(t, err)
 	assert.Equal(t, "Hello World!", buf.String())
@@ -64,7 +65,7 @@ func TestSMTPSender_parseTemplate_NonExistentFile(t *testing.T) {
 	// Test parsing a non-existent file path as inline template
 	nonExistentFile := "/path/that/does/not/exist/template.html"
 	tmpl, err := sender.parseTemplate(nonExistentFile)
-	
+
 	// Should treat as inline template and successfully parse since it's valid template syntax
 	assert.NoError(t, err)
 	assert.NotNil(t, tmpl)
@@ -75,9 +76,9 @@ func TestSMTPSender_parseTemplate_InvalidInlineTemplate(t *testing.T) {
 	sender := &SMTPSender{}
 
 	// Test invalid inline template syntax
-	invalidTemplate := "Hello {{.Body"
+	invalidTemplate := "Hello {{.Name"
 	tmpl, err := sender.parseTemplate(invalidTemplate)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, tmpl)
 }
@@ -117,7 +118,7 @@ func TestSMTPSender_parseTemplate_PathDetection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Test the behavior: file paths that don't exist will be treated as inline templates
 			tmpl, err := sender.parseTemplate(tt.input)
-			
+
 			if tt.expectFilePath {
 				// For file paths that don't exist, they're treated as inline templates
 				// The non-existent path string should parse as a template successfully
@@ -139,9 +140,11 @@ func TestSMTPSender_getSafeTemplateFunctions(t *testing.T) {
 	funcs := sender.getSafeTemplateFunctions()
 
 	// Test that all expected safe functions are present
+	// Note: html/js pipe functions were removed because html/template handles
+	// contextual escaping automatically — manual wrappers defeat auto-escaping.
 	expectedFunctions := []string{
 		"upper", "lower", "title", "trim", "replace",
-		"html", "js", "url", "printf",
+		"url", "printf",
 	}
 
 	for _, funcName := range expectedFunctions {
@@ -165,43 +168,43 @@ func TestSMTPSender_SafeTemplateFunctions_StringManipulation(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
-		data     map[string]interface{}
+		data     map[string]any
 		expected string
 	}{
 		{
 			name:     "upper function",
 			template: "{{.Text | upper}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "HELLO WORLD",
 		},
 		{
 			name:     "lower function",
 			template: "{{.Text | lower}}",
-			data:     map[string]interface{}{"Text": "HELLO WORLD"},
+			data:     map[string]any{"Text": "HELLO WORLD"},
 			expected: "hello world",
 		},
 		{
 			name:     "title function",
 			template: "{{.Text | title}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "Hello World",
 		},
 		{
 			name:     "trim function",
 			template: "{{.Text | trim}}",
-			data:     map[string]interface{}{"Text": "  hello world  "},
+			data:     map[string]any{"Text": "  hello world  "},
 			expected: "hello world",
 		},
 		{
 			name:     "replace function",
 			template: "{{replace .Text \"world\" \"universe\"}}",
-			data:     map[string]interface{}{"Text": "hello world"},
+			data:     map[string]any{"Text": "hello world"},
 			expected: "hello universe",
 		},
 		{
 			name:     "printf function",
 			template: "{{printf \"Hello %s, you have %d messages\" .Name .Count}}",
-			data:     map[string]interface{}{"Name": "Alice", "Count": 5},
+			data:     map[string]any{"Name": "Alice", "Count": 5},
 			expected: "Hello Alice, you have 5 messages",
 		},
 	}
@@ -219,32 +222,29 @@ func TestSMTPSender_SafeTemplateFunctions_StringManipulation(t *testing.T) {
 	}
 }
 
-func TestSMTPSender_SafeTemplateFunctions_HTMLEscaping(t *testing.T) {
+func TestSMTPSender_SafeTemplateFunctions_Escaping(t *testing.T) {
 	sender := &SMTPSender{}
 
 	tests := []struct {
 		name     string
 		template string
-		data     map[string]interface{}
+		data     map[string]any
 		expected string
 	}{
 		{
-			name:     "html escaping",
-			template: "{{.Content | html}}",
-			data:     map[string]interface{}{"Content": "<script>alert('xss')</script>"},
+			// html/template auto-escapes string fields in HTML text context.
+			name:     "auto html escaping",
+			template: "{{.Content}}",
+			data:     map[string]any{"Content": "<script>alert('xss')</script>"},
 			expected: "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;",
 		},
 		{
-			name:     "js escaping",
-			template: "{{.Content | js}}",
-			data:     map[string]interface{}{"Content": "alert('test')"},
-			expected: "alert(\\'test\\')",
-		},
-		{
+			// html/template HTML-encodes the URL-encoded string in HTML text context,
+			// so '+' becomes '&#43;' in the final output.
 			name:     "url escaping",
 			template: "{{.URL | url}}",
-			data:     map[string]interface{}{"URL": "hello world & special chars"},
-			expected: "hello+world+%26+special+chars",
+			data:     map[string]any{"URL": "hello world & special chars"},
+			expected: "hello&#43;world&#43;%26&#43;special&#43;chars",
 		},
 	}
 
@@ -291,7 +291,7 @@ func TestSMTPSender_SafeTemplateFunctions_PreventsDangerousOperations(t *testing
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := sender.parseTemplate(tt.template)
 			assert.Error(t, err, tt.reason)
-			assert.Contains(t, strings.ToLower(err.Error()), "function", 
+			assert.Contains(t, strings.ToLower(err.Error()), "function",
 				"Error should mention function issue for: %s", tt.reason)
 		})
 	}
@@ -299,13 +299,13 @@ func TestSMTPSender_SafeTemplateFunctions_PreventsDangerousOperations(t *testing
 
 func TestSMTPSender_SafeTemplateFunctions_FileAndInlineConsistency(t *testing.T) {
 	sender := &SMTPSender{}
-	
+
 	// Template content that uses safe functions
-	templateContent := `Hello {{.Name | upper}}! 
-Your message: {{.Message | html}}
+	templateContent := `Hello {{.Name | upper}}!
+Your message: {{.Message}}
 URL: {{.URL | url}}`
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"Name":    "alice",
 		"Message": "<script>alert('test')</script>",
 		"URL":     "hello world",
@@ -322,7 +322,7 @@ URL: {{.URL | url}}`
 	// Test file template
 	tempDir := t.TempDir()
 	templateFile := filepath.Join(tempDir, "test_template.html")
-	err = os.WriteFile(templateFile, []byte(templateContent), 0644)
+	err = os.WriteFile(templateFile, []byte(templateContent), 0o644)
 	require.NoError(t, err)
 
 	fileTmpl, err := sender.parseTemplate(templateFile)
@@ -333,14 +333,16 @@ URL: {{.URL | url}}`
 	require.NoError(t, err)
 
 	// Both should produce identical output
-	assert.Equal(t, inlineBuf.String(), fileBuf.String(), 
+	assert.Equal(t, inlineBuf.String(), fileBuf.String(),
 		"File and inline templates should produce identical output")
 
 	// Verify the output contains expected safe transformations
 	output := inlineBuf.String()
 	assert.Contains(t, output, "ALICE", "Name should be uppercased")
 	assert.Contains(t, output, "&lt;script&gt;", "HTML should be escaped")
-	assert.Contains(t, output, "hello+world", "URL should be escaped")
+	// html/template HTML-encodes the URL-encoded string in HTML text context,
+	// so '+' from URL-encoding becomes '&#43;' in the final output.
+	assert.Contains(t, output, "hello&#43;world", "URL should be escaped")
 }
 
 func TestSMTPSender_SafeTemplateFunctions_ChainedOperations(t *testing.T) {
@@ -348,7 +350,7 @@ func TestSMTPSender_SafeTemplateFunctions_ChainedOperations(t *testing.T) {
 
 	// Test chaining multiple safe functions
 	template := `{{.Text | trim | lower | title}}`
-	data := map[string]interface{}{"Text": "  HELLO WORLD  "}
+	data := map[string]any{"Text": "  HELLO WORLD  "}
 
 	tmpl, err := sender.parseTemplate(template)
 	require.NoError(t, err)
@@ -512,7 +514,7 @@ func TestSMTPSender_validateTemplateContent_InvalidTemplates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := sender.validateTemplateContent(tt.template)
 			assert.Error(t, err, tt.reason)
-			assert.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedErr), 
+			assert.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tt.expectedErr),
 				"Error should contain expected message for: %s", tt.reason)
 		})
 	}
@@ -583,23 +585,29 @@ func TestSMTPSender_validateTemplateContent_EdgeCases(t *testing.T) {
 type mockConfigPortSecure struct{}
 
 // Verify interface compliance
-var _ secondary.ConfigPort = &mockConfigPortSecure{}
-var _ secondary.LoggerPort = &mockLoggerPortSecure{}
-var _ secondary.ValidationPort = &mockValidationPortSecure{}
+var (
+	_ secondary.ConfigPort     = &mockConfigPortSecure{}
+	_ secondary.LoggerPort     = &mockLoggerPortSecure{}
+	_ secondary.ValidationPort = &mockValidationPortSecure{}
+)
 
-func (m *mockConfigPortSecure) GetServerEmail() string                         { return "test@example.com" }
-func (m *mockConfigPortSecure) GetServerName() string                          { return "Test Server" }
-func (m *mockConfigPortSecure) GetPasswordExchangeURL() string                 { return "https://test.example.com" }
-func (m *mockConfigPortSecure) GetInitialNotificationSubject() string          { return "Test Subject %s" }
-func (m *mockConfigPortSecure) GetReminderNotificationSubject() string         { return "Reminder Subject %d" }
-func (m *mockConfigPortSecure) GetEmailTemplate() string                       { return "Test template: {{.Body}}" }
-func (m *mockConfigPortSecure) GetInitialNotificationBodyTemplate() string     { return "Initial body template" }
-func (m *mockConfigPortSecure) GetReminderNotificationBodyTemplate() string    { return "Reminder body template" }
-func (m *mockConfigPortSecure) GetReminderEmailTemplate() string               { return "Reminder email template" }
-func (m *mockConfigPortSecure) GetReminderMessageContent() string              { return "Reminder message content" }
-func (m *mockConfigPortSecure) ValidatePasswordExchangeURL() error             { return nil }
-func (m *mockConfigPortSecure) ValidateServerEmail() error                     { return nil }
-func (m *mockConfigPortSecure) ValidateTemplateFormats() error                 { return nil }
+func (m *mockConfigPortSecure) GetServerEmail() string                 { return "test@example.com" }
+func (m *mockConfigPortSecure) GetServerName() string                  { return "Test Server" }
+func (m *mockConfigPortSecure) GetPasswordExchangeURL() string         { return "https://test.example.com" }
+func (m *mockConfigPortSecure) GetInitialNotificationSubject() string  { return "Test Subject %s" }
+func (m *mockConfigPortSecure) GetReminderNotificationSubject() string { return "Reminder Subject %d" }
+func (m *mockConfigPortSecure) GetEmailTemplate() string {
+	return "{{if .RecipientName}}Hi {{.RecipientName}}{{end}} from {{.SenderName}}"
+}
+
+func (m *mockConfigPortSecure) GetReminderNotificationBodyTemplate() string {
+	return "Reminder body template"
+}
+func (m *mockConfigPortSecure) GetReminderEmailTemplate() string   { return "Reminder email template" }
+func (m *mockConfigPortSecure) GetReminderMessageContent() string  { return "Reminder message content" }
+func (m *mockConfigPortSecure) ValidatePasswordExchangeURL() error { return nil }
+func (m *mockConfigPortSecure) ValidateServerEmail() error         { return nil }
+func (m *mockConfigPortSecure) ValidateTemplateFormats() error     { return nil }
 
 // mockLoggerPortSecure for email header testing
 type mockLoggerPortSecure struct{}
@@ -611,13 +619,13 @@ func (m *mockLoggerPortSecure) Error() contracts.LogEvent { return &mockLogEvent
 
 type mockLogEventSecure struct{}
 
-func (m *mockLogEventSecure) Str(key, val string) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Err(err error) contracts.LogEvent       { return m }
-func (m *mockLogEventSecure) Int(key string, val int) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Bool(key string, val bool) contracts.LogEvent { return m }
+func (m *mockLogEventSecure) Str(key, val string) contracts.LogEvent               { return m }
+func (m *mockLogEventSecure) Err(err error) contracts.LogEvent                     { return m }
+func (m *mockLogEventSecure) Int(key string, val int) contracts.LogEvent           { return m }
+func (m *mockLogEventSecure) Bool(key string, val bool) contracts.LogEvent         { return m }
 func (m *mockLogEventSecure) Dur(key string, val time.Duration) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Float64(key string, val float64) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Msg(msg string)                         {}
+func (m *mockLogEventSecure) Float64(key string, val float64) contracts.LogEvent   { return m }
+func (m *mockLogEventSecure) Msg(msg string)                                       {}
 
 // mockValidationPortSecure for email header testing
 type mockValidationPortSecure struct{}
@@ -721,12 +729,12 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headers, err := sender.buildSafeEmailHeaders(tt.fromName, tt.fromEmail, tt.to, tt.subject)
-			
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("buildSafeEmailHeaders() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr {
 				if err != nil && tt.errSubstr != "" {
 					if !strings.Contains(err.Error(), tt.errSubstr) {
@@ -738,7 +746,7 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 				if headers == "" {
 					t.Error("buildSafeEmailHeaders() returned empty headers for valid input")
 				}
-				
+
 				// Verify the headers contain expected content
 				expectedPatterns := []string{
 					"From:",
@@ -747,7 +755,7 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 					"MIME-version: 1.0",
 					"Content-Type: text/html",
 				}
-				
+
 				for _, pattern := range expectedPatterns {
 					if !strings.Contains(headers, pattern) {
 						t.Errorf("buildSafeEmailHeaders() headers missing expected pattern: %q", pattern)
@@ -756,4 +764,76 @@ func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSMTPSender_RenderEmailTemplate verifies that email_template.html renders correctly
+// with html/template contextual escaping: data fields appear in output, dangerous URIs
+// are blocked, and missing optional fields degrade gracefully.
+func TestSMTPSender_RenderEmailTemplate(t *testing.T) {
+	_, thisFile, _, ok := runtime.Caller(0)
+	require.True(t, ok, "runtime.Caller must succeed")
+	templatePath := filepath.Join(filepath.Dir(thisFile), "../../../../../../templates/email_template.html")
+
+	sender := &SMTPSender{}
+
+	t.Run("renders all personalisation fields", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		data := contracts.NotificationTemplateData{
+			RecipientName: "Jane Doe",
+			SenderName:    "John Smith",
+			MessageURL:    "https://password.exchange/m/abc123",
+			Message:       "Your encrypted message is ready.",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.Contains(t, output, "Jane Doe", "output should contain RecipientName")
+		assert.Contains(t, output, "John Smith", "output should contain SenderName")
+		assert.Contains(t, output, "https://password.exchange/m/abc123", "output should contain MessageURL")
+		assert.Contains(t, output, "Your encrypted message is ready.", "output should contain Message")
+	})
+
+	t.Run("falls back to generic message when sender and recipient are empty", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		// Reminder-style: no SenderName or RecipientName (intentional — see reminder_service.go)
+		data := contracts.NotificationTemplateData{
+			MessageURL: "https://password.exchange/m/xyz",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.Contains(t, output, "Someone has shared an encrypted message",
+			"should show generic sender message when SenderName is empty")
+		assert.NotContains(t, output, "Jane", "should not show recipient name when empty")
+	})
+
+	t.Run("blocks javascript: URI in href attribute", func(t *testing.T) {
+		tmpl, err := sender.parseTemplate(templatePath)
+		require.NoError(t, err)
+
+		data := contracts.NotificationTemplateData{
+			RecipientName: "Alice",
+			SenderName:    "Bob",
+			MessageURL:    "javascript:alert(1)",
+			Message:       "test",
+		}
+
+		var buf bytes.Buffer
+		err = tmpl.Execute(&buf, data)
+		require.NoError(t, err)
+
+		output := buf.String()
+		assert.NotContains(t, output, "javascript:", "html/template must block javascript: URI")
+		assert.Contains(t, output, "#ZgotmplZ", "html/template must replace dangerous URI with #ZgotmplZ")
+	})
 }

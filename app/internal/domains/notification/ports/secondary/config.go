@@ -58,14 +58,6 @@ type ConfigPort interface {
 	//   - The file path to the email template (e.g., "templates/email_template.html")
 	GetEmailTemplate() string
 
-	// GetInitialNotificationBodyTemplate returns the body template for initial notification emails.
-	// This can be either a file path to a template file or an inline template string.
-	// The template should support placeholders for recipient name, sender name, and URLs.
-	//
-	// Returns:
-	//   - The body template string or file path
-	GetInitialNotificationBodyTemplate() string
-
 	// GetReminderNotificationBodyTemplate returns the body template for reminder notification emails.
 	// This can be either a file path to a template file or an inline template string.
 	//

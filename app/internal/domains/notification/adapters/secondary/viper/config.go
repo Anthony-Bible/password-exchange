@@ -46,7 +46,6 @@ func getDefaultEmailConfig() config.EmailConfig {
 			Reminder: "Reminder: You have an unviewed encrypted message (Reminder #%d)",
 		},
 		Body: config.EmailBody{
-			Initial:  "Hi %s, \n %s used our service at <a href=\"%s\"> Password Exchange </a> to send a secure message to you. We've included a link to view the message below, to find out more information go to %s/about",
 			Reminder: "Please check your original email for the secure decrypt link. For security reasons, the decrypt link cannot be included in reminder emails. If you cannot find the original email, please contact the sender to resend the message.",
 		},
 		Sender: config.EmailSender{
@@ -71,9 +70,6 @@ func setDefaults(cfg *config.EmailConfig) {
 	}
 	if cfg.Subjects.Reminder == "" {
 		cfg.Subjects.Reminder = defaults.Subjects.Reminder
-	}
-	if cfg.Body.Initial == "" {
-		cfg.Body.Initial = defaults.Body.Initial
 	}
 	if cfg.Body.Reminder == "" {
 		cfg.Body.Reminder = defaults.Body.Reminder
@@ -113,10 +109,6 @@ func (v *ViperConfigAdapter) GetReminderNotificationSubject() string {
 	return v.emailConfig.Subjects.Reminder
 }
 
-func (v *ViperConfigAdapter) GetInitialNotificationBodyTemplate() string {
-	return v.emailConfig.Body.Initial
-}
-
 func (v *ViperConfigAdapter) GetReminderNotificationBodyTemplate() string {
 	return v.emailConfig.Templates.Reminder
 }
@@ -146,6 +138,5 @@ func (v *ViperConfigAdapter) ValidateTemplateFormats() error {
 	return v.validator.ValidateTemplateFormats(
 		v.emailConfig.Subjects.Initial,
 		v.emailConfig.Subjects.Reminder,
-		v.emailConfig.Body.Initial,
 	)
 }

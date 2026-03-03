@@ -5,17 +5,118 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/smtp"
 	"os"
 	"regexp"
 	"strings"
-	"text/template"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+// Pre-compiled regexes and safe function data (initialized once at package load).
+var (
+	// dangerousFuncRegexes maps dangerous function names to their pre-compiled pattern.
+	dangerousFuncRegexes map[string]*regexp.Regexp
+
+	// funcCallRegex matches function-call-like patterns in templates: {{func arg}}.
+	funcCallRegex *regexp.Regexp
+
+	// pathTraversalRegexes are pre-compiled patterns for path traversal detection.
+	pathTraversalRegexes []pathPattern
+
+	// scriptRegexes are pre-compiled patterns for script injection detection.
+	scriptRegexes []*regexp.Regexp
+
+	// safeFuncMap is the immutable set of template functions available to email templates.
+	safeFuncMap template.FuncMap
+
+	// safeFuncNames is the set of allowed function names (FuncMap keys + Go template builtins).
+	safeFuncNames map[string]bool
+)
+
+type pathPattern struct {
+	re          *regexp.Regexp
+	isTraversal bool // true for ../ patterns vs absolute path patterns
+}
+
+func init() {
+	// Build safe template functions once.
+	titler := cases.Title(language.Und, cases.NoLower)
+	safeFuncMap = template.FuncMap{
+		"upper":   strings.ToUpper,
+		"lower":   strings.ToLower,
+		"title":   titler.String,
+		"trim":    strings.TrimSpace,
+		"replace": strings.ReplaceAll,
+		"url":     template.URLQueryEscaper,
+		"printf":  fmt.Sprintf,
+	}
+
+	// Derive safe function names from the FuncMap keys plus Go template builtins.
+	// Single source of truth: adding a function to safeFuncMap automatically allows it in validation.
+	safeFuncNames = make(map[string]bool)
+	for name := range safeFuncMap {
+		safeFuncNames[name] = true
+	}
+	for _, name := range []string{
+		"and", "or", "not", "len", "index", "print", "println",
+		"if", "else", "end", "range", "with", "template", "define", "block",
+	} {
+		safeFuncNames[name] = true
+	}
+
+	// Pre-compile dangerous function detection patterns.
+	dangerousFuncRegexes = make(map[string]*regexp.Regexp)
+	for _, fn := range []string{
+		"exec", "system", "call", "env", "read", "write", "open", "close",
+		"file", "dir", "os", "cmd", "shell", "process", "eval", "run",
+	} {
+		pattern := fmt.Sprintf(`\{\{[^}]*\b%s\b[^}]*\}\}`, regexp.QuoteMeta(fn))
+		dangerousFuncRegexes[fn] = regexp.MustCompile(pattern)
+	}
+
+	// Pre-compile function call pattern.
+	funcCallRegex = regexp.MustCompile(`\{\{(?:\s*-\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\s+[^}|]*\}\}`)
+
+	// Pre-compile path traversal patterns.
+	for _, p := range []struct {
+		pattern     string
+		isTraversal bool
+	}{
+		{`\.\./`, true},
+		{`\.\.\\`, true},
+		{`/etc/`, false},
+		{`/var/`, false},
+		{`/usr/`, false},
+		{`/root/`, false},
+		{`/home/`, false},
+		{`C:\\\\`, false},
+		{`%SYSTEMROOT%`, false},
+	} {
+		pathTraversalRegexes = append(pathTraversalRegexes, pathPattern{
+			re:          regexp.MustCompile(p.pattern),
+			isTraversal: p.isTraversal,
+		})
+	}
+
+	// Pre-compile script injection patterns (case insensitive).
+	for _, p := range []string{
+		`(?i)<script[^>]*>.*?</script>`,
+		`(?i)javascript:`,
+		`(?i)vbscript:`,
+		`(?i)onload=`,
+		`(?i)onerror=`,
+		`(?i)onclick=`,
+	} {
+		scriptRegexes = append(scriptRegexes, regexp.MustCompile(p))
+	}
+}
 
 // SMTPSender implements the EmailPort using SMTP
 type SMTPSender struct {
@@ -40,169 +141,84 @@ func NewSMTPSender(
 	}
 }
 
-// getSafeTemplateFunctions returns a map of safe template functions
-// Only includes essential functions needed for email templates
+// getSafeTemplateFunctions returns the package-level safe template FuncMap.
+// html/template handles contextual escaping automatically, so no manual
+// html/js escape helpers are needed (they would defeat auto-escaping).
 func (s *SMTPSender) getSafeTemplateFunctions() template.FuncMap {
-	return template.FuncMap{
-		// String manipulation functions
-		"upper":    strings.ToUpper,
-		"lower":    strings.ToLower,
-		"title":    strings.Title,
-		"trim":     strings.TrimSpace,
-		"replace":  strings.ReplaceAll,
-		
-		// HTML escaping for security
-		"html": template.HTMLEscaper,
-		"js":   template.JSEscaper,
-		"url":  template.URLQueryEscaper,
-		
-		// Safe formatting
-		"printf": fmt.Sprintf,
-	}
+	return safeFuncMap
 }
 
-// validateTemplateContent validates template content for security and safety
-// Prevents template injection attacks by checking for dangerous functions and patterns
+// validateTemplateContent validates template content for security and safety.
+// Prevents template injection attacks by checking for dangerous functions and patterns.
+// Uses pre-compiled regexes from package init for efficiency.
 func (s *SMTPSender) validateTemplateContent(templateContent string) error {
-	// Constants for validation limits
 	const (
-		maxTemplateSize   = 10 * 1024 // 10KB
-		maxNestingDepth   = 50
+		maxTemplateSize = 10 * 1024 // 10KB
+		maxNestingDepth = 50
 	)
 
-	// Check template size
 	if len(templateContent) > maxTemplateSize {
 		return errors.New("template too large: exceeds 10KB limit")
 	}
 
-	// Check for dangerous function patterns
-	dangerousFunctions := []string{
-		"exec", "system", "call", "env", "read", "write", "open", "close",
-		"file", "dir", "os", "cmd", "shell", "process", "eval", "run",
-	}
-
-	// Create regex patterns for dangerous function detection
-	for _, fn := range dangerousFunctions {
-		// Match function calls like {{exec ...}} or {{.Data | exec}}
-		pattern := fmt.Sprintf(`\{\{[^}]*\b%s\b[^}]*\}\}`, regexp.QuoteMeta(fn))
-		matched, err := regexp.MatchString(pattern, templateContent)
-		if err != nil {
-			return fmt.Errorf("regex error checking for dangerous function %s: %w", fn, err)
-		}
-		if matched {
+	// Check for dangerous function patterns using pre-compiled regexes.
+	for fn, re := range dangerousFuncRegexes {
+		if re.MatchString(templateContent) {
 			return fmt.Errorf("dangerous function '%s' detected in template", fn)
 		}
 	}
 
-	// Check for potentially dangerous function names that might be undefined
-	// Use regex to find function-like patterns that aren't in our safe list
-	safeFunctionNames := []string{
-		"upper", "lower", "title", "trim", "replace", "html", "js", "url", "printf",
-		// Go template built-ins that are safe
-		"and", "or", "not", "len", "index", "print", "println", 
-		"if", "else", "end", "range", "with", "template", "define", "block",
-	}
-	
-	// Look for function calls in templates (pattern: function name followed by space/args)
-	// This pattern looks for function calls like {{func arg}} but not {{.field}} or {{.field | func}}
-	functionPattern := `\{\{(?:\s*-\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\s+[^}|]*\}\}`
-	re := regexp.MustCompile(functionPattern)
-	matches := re.FindAllStringSubmatch(templateContent, -1)
-	
+	// Check for undefined function names using pre-compiled regex and derived safe list.
+	matches := funcCallRegex.FindAllStringSubmatch(templateContent, -1)
 	for _, match := range matches {
 		if len(match) > 1 {
 			funcName := match[1]
-			// Skip template control structures and safe built-ins
 			if strings.HasPrefix(funcName, ".") {
 				continue
 			}
-			
-			// Check if function is in safe list
-			isSafe := false
-			for _, safeName := range safeFunctionNames {
-				if funcName == safeName {
-					isSafe = true
-					break
-				}
-			}
-			
-			if !isSafe {
+			if !safeFuncNames[funcName] {
 				return fmt.Errorf("undefined function '%s' detected in template", funcName)
 			}
 		}
 	}
 
-	// Check for path traversal patterns
-	pathTraversalPatterns := []string{
-		`\.\./`,           // ../
-		`\.\.\\`,          // ..\
-		`/etc/`,           // /etc/
-		`/var/`,           // /var/
-		`/usr/`,           // /usr/
-		`/root/`,          // /root/
-		`/home/`,          // /home/
-		`C:\\\\`,          // C:\
-		`%SYSTEMROOT%`,    // %SYSTEMROOT%
-	}
-
-	for _, pattern := range pathTraversalPatterns {
-		matched, err := regexp.MatchString(pattern, templateContent)
-		if err != nil {
-			return fmt.Errorf("regex error checking for path traversal: %w", err)
-		}
-		if matched {
-			if strings.Contains(pattern, `\.\.`) {
+	// Check for path traversal patterns using pre-compiled regexes.
+	for _, pp := range pathTraversalRegexes {
+		if pp.re.MatchString(templateContent) {
+			if pp.isTraversal {
 				return errors.New("path traversal detected in template")
 			}
 			return errors.New("absolute path detected in template")
 		}
 	}
 
-	// Check for script injection
-	scriptPatterns := []string{
-		`<script[^>]*>.*?</script>`,
-		`javascript:`,
-		`vbscript:`,
-		`onload=`,
-		`onerror=`,
-		`onclick=`,
-	}
-
-	for _, pattern := range scriptPatterns {
-		matched, err := regexp.MatchString(`(?i)`+pattern, templateContent)
-		if err != nil {
-			return fmt.Errorf("regex error checking for script injection: %w", err)
-		}
-		if matched {
+	// Check for script injection using pre-compiled regexes.
+	for _, re := range scriptRegexes {
+		if re.MatchString(templateContent) {
 			return errors.New("script tag detected in template")
 		}
 	}
 
-	// Check nesting depth by counting template constructs
+	// Check nesting depth by counting template constructs.
 	nestingLevel := 0
 	maxNesting := 0
-	
-	// Simple state machine to track nesting
+
 	i := 0
 	for i < len(templateContent) {
 		if i < len(templateContent)-1 && templateContent[i] == '{' && templateContent[i+1] == '{' {
-			// Found opening template tag
 			j := i + 2
 			for j < len(templateContent)-1 && !(templateContent[j] == '}' && templateContent[j+1] == '}') {
 				j++
 			}
-			
+
 			if j < len(templateContent)-1 {
-				// Found closing tag, extract content
-				tagContent := templateContent[i+2:j]
-				
-				// Check if it's a block opening tag (range, if, with, define, block)
+				tagContent := templateContent[i+2 : j]
 				trimmed := strings.TrimSpace(tagContent)
-				if strings.HasPrefix(trimmed, "range ") || 
-				   strings.HasPrefix(trimmed, "if ") || 
-				   strings.HasPrefix(trimmed, "with ") ||
-				   strings.HasPrefix(trimmed, "define ") ||
-				   strings.HasPrefix(trimmed, "block ") {
+				if strings.HasPrefix(trimmed, "range ") ||
+					strings.HasPrefix(trimmed, "if ") ||
+					strings.HasPrefix(trimmed, "with ") ||
+					strings.HasPrefix(trimmed, "define ") ||
+					strings.HasPrefix(trimmed, "block ") {
 					nestingLevel++
 					if nestingLevel > maxNesting {
 						maxNesting = nestingLevel
@@ -210,7 +226,7 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 				} else if trimmed == "end" {
 					nestingLevel--
 				}
-				
+
 				i = j + 2
 			} else {
 				i++
@@ -232,33 +248,30 @@ func (s *SMTPSender) validateTemplateContent(templateContent string) error {
 func (s *SMTPSender) parseTemplate(templateConfig string) (*template.Template, error) {
 	// Define safe template functions only
 	safeFuncs := s.getSafeTemplateFunctions()
-	
+
 	var templateContent string
-	
-	// Check if templateConfig starts with '/' or contains common path separators - likely a file path
+
+	// Check if templateConfig looks like a file path - attempt to read directly.
+	// Avoids TOCTOU by skipping os.Stat and handling os.ReadFile errors instead.
 	if strings.HasPrefix(templateConfig, "/") || strings.Contains(templateConfig, "/") {
-		// Check if file exists
-		if _, err := os.Stat(templateConfig); err == nil {
-			// It's a file path and file exists - read content
-			content, err := os.ReadFile(templateConfig)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read template file: %w", err)
-			}
+		content, err := os.ReadFile(templateConfig)
+		if err == nil {
 			templateContent = string(content)
-		} else {
+		} else if errors.Is(err, os.ErrNotExist) {
 			// File doesn't exist, treat as inline template
 			templateContent = templateConfig
+		} else {
+			return nil, fmt.Errorf("failed to read template file: %w", err)
 		}
 	} else {
-		// Treat as inline template content
 		templateContent = templateConfig
 	}
-	
+
 	// Validate template content before parsing
 	if err := s.validateTemplateContent(templateContent); err != nil {
 		return nil, fmt.Errorf("template validation failed: %w", err)
 	}
-	
+
 	// Parse template with safe functions
 	return template.New("email").Funcs(safeFuncs).Parse(templateContent)
 }
@@ -294,12 +307,18 @@ func (s *SMTPSender) buildSafeEmailHeaders(fromName, fromEmail, to, subject stri
 }
 
 // SendEmail sends an email notification via SMTP
-func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.NotificationRequest) (*contracts.NotificationResponse, error) {
-	s.logger.Debug().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("subject", req.Subject).Msg("Sending email via SMTP")
+func (s *SMTPSender) SendNotification(
+	ctx context.Context,
+	req contracts.NotificationRequest,
+) (*contracts.NotificationResponse, error) {
+	s.logger.Debug().
+		Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+		Str("subject", req.Subject).
+		Msg("Sending email via SMTP")
 
 	// Create SMTP authentication
 	auth := smtp.PlainAuth("", s.emailConn.User, s.emailConn.Password, s.emailConn.Host)
-	
+
 	// Parse email template using injected config (supports both file paths and inline templates)
 	templateConfig := s.config.GetEmailTemplate()
 	tmpl, err := s.parseTemplate(templateConfig)
@@ -309,11 +328,11 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	}
 
 	// Prepare template data
-	passwordExchangeURL := s.config.GetPasswordExchangeURL()
 	templateData := contracts.NotificationTemplateData{
-		Body: fmt.Sprintf(s.config.GetInitialNotificationBodyTemplate(), 
-			req.RecipientName, req.SenderName, passwordExchangeURL, passwordExchangeURL),
-		Message: req.MessageContent,
+		Message:       req.MessageContent,
+		SenderName:    req.SenderName,
+		RecipientName: req.RecipientName,
+		MessageURL:    req.MessageURL,
 	}
 
 	// Build email headers with CRLF injection protection
@@ -326,7 +345,7 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 	// Render template
 	body := []byte(emailHeaders)
 	buf := bytes.NewBuffer(body)
-	
+
 	err = tmpl.Execute(buf, templateData)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to execute email template")
@@ -347,20 +366,15 @@ func (s *SMTPSender) SendNotification(ctx context.Context, req contracts.Notific
 
 	// Generate a simple message ID
 	messageID := fmt.Sprintf("smtp-%d-%s", len(req.To)+len(req.Subject), req.To[:min(5, len(req.To))])
-	
+
 	response := &contracts.NotificationResponse{
 		Success:   true,
 		MessageID: messageID,
 	}
 
-	s.logger.Info().Str("to", s.validation.SanitizeEmailForLogging(req.To)).Str("messageId", response.MessageID).Msg("Email sent successfully via SMTP")
+	s.logger.Info().
+		Str("to", s.validation.SanitizeEmailForLogging(req.To)).
+		Str("messageId", response.MessageID).
+		Msg("Email sent successfully via SMTP")
 	return response, nil
-}
-
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

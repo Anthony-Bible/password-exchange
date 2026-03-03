@@ -17,7 +17,7 @@ func createTestMocks() (*MockStorageRepository, *MockNotificationPublisher, *Moc
 	mockLogger := &MockLoggerPort{}
 	mockConfig := &MockConfigPort{}
 	mockValidation := &MockValidationPort{}
-	
+
 	// Set up default mock expectations for config
 	mockConfig.On("GetServerEmail").Return("test@example.com")
 	mockConfig.On("GetServerName").Return("Test Server")
@@ -26,15 +26,14 @@ func createTestMocks() (*MockStorageRepository, *MockNotificationPublisher, *Moc
 	mockConfig.On("GetReminderNotificationSubject").Return("Reminder %d: You have an unviewed encrypted message")
 	mockConfig.On("GetInitialNotificationSubject").Return("You have an encrypted message")
 	mockConfig.On("GetReminderMessageContent").Return("You have an unviewed encrypted message. Please check it.")
-	mockConfig.On("GetInitialNotificationBodyTemplate").Return("You have received an encrypted message from {{.SenderName}}")
-	
+
 	// Set up lenient mock expectations for logger - these will match any calls
 	mockLogEvent := &MockLogEvent{}
 	mockLogger.On("Debug").Return(mockLogEvent).Maybe()
 	mockLogger.On("Info").Return(mockLogEvent).Maybe()
 	mockLogger.On("Warn").Return(mockLogEvent).Maybe()
 	mockLogger.On("Error").Return(mockLogEvent).Maybe()
-	
+
 	// Set up lenient mock expectations for log event methods
 	mockLogEvent.On("Err", mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
@@ -43,13 +42,13 @@ func createTestMocks() (*MockStorageRepository, *MockNotificationPublisher, *Moc
 	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(mockLogEvent).Maybe()
 	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
-	
+
 	// No default storage expectations - set up as needed in individual tests
-	
+
 	// Set up default mock expectations for validation (can be overridden in specific tests)
 	mockValidation.On("ValidateEmail", mock.AnythingOfType("string")).Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", mock.AnythingOfType("string")).Return("sanitized@example.com")
-	
+
 	return mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation
 }
 
@@ -436,11 +435,11 @@ func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
 func TestProcessMessageReminder_EdgeCaseEmails_Validation(t *testing.T) {
 	// Arrange
 	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
-	
+
 	// Override validation to return errors for invalid emails
 	mockValidation.ExpectedCalls = nil // Clear default expectations
 	mockValidation.On("ValidateEmail", mock.AnythingOfType("string")).Return(errors.New("invalid email"))
-	
+
 	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
 
 	ctx := context.Background()
@@ -546,11 +545,12 @@ func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 
 	// Mock storage calls - first message logging fails, second succeeds
 	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
-	
+
 	// First message - logging fails after retry attempts
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
-	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").Return(errors.New("logging database unavailable"))
-	
+	mockStorageRepo.On("LogReminderSent", ctx, 123, "test@example.com").
+		Return(errors.New("logging database unavailable"))
+
 	// Second message - succeeds
 	mockStorageRepo.On("GetReminderHistory", ctx, 124).Return([]*ReminderLogEntry{}, nil)
 	mockStorageRepo.On("LogReminderSent", ctx, 124, "valid@example.com").Return(nil)
@@ -639,16 +639,16 @@ func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	mockValidation.On("ValidateEmail", "invalid-email").Return(errors.New("invalid email format"))
 	mockValidation.On("ValidateEmail", "another@example.com").Return(nil)
 	mockValidation.On("SanitizeEmailForLogging", mock.AnythingOfType("string")).Return("sanitized@example.com")
-	
+
 	// Mock storage calls
 	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
-	
+
 	// Valid email processing (message 123)
 	mockStorageRepo.On("GetReminderHistory", ctx, 123).Return([]*ReminderLogEntry{}, nil)
 	mockStorageRepo.On("LogReminderSent", ctx, 123, "valid@example.com").Return(nil)
-	
+
 	// Invalid email processing (message 124) - won't reach storage calls
-	
+
 	// Valid email processing (message 125)
 	mockStorageRepo.On("GetReminderHistory", ctx, 125).Return([]*ReminderLogEntry{}, nil)
 	mockStorageRepo.On("LogReminderSent", ctx, 125, "another@example.com").Return(nil)
@@ -789,7 +789,7 @@ func TestProcessReminders_ReminderInterval_RespectedCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
 	mockNotificationPublisher.AssertExpectations(t)
-	
+
 	// Verify that the storage adapter was called with the correct interval parameter
 	mockStorageRepo.AssertCalled(t, "GetUnviewedMessagesForReminders", ctx, 24, 3, 48)
 }
