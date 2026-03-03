@@ -2,6 +2,7 @@ package smtp
 
 import (
 	"bytes"
+	"html/template"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -784,7 +785,7 @@ func TestSMTPSender_RenderEmailTemplate(t *testing.T) {
 			RecipientName: "Jane Doe",
 			SenderName:    "John Smith",
 			MessageURL:    "https://password.exchange/m/abc123",
-			Message:       "Your encrypted message is ready.",
+			Message:       template.HTML("Your encrypted message is ready."),
 		}
 
 		var buf bytes.Buffer
@@ -825,7 +826,7 @@ func TestSMTPSender_RenderEmailTemplate(t *testing.T) {
 			RecipientName: "Alice",
 			SenderName:    "Bob",
 			MessageURL:    "javascript:alert(1)",
-			Message:       "test",
+			Message:       template.HTML("test"),
 		}
 
 		var buf bytes.Buffer

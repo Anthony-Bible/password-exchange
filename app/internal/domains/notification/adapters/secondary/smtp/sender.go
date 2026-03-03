@@ -329,7 +329,7 @@ func (s *SMTPSender) SendNotification(
 
 	// Prepare template data
 	templateData := contracts.NotificationTemplateData{
-		Message:       req.MessageContent,
+		Message:       template.HTML(req.MessageContent),
 		SenderName:    req.SenderName,
 		RecipientName: req.RecipientName,
 		MessageURL:    req.MessageURL,
