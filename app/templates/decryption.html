@@ -53,8 +53,8 @@
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control font-monospace" 
-                               id="message-content-input" readonly>
+                        <textarea class="form-control font-monospace message-textarea" 
+                               id="message-content-input" readonly></textarea>
                         <button type="button" 
                                 class="btn btn-outline-secondary" 
                                 id="copy-message-btn" 
@@ -265,7 +265,11 @@ function handleDecryptionSuccess(data) {
     }
     
     // Show decrypted message
-    document.getElementById('message-content-input').value = data.content;
+    const messageInput = document.getElementById('message-content-input');
+    messageInput.value = data.content;
+    // Auto-resize textarea to fit content (up to CSS max-height)
+    messageInput.style.height = 'auto';
+    messageInput.style.height = messageInput.scrollHeight + 'px';
     
     // Update view count information
     const viewCount = data.viewCount || 1;
