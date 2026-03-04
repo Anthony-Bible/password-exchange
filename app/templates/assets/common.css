@@ -373,6 +373,14 @@ h2 {
     word-break: break-word;
 }
 
+.message-textarea {
+    white-space: pre-wrap;
+    resize: none;
+    overflow-y: auto;
+    min-height: 3rem;
+    max-height: 20rem;
+}
+
 /* Error page specific styles */
 .error-container {
     padding: 2rem 0;
