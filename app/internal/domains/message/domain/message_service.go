@@ -20,6 +20,7 @@ type MessageService struct {
 	passwordHasher      PasswordHasher
 	urlBuilder          URLBuilder
 	turnstileValidator  TurnstileValidator
+	healthCheckService  HealthCheckService
 }
 
 // NewMessageService creates a new message service
@@ -30,6 +31,7 @@ func NewMessageService(
 	passwordHasher PasswordHasher,
 	urlBuilder URLBuilder,
 	turnstileValidator TurnstileValidator,
+	healthCheckService HealthCheckService,
 ) *MessageService {
 	return &MessageService{
 		encryptionService:   encryptionService,
@@ -38,6 +40,7 @@ func NewMessageService(
 		passwordHasher:      passwordHasher,
 		urlBuilder:          urlBuilder,
 		turnstileValidator:  turnstileValidator,
+		healthCheckService:  healthCheckService,
 	}
 }
 
@@ -286,6 +289,40 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 		Bool("requiresPassphrase", accessInfo.RequiresPassphrase).
 		Msg("Message access checked")
 	return accessInfo, nil
+}
+
+// HealthCheck returns the aggregated health status of all system components
+func (s *MessageService) HealthCheck(ctx context.Context) (*HealthStatus, error) {
+	services := make(map[string]string)
+	overallStatus := "healthy"
+
+	// Check Database
+	dbStatus, err := s.healthCheckService.CheckDatabase(ctx)
+	services["database"] = dbStatus
+	if err != nil || dbStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	// Check Encryption
+	encStatus, err := s.healthCheckService.CheckEncryption(ctx)
+	services["encryption"] = encStatus
+	if err != nil || encStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	// Check Email
+	emailStatus, err := s.healthCheckService.CheckEmail(ctx)
+	services["email"] = emailStatus
+	if err != nil || emailStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	return &HealthStatus{
+		Status:    overallStatus,
+		Version:   "1.0.0", // TODO: Get from build info/config
+		Timestamp: time.Now(),
+		Services:  services,
+	}, nil
 }
 
 // validateSubmissionRequest validates the message submission request

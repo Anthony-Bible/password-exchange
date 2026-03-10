@@ -133,6 +133,21 @@ type URLBuilder interface {
 	BuildDecryptURL(messageID string, encryptionKey []byte) string
 }
 
+// HealthStatus represents the aggregated health status of the system
+type HealthStatus struct {
+	Status    string            `json:"status"`
+	Version   string            `json:"version"`
+	Timestamp time.Time         `json:"timestamp"`
+	Services  map[string]string `json:"services"`
+}
+
+// HealthCheckService defines the interface for health checking operations
+type HealthCheckService interface {
+	CheckDatabase(ctx context.Context) (string, error)
+	CheckEncryption(ctx context.Context) (string, error)
+	CheckEmail(ctx context.Context) (string, error)
+}
+
 // TurnstileValidator defines the interface for Cloudflare Turnstile validation
 type TurnstileValidator interface {
 	ValidateToken(ctx context.Context, token string, remoteIP string) (bool, error)

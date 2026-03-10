@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"testing"
 	"time"
 
@@ -90,7 +91,51 @@ func (m *mockTurnstileValidator) ValidateToken(ctx context.Context, token string
 	return args.Bool(0), args.Error(1)
 }
 
+type mockHealthCheckService struct{ mock.Mock }
+
+func (m *mockHealthCheckService) CheckDatabase(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockHealthCheckService) CheckEncryption(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
+func (m *mockHealthCheckService) CheckEmail(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 // --- Tests ---
+
+func TestHealthCheck(t *testing.T) {
+	enc := new(mockEncryptionService)
+	stor := new(mockStorageService)
+	notif := new(mockNotificationService)
+	hasher := new(mockPasswordHasher)
+	urlb := new(mockURLBuilder)
+	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+
+	health.On("CheckDatabase", mock.Anything).Return("healthy", nil)
+	health.On("CheckEncryption", mock.Anything).Return("healthy", nil)
+	health.On("CheckEmail", mock.Anything).Return("unhealthy", fmt.Errorf("connection error"))
+
+	resp, err := svc.HealthCheck(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, "unhealthy", resp.Status)
+	assert.Equal(t, "healthy", resp.Services["database"])
+	assert.Equal(t, "healthy", resp.Services["encryption"])
+	assert.Equal(t, "unhealthy", resp.Services["email"])
+	assert.NotZero(t, resp.Timestamp)
+
+	health.AssertExpectations(t)
+}
 
 func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
 	// RetrieveMessage must carry ExpiresAt from storage through to the response.
@@ -100,8 +145,9 @@ func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
 
 	fixedExpiry := time.Date(2030, 3, 7, 12, 0, 0, 0, time.UTC)
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
@@ -142,8 +188,9 @@ func TestRetrieveMessage_NilExpiresAtPropagated(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
 
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
 	storageResp := &MessageStorageResponse{
@@ -182,8 +229,9 @@ func TestSubmitMessage_CustomExpirationHours(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -228,8 +276,9 @@ func TestSubmitMessage_DefaultExpirationWhenZero(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -273,8 +322,9 @@ func TestSubmitMessage_ExpirationHoursValidation(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
+	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
 
 	tests := []struct {
 		name  string
