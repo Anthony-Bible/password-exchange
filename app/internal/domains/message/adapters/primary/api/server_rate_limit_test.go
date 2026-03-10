@@ -31,7 +31,7 @@ func TestServerRateLimiting(t *testing.T) {
 		}
 
 		// Set up mock to expect up to 10 calls (the rate limit) with flexible matching
-		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
+		mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false && req.RecipientName == "Jane Smith"
 		})).
 			Return(mockResponse, nil).
@@ -87,7 +87,7 @@ func TestServerRateLimiting(t *testing.T) {
 		}
 
 		// Set up mock to expect up to 100 calls (the rate limit)
-		mockService.On("CheckMessageAccess", mock.AnythingOfType("*context.timerCtx"), "test-id").
+		mockService.On("CheckMessageAccess", mock.Anything, "test-id").
 			Return(mockResponse, nil).
 			Times(100)
 
@@ -126,7 +126,7 @@ func TestServerRateLimiting(t *testing.T) {
 		}
 
 		// Set up mock to expect up to 20 calls (the rate limit) with flexible matching
-		mockService.On("RetrieveMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageRetrievalRequest) bool {
+		mockService.On("RetrieveMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageRetrievalRequest) bool {
 			return req.MessageID == "test-id"
 		})).
 			Return(mockResponse, nil).
@@ -165,6 +165,8 @@ func TestServerRateLimiting(t *testing.T) {
 		server := NewServer(mockService)
 		router := server.GetRouter()
 
+		mockService.On("HealthCheck", mock.Anything).Return(&domain.HealthStatus{Status: "healthy"}, nil)
+
 		// Test that 300 requests succeed (within rate limit)
 		for i := 0; i < 300; i++ {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
@@ -197,7 +199,7 @@ func TestServerRateLimiting(t *testing.T) {
 		}
 
 		// Each IP should be able to make 10 requests - flexible matching for 3 IPs × 10 requests
-		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
+		mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false
 		})).
 			Return(mockResponse, nil).
@@ -250,7 +252,7 @@ func TestServerRateLimiting(t *testing.T) {
 			Success:    true,
 		}
 
-		mockService.On("SubmitMessage", mock.AnythingOfType("*context.timerCtx"), mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
+		mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
 			return req.Content == "test message" && req.SendNotification == false
 		})).
 			Return(mockResponse, nil).
