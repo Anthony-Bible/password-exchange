@@ -18,14 +18,12 @@ The goal of this phase is to replace placeholder health check responses with act
     - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to clean up the adapter implementations.
     - [x] **Review Phase**: Use `tdd-review-agent` to verify all services are covered.
     - [x] **Security Audit**: Use `security-auditor` to check for gRPC/RabbitMQ connection security.
-    - [ ] [git-hash: ]
-- [ ] **Task: Update API Handler for Health Checks**
-    - [ ] **Red Phase**: Use `red-phase-tester` to write failing tests for the `/health` endpoint.
-    - [ ] **Green Phase**: Refactor `HealthCheck` handler to use the new health check ports and return aggregated status.
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the handler logic.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to verify API response structure.
-    - [ ] **Security Audit**: Use `security-auditor` to ensure health endpoint doesn't expose internal system details.
-    - [ ] [git-hash: ]
+- [x] **Task: Update API Handler for Health Checks** [git-hash: 4f36b66]
+    - [x] **Red Phase**: Use `red-phase-tester` to write failing tests for the `/health` endpoint.
+    - [x] **Green Phase**: Refactor `HealthCheck` handler to use the new health check ports and return aggregated status.
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the handler logic.
+    - [x] **Review Phase**: Use `tdd-review-agent` to verify API response structure.
+    - [x] **Security Audit**: Use `security-auditor` to ensure health endpoint doesn't expose internal system details.
 - [ ] **Task: Conductor - User Manual Verification 'Phase 1: Service Health Checks Implementation' (Protocol in workflow.md)**
     - [ ] [git-hash: ]
 
