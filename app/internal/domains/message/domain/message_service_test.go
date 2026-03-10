@@ -35,6 +35,11 @@ func (m *mockEncryptionService) GenerateID(ctx context.Context) (string, error) 
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockEncryptionService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 type mockStorageService struct{ mock.Mock }
 
 func (m *mockStorageService) StoreMessage(ctx context.Context, req MessageStorageRequest) error {
@@ -58,11 +63,21 @@ func (m *mockStorageService) GetMessage(
 	return args.Get(0).(*MessageStorageResponse), args.Error(1)
 }
 
+func (m *mockStorageService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 type mockNotificationService struct{ mock.Mock }
 
 func (m *mockNotificationService) SendMessageNotification(ctx context.Context, req MessageNotificationRequest) error {
 	args := m.Called(ctx, req)
 	return args.Error(0)
+}
+
+func (m *mockNotificationService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
 }
 
 type mockPasswordHasher struct{ mock.Mock }
@@ -91,23 +106,6 @@ func (m *mockTurnstileValidator) ValidateToken(ctx context.Context, token string
 	return args.Bool(0), args.Error(1)
 }
 
-type mockHealthCheckService struct{ mock.Mock }
-
-func (m *mockHealthCheckService) CheckDatabase(ctx context.Context) (string, error) {
-	args := m.Called(ctx)
-	return args.String(0), args.Error(1)
-}
-
-func (m *mockHealthCheckService) CheckEncryption(ctx context.Context) (string, error) {
-	args := m.Called(ctx)
-	return args.String(0), args.Error(1)
-}
-
-func (m *mockHealthCheckService) CheckEmail(ctx context.Context) (string, error) {
-	args := m.Called(ctx)
-	return args.String(0), args.Error(1)
-}
-
 // --- Tests ---
 
 func TestHealthCheck(t *testing.T) {
@@ -117,13 +115,12 @@ func TestHealthCheck(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
-	health.On("CheckDatabase", mock.Anything).Return("healthy", nil)
-	health.On("CheckEncryption", mock.Anything).Return("healthy", nil)
-	health.On("CheckEmail", mock.Anything).Return("unhealthy", fmt.Errorf("connection error"))
+	stor.On("CheckHealth", mock.Anything).Return("healthy", nil)
+	enc.On("CheckHealth", mock.Anything).Return("healthy", nil)
+	notif.On("CheckHealth", mock.Anything).Return("unhealthy", fmt.Errorf("connection error"))
 
 	resp, err := svc.HealthCheck(context.Background())
 
@@ -134,7 +131,9 @@ func TestHealthCheck(t *testing.T) {
 	assert.Equal(t, "unhealthy", resp.Services["email"])
 	assert.NotZero(t, resp.Timestamp)
 
-	health.AssertExpectations(t)
+	stor.AssertExpectations(t)
+	enc.AssertExpectations(t)
+	notif.AssertExpectations(t)
 }
 
 func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
@@ -145,9 +144,8 @@ func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
 	fixedExpiry := time.Date(2030, 3, 7, 12, 0, 0, 0, time.UTC)
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
@@ -188,9 +186,8 @@ func TestRetrieveMessage_NilExpiresAtPropagated(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
 	storageResp := &MessageStorageResponse{
@@ -229,9 +226,8 @@ func TestSubmitMessage_CustomExpirationHours(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -276,9 +272,8 @@ func TestSubmitMessage_DefaultExpirationWhenZero(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -322,9 +317,8 @@ func TestSubmitMessage_ExpirationHoursValidation(t *testing.T) {
 	hasher := new(mockPasswordHasher)
 	urlb := new(mockURLBuilder)
 	turnstile := new(mockTurnstileValidator)
-	health := new(mockHealthCheckService)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, health)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
 
 	tests := []struct {
 		name  string

@@ -17,4 +17,7 @@ type EncryptionServicePort interface {
 
 	// GenerateID generates a unique identifier
 	GenerateID(ctx context.Context) (string, error)
+
+	// CheckHealth returns the health status of the encryption service
+	CheckHealth(ctx context.Context) (string, error)
 }

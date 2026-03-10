@@ -13,4 +13,7 @@ type StorageServicePort interface {
 
 	// RetrieveMessage retrieves a stored message by ID
 	RetrieveMessage(ctx context.Context, req domain.MessageRetrievalStorageRequest) (*domain.MessageStorageResponse, error)
+
+	// CheckHealth returns the health status of the database service
+	CheckHealth(ctx context.Context) (string, error)
 }

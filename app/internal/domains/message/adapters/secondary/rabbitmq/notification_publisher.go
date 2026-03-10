@@ -113,8 +113,8 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	return nil
 }
 
-// CheckEmail returns the health status of the email service (RabbitMQ)
-func (p *NotificationPublisher) CheckEmail(ctx context.Context) (string, error) {
+// CheckHealth returns the health status of the email service (RabbitMQ)
+func (p *NotificationPublisher) CheckHealth(ctx context.Context) (string, error) {
 	if p.connection == nil || p.connection.IsClosed() {
 		return "unhealthy", fmt.Errorf("rabbitmq connection is closed or nil")
 	}

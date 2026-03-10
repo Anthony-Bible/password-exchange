@@ -107,8 +107,8 @@ func (c *EncryptionClient) GenerateID(ctx context.Context) (string, error) {
 	return id, nil
 }
 
-// CheckEncryption returns the health status of the encryption service
-func (c *EncryptionClient) CheckEncryption(ctx context.Context) (string, error) {
+// CheckHealth returns the health status of the encryption service
+func (c *EncryptionClient) CheckHealth(ctx context.Context) (string, error) {
 	if c.client == nil {
 		return "unhealthy", fmt.Errorf("encryption client is nil")
 	}

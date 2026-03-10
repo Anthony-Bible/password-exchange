@@ -10,4 +10,7 @@ import (
 type NotificationServicePort interface {
 	// SendMessageNotification sends a notification about a new message
 	SendMessageNotification(ctx context.Context, req domain.MessageNotificationRequest) error
+
+	// CheckHealth returns the health status of the email service
+	CheckHealth(ctx context.Context) (string, error)
 }

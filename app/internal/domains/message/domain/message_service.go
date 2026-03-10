@@ -20,7 +20,6 @@ type MessageService struct {
 	passwordHasher      PasswordHasher
 	urlBuilder          URLBuilder
 	turnstileValidator  TurnstileValidator
-	healthCheckService  HealthCheckService
 }
 
 // NewMessageService creates a new message service
@@ -31,7 +30,6 @@ func NewMessageService(
 	passwordHasher PasswordHasher,
 	urlBuilder URLBuilder,
 	turnstileValidator TurnstileValidator,
-	healthCheckService HealthCheckService,
 ) *MessageService {
 	return &MessageService{
 		encryptionService:   encryptionService,
@@ -40,7 +38,6 @@ func NewMessageService(
 		passwordHasher:      passwordHasher,
 		urlBuilder:          urlBuilder,
 		turnstileValidator:  turnstileValidator,
-		healthCheckService:  healthCheckService,
 	}
 }
 
@@ -297,21 +294,21 @@ func (s *MessageService) HealthCheck(ctx context.Context) (*HealthStatus, error)
 	overallStatus := "healthy"
 
 	// Check Database
-	dbStatus, err := s.healthCheckService.CheckDatabase(ctx)
+	dbStatus, err := s.storageService.CheckHealth(ctx)
 	services["database"] = dbStatus
 	if err != nil || dbStatus != "healthy" {
 		overallStatus = "unhealthy"
 	}
 
 	// Check Encryption
-	encStatus, err := s.healthCheckService.CheckEncryption(ctx)
+	encStatus, err := s.encryptionService.CheckHealth(ctx)
 	services["encryption"] = encStatus
 	if err != nil || encStatus != "healthy" {
 		overallStatus = "unhealthy"
 	}
 
 	// Check Email
-	emailStatus, err := s.healthCheckService.CheckEmail(ctx)
+	emailStatus, err := s.notificationService.CheckHealth(ctx)
 	services["email"] = emailStatus
 	if err != nil || emailStatus != "healthy" {
 		overallStatus = "unhealthy"

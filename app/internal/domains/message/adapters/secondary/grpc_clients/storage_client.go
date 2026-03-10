@@ -143,8 +143,8 @@ func (c *StorageClient) GetMessage(
 	return response, nil
 }
 
-// CheckDatabase returns the health status of the database service
-func (c *StorageClient) CheckDatabase(ctx context.Context) (string, error) {
+// CheckHealth returns the health status of the database service
+func (c *StorageClient) CheckHealth(ctx context.Context) (string, error) {
 	if c.client == nil {
 		return "unhealthy", fmt.Errorf("storage client is nil")
 	}
