@@ -6,12 +6,12 @@ This plan outlines the steps to implement comprehensive service health checks an
 
 The goal of this phase is to replace placeholder health check responses with actual status checks for Database, Encryption, and Email services.
 
-- [ ] **Task: Define Health Check Interfaces and Ports**
-    - [ ] **Red Phase**: Use `red-phase-tester` to write failing tests for health check port interfaces.
-    - [ ] **Green Phase**: Implement secondary ports for health checking in `app/internal/domains/message/ports/secondary/`.
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to improve the interface design.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to verify implementation completeness.
-    - [ ] **Security Audit**: Use `security-auditor` to ensure no sensitive info is leaked in ports.
+- [x] **Task: Define Health Check Interfaces and Ports** [git-hash: b771986]
+    - [x] **Red Phase**: Use `red-phase-tester` to write failing tests for health check port interfaces.
+    - [x] **Green Phase**: Implement secondary ports for health checking in `app/internal/domains/message/ports/secondary/`.
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to improve the interface design.
+    - [x] **Review Phase**: Use `tdd-review-agent` to verify implementation completeness.
+    - [x] **Security Audit**: Use `security-auditor` to ensure no sensitive info is leaked in ports.
     - [ ] [git-hash: ]
 - [ ] **Task: Implement Health Check Adapters**
     - [ ] **Red Phase**: Use `red-phase-tester` to write failing tests for gRPC and RabbitMQ health check implementations.
