@@ -12,13 +12,12 @@ The goal of this phase is to replace placeholder health check responses with act
     - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to improve the interface design.
     - [x] **Review Phase**: Use `tdd-review-agent` to verify implementation completeness.
     - [x] **Security Audit**: Use `security-auditor` to ensure no sensitive info is leaked in ports.
-    - [ ] [git-hash: ]
-- [ ] **Task: Implement Health Check Adapters**
-    - [ ] **Red Phase**: Use `red-phase-tester` to write failing tests for gRPC and RabbitMQ health check implementations.
-    - [ ] **Green Phase**: Implement health check logic for Database service (gRPC), Encryption service (gRPC), and Email service (RabbitMQ).
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to clean up the adapter implementations.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to verify all services are covered.
-    - [ ] **Security Audit**: Use `security-auditor` to check for gRPC/RabbitMQ connection security.
+    - [x] **Task: Implement Health Check Adapters** [git-hash: 30ca18e]
+    - [x] **Red Phase**: Use `red-phase-tester` to write failing tests for gRPC and RabbitMQ health check implementations.
+    - [x] **Green Phase**: Implement health check logic for Database service (gRPC), Encryption service (gRPC), and Email service (RabbitMQ).
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to clean up the adapter implementations.
+    - [x] **Review Phase**: Use `tdd-review-agent` to verify all services are covered.
+    - [x] **Security Audit**: Use `security-auditor` to check for gRPC/RabbitMQ connection security.
     - [ ] [git-hash: ]
 - [ ] **Task: Update API Handler for Health Checks**
     - [ ] **Red Phase**: Use `red-phase-tester` to write failing tests for the `/health` endpoint.
