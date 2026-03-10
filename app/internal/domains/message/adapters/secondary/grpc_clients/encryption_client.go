@@ -107,6 +107,26 @@ func (c *EncryptionClient) GenerateID(ctx context.Context) (string, error) {
 	return id, nil
 }
 
+// CheckEncryption returns the health status of the encryption service
+func (c *EncryptionClient) CheckEncryption(ctx context.Context) (string, error) {
+	if c.client == nil {
+		return "unhealthy", fmt.Errorf("encryption client is nil")
+	}
+
+	// Try to generate a small random string to verify connectivity
+	req := &pb.Randomrequest{
+		RandomLength: 1,
+	}
+
+	_, err := c.client.GenerateRandomString(ctx, req)
+	if err != nil {
+		log.Error().Err(err).Msg("Encryption health check failed")
+		return "unhealthy", err
+	}
+
+	return "healthy", nil
+}
+
 // Close closes the gRPC connection
 func (c *EncryptionClient) Close() error {
 	if c.conn != nil {
