@@ -24,26 +24,27 @@ The goal of this phase is to replace placeholder health check responses with act
     - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the handler logic.
     - [x] **Review Phase**: Use `tdd-review-agent` to verify API response structure.
     - [x] **Security Audit**: Use `security-auditor` to ensure health endpoint doesn't expose internal system details.
-- [ ] **Task: Conductor - User Manual Verification 'Phase 1: Service Health Checks Implementation' (Protocol in workflow.md)**
-    - [ ] [git-hash: ]
+- [x] **Task: Conductor - User Manual Verification 'Phase 1: Service Health Checks Implementation' (Protocol in workflow.md)** [git-hash: 498f9e2]
 
 ## Phase 2: Automated Swagger Documentation
 
 The goal of this phase is to fully automate Swagger documentation generation and ensure all API endpoints are correctly documented.
 
-- [ ] **Task: Configure Swaggo and Document Endpoints**
-    - [ ] **Red Phase**: Use `red-phase-tester` to create a test that fails if Swagger docs are missing or outdated.
-    - [ ] **Green Phase**: Add Swaggo annotations and define models for all message domain handlers.
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to organize Swagger annotations efficiently.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to check documentation accuracy against implementation.
-    - [ ] **Security Audit**: Use `security-auditor` to ensure Swagger docs don't leak internal implementation details.
-    - [ ] [git-hash: ]
-- [ ] **Task: Automate Swagger Generation in Build Script**
-    - [ ] **Red Phase**: Create a test script that fails if `test-build.sh` doesn't produce valid Swagger files.
-    - [ ] **Green Phase**: Update `test-build.sh` to run `swag init`.
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the build script integration.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to verify generated artifacts.
-    - [ ] [git-hash: ]
+- [x] **Task: Configure Swaggo and Document Endpoints** [git-hash: 2a78de5]
+    - [x] **Red Phase**: Use `red-phase-tester` to create a test that fails if Swagger docs are missing or outdated.
+    - [x] **Green Phase**: Add Swaggo annotations and define models for all message domain handlers.
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to organize Swagger annotations efficiently.
+    - [x] **Review Phase**: Use `tdd-review-agent` to check documentation accuracy against implementation.
+    - [x] **Security Audit**: Use `security-auditor` to ensure Swagger docs don't leak internal implementation details.
+- [~] **Task: Automate Swagger Generation in Build Script**
+
+- [x] **Task: Automate Swagger Generation in Build Script** [git-hash: cdbac55]
+    - [x] **Red Phase**: Create a test script that fails if `test-build.sh` doesn't produce valid Swagger files.
+    - [x] **Green Phase**: Update `test-build.sh` to run `swag init`.
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the build script integration.
+    - [x] **Review Phase**: Use `tdd-review-agent` to verify generated artifacts.
+- [~] **Task: Verify Swagger UI Integration**
+
 - [ ] **Task: Verify Swagger UI Integration**
     - [ ] **Red Phase**: Use `red-phase-tester` to write tests that fail if the Swagger UI is inaccessible.
     - [ ] **Green Phase**: Ensure Swagger UI is served at `/api/v1/docs/index.html`.
