@@ -14,6 +14,7 @@ This document defines the technology stack and architectural patterns for Passwo
 - **Cobra & Viper**: For CLI commands and configuration management in Go.
 - **Zerolog**: For structured logging.
 - **Prometheus**: For metrics and monitoring.
+- **Swaggo/swag**: For automated Swagger/OpenAPI documentation generation.
 
 ## Data Storage & Messaging
 - **MySQL/MariaDB**: Primary database for storing encrypted content and metadata.
