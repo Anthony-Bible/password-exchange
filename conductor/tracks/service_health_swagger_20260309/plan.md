@@ -43,14 +43,10 @@ The goal of this phase is to fully automate Swagger documentation generation and
     - [x] **Green Phase**: Update `test-build.sh` to run `swag init`.
     - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to optimize the build script integration.
     - [x] **Review Phase**: Use `tdd-review-agent` to verify generated artifacts.
-- [~] **Task: Verify Swagger UI Integration**
-
-- [ ] **Task: Verify Swagger UI Integration**
-    - [ ] **Red Phase**: Use `red-phase-tester` to write tests that fail if the Swagger UI is inaccessible.
-    - [ ] **Green Phase**: Ensure Swagger UI is served at `/api/v1/docs/index.html`.
-    - [ ] **Refactor Phase**: Use `tdd-refactor-specialist` to improve UI configuration.
-    - [ ] **Review Phase**: Use `tdd-review-agent` to verify final UI accessibility.
-    - [ ] **Security Audit**: Use `security-auditor` to check Swagger UI for common web vulnerabilities.
-    - [ ] [git-hash: ]
+- [x] **Task: Verify Swagger UI Integration** [git-hash: cf794e6]
+    - [x] **Red Phase**: Use `red-phase-tester` to write tests that fail if the Swagger UI is inaccessible.
+    - [x] **Green Phase**: Ensure Swagger UI is served at `/api/v1/docs/index.html`.
+    - [x] **Refactor Phase**: Use `tdd-refactor-specialist` to improve UI configuration.
+    - [x] **Review Phase**: Use `tdd-review-agent` to verify final UI accessibility.
+    - [x] **Security Audit**: Use `security-auditor` to check Swagger UI for common web vulnerabilities.
 - [ ] **Task: Conductor - User Manual Verification 'Phase 2: Automated Swagger Documentation' (Protocol in workflow.md)**
-    - [ ] [git-hash: ]
