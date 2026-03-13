@@ -188,8 +188,14 @@ docker build -t slackbot -f slackbot/Dockerfile .
 # Web service with frontend and REST API
 ./app web --config=config.yaml
 
-# Database service (gRPC)
+# Database service (gRPC) - automatically runs migrations if enabled in config
 ./app database --config=config.yaml
+
+# Database migration management
+./app database migrate status --config=config.yaml
+./app database migrate up --config=config.yaml
+./app database migrate down --config=config.yaml
+./app database migrate create my_migration --config=config.yaml
 
 # Encryption service (gRPC)  
 ./app encryption --config=config.yaml
@@ -213,9 +219,8 @@ Currently we only support Kubernetes. If you don't have a Kubernetes cluster, yo
 
 ### Deployment Steps
 1. **Database Setup**
-   - Download the MySQL file from the root of the project
-   - Update password in create user statements
-   - Import the MySQL schema: `mysql -u user -p < passwordexchange.sql`
+   - The database service handles schema initialization and migrations automatically on startup if `automigrate: true` is set in your configuration.
+   - For manual setup, use the migration commands: `./app database migrate up --config=config.yaml`
 
 2. **Configuration**
    - Edit `kubernetes/secrets.yaml` with your information

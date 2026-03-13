@@ -458,13 +458,13 @@ func TestValidationConstants(t *testing.T) {
 func TestConfigStructure(t *testing.T) {
 	t.Run("config embeds config.Config correctly", func(t *testing.T) {
 		cfg := Config{}
-		
+
 		// Test that we can access embedded fields
 		cfg.DbHost = "testhost"
 		cfg.DbUser = "testuser"
 		cfg.Reminder.Enabled = true
 		cfg.Reminder.CheckAfterHours = 48
-		
+
 		assert.Equal(t, "testhost", cfg.DbHost)
 		assert.Equal(t, "testuser", cfg.DbUser)
 		assert.True(t, cfg.Reminder.Enabled)
@@ -476,27 +476,27 @@ func TestViperFlagIntegration(t *testing.T) {
 	t.Run("command flags are properly bound to viper", func(t *testing.T) {
 		// Reset viper state
 		viper.Reset()
-		
+
 		// Create a test command to simulate CLI usage
 		testCmd := &cobra.Command{
 			Use: "test",
 		}
-		
+
 		// Add the same flags as reminder command
 		testCmd.Flags().String("older-than-hours", "", "Test flag")
 		testCmd.Flags().String("max-reminders", "", "Test flag")
 		testCmd.Flags().Bool("dry-run", false, "Test flag")
-		
+
 		// Bind flags to viper
 		viper.BindPFlag("older-than-hours", testCmd.Flags().Lookup("older-than-hours"))
 		viper.BindPFlag("max-reminders", testCmd.Flags().Lookup("max-reminders"))
 		viper.BindPFlag("dry-run", testCmd.Flags().Lookup("dry-run"))
-		
+
 		// Set flag values
 		testCmd.Flags().Set("older-than-hours", "48")
 		testCmd.Flags().Set("max-reminders", "5")
 		testCmd.Flags().Set("dry-run", "true")
-		
+
 		// Verify viper can read the flag values
 		assert.Equal(t, "48", viper.GetString("older-than-hours"))
 		assert.Equal(t, "5", viper.GetString("max-reminders"))
@@ -517,20 +517,20 @@ func TestCompleteConfigurationFlow(t *testing.T) {
 			os.Unsetenv("PASSWORDEXCHANGE_DBHOST")
 			viper.Reset()
 		}()
-		
+
 		// Set viper flag override
 		viper.Set("older-than-hours", "48")
-		
+
 		// Load configuration
 		var cfg Config
 		bindenvs(&cfg)
 		err := viper.Unmarshal(&cfg)
 		require.NoError(t, err)
-		
+
 		// Apply flag overrides
 		err = applyFlagOverrides(&cfg)
 		require.NoError(t, err)
-		
+
 		// Verify final configuration
 		assert.True(t, cfg.Reminder.Enabled)
 		assert.Equal(t, 48, cfg.Reminder.CheckAfterHours) // Overridden by flag
