@@ -6,7 +6,7 @@ greenlet==3.2.3
 grpcio==1.71.0
 grpcio-tools>=1.62.0
 gunicorn==23.0.0
-importlib-metadata==5.2.0
+importlib-metadata==8.7.1
 itsdangerous==2.2.0
 Jinja2==3.1.6
 mariadb>=1.0.11
