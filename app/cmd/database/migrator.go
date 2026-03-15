@@ -11,21 +11,22 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// Migrator defines the interface for database migrations
+// Migrator defines the interface for database migrations.
 type Migrator interface {
 	Up() error
 	Down() error
 	Version() (uint, bool, error)
 	Create(name string) error
+	Force(version int) error
 }
 
-// defaultMigrator implements the Migrator interface
+// defaultMigrator implements the Migrator interface.
 type defaultMigrator struct {
 	db            *sql.DB
 	migrationsDir string
 }
 
-// NewMigrator creates a new instance of the default Migrator implementation
+// NewMigrator creates a new instance of the default Migrator implementation.
 func NewMigrator(db *sql.DB, migrationsDir string) (Migrator, error) {
 	return &defaultMigrator{
 		db:            db,
@@ -43,6 +44,10 @@ func (m *defaultMigrator) Down() error {
 
 func (m *defaultMigrator) Version() (uint, bool, error) {
 	return migrations.Version(m.db, m.migrationsDir)
+}
+
+func (m *defaultMigrator) Force(version int) error {
+	return migrations.Force(m.db, m.migrationsDir, version)
 }
 
 func (m *defaultMigrator) Create(name string) error {

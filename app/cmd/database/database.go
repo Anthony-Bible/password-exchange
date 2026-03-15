@@ -19,14 +19,14 @@ import (
 var (
 	migrator Migrator
 	cfg      Config
-	// runDatabaseServer is a variable to allow mocking in tests
+	// runDatabaseServer is a variable to allow mocking in tests.
 	runDatabaseServer = func() {
 		log.Info().Msg("Starting database server...")
 		cfg.startServer()
 	}
 )
 
-// databaseCmd represents the database command
+// databaseCmd represents the database command.
 var databaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "Database management and server",
@@ -67,7 +67,7 @@ func runAutoMigrations() error {
 	return nil
 }
 
-// migrateCmd represents the migrate command
+// migrateCmd represents the migrate command.
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Manage database migrations",
@@ -124,6 +124,22 @@ var migrateCreateCmd = &cobra.Command{
 	},
 }
 
+var migrateForceCmd = &cobra.Command{
+	Use:   "force",
+	Short: "Force the migration version",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if migrator == nil {
+			return errors.New("migrator not initialized")
+		}
+		var version int
+		if _, err := fmt.Sscanf(args[0], "%d", &version); err != nil {
+			return fmt.Errorf("invalid version: %w", err)
+		}
+		return migrator.Force(version)
+	},
+}
+
 func initConfigAndMigrator() error {
 	bindenvs(cfg)
 	if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
@@ -131,7 +147,7 @@ func initConfigAndMigrator() error {
 	}
 
 	// Initialize migrator
-	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
 		cfg.PassConfig.DbUser,
 		cfg.PassConfig.DbPass,
 		cfg.PassConfig.DbHost,
@@ -184,6 +200,7 @@ func init() {
 	migrateCmd.AddCommand(migrateDownCmd)
 	migrateCmd.AddCommand(migrateStatusCmd)
 	migrateCmd.AddCommand(migrateCreateCmd)
+	migrateCmd.AddCommand(migrateForceCmd)
 
 	// Register with root command
 	cmd.RootCmd.AddCommand(databaseCmd)

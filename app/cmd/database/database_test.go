@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockMigrator is a mock of the Migrator interface
+// MockMigrator is a mock of the Migrator interface.
 type MockMigrator struct {
 	mock.Mock
 }
@@ -206,7 +206,7 @@ func TestDatabaseCmdRun_MigrationsBeforeServerStart(t *testing.T) {
 	databaseCmd.Run(databaseCmd, []string{})
 
 	// Verify order
-	require.Equal(t, 2, len(callOrder), "Both migrations and server should be called")
+	require.Len(t, callOrder, 2, "Both migrations and server should be called")
 	assert.Equal(t, "migrations", callOrder[0], "Migrations should be called first")
 	assert.Equal(t, "server", callOrder[1], "Server should be called after migrations")
 }
