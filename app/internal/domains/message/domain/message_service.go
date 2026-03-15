@@ -288,6 +288,40 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 	return accessInfo, nil
 }
 
+// HealthCheck returns the aggregated health status of all system components
+func (s *MessageService) HealthCheck(ctx context.Context) (*HealthStatus, error) {
+	services := make(map[string]string)
+	overallStatus := "healthy"
+
+	// Check Database
+	dbStatus, err := s.storageService.CheckHealth(ctx)
+	services["database"] = dbStatus
+	if err != nil || dbStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	// Check Encryption
+	encStatus, err := s.encryptionService.CheckHealth(ctx)
+	services["encryption"] = encStatus
+	if err != nil || encStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	// Check Email
+	emailStatus, err := s.notificationService.CheckHealth(ctx)
+	services["email"] = emailStatus
+	if err != nil || emailStatus != "healthy" {
+		overallStatus = "unhealthy"
+	}
+
+	return &HealthStatus{
+		Status:    overallStatus,
+		Version:   "1.0.0", // TODO: Get from build info/config
+		Timestamp: time.Now(),
+		Services:  services,
+	}, nil
+}
+
 // validateSubmissionRequest validates the message submission request
 func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest) error {
 	if strings.TrimSpace(req.Content) == "" {

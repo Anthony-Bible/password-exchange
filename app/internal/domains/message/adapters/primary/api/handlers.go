@@ -317,22 +317,28 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 // @Success 200 {object} models.HealthCheckResponse "Service health status"
 // @Router /health [get]
 func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
+	ctx := c.Request.Context()
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
 	log.Debug().
 		Interface("correlation_id", correlationID).
 		Msg("Health check requested")
 
-	// TODO: Implement actual health checks for services
+	healthStatus, err := h.messageService.HealthCheck(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Health check failed")
+		// Even if it fails, we return the status if we have it
+		if healthStatus == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Health check failed"})
+			return
+		}
+	}
+
 	response := models.HealthCheckResponse{
-		Status:    "healthy",
-		Version:   "1.0.0", // TODO: Get from build info
-		Timestamp: time.Now(),
-		Services: map[string]string{
-			"database":   "healthy", // TODO: Check database service
-			"encryption": "healthy", // TODO: Check encryption service
-			"email":      "healthy", // TODO: Check email service
-		},
+		Status:    healthStatus.Status,
+		Version:   healthStatus.Version,
+		Timestamp: healthStatus.Timestamp,
+		Services:  healthStatus.Services,
 	}
 
 	c.JSON(http.StatusOK, response)

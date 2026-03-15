@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"\x83\x01\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\x12\x16\n\x0emax_view_count\x18\x05 \x01(\x05\x12\x12\n\nexpires_at\x18\x06 \x01(\t\"s\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x16\n\x0emax_view_count\x18\x04 \x01(\x05\x12\x17\n\x0frecipient_email\x18\x05 \x01(\t\"n\n\x1aGetUnviewedMessagesRequest\x12\x18\n\x10older_than_hours\x18\x01 \x01(\x05\x12\x15\n\rmax_reminders\x18\x02 \x01(\x05\x12\x1f\n\x17reminder_interval_hours\x18\x03 \x01(\x05\"t\n\x0fUnviewedMessage\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x11\n\tunique_id\x18\x02 \x01(\t\x12\x17\n\x0frecipient_email\x18\x03 \x01(\t\x12\x0f\n\x07\x63reated\x18\x04 \x01(\t\x12\x10\n\x08\x64\x61ys_old\x18\x05 \x01(\x05\"L\n\x1bGetUnviewedMessagesResponse\x12-\n\x08messages\x18\x01 \x03(\x0b\x32\x1b.databasepb.UnviewedMessage\"?\n\x12LogReminderRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\"/\n\x19GetReminderHistoryRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\"q\n\x10ReminderLogEntry\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\x12\x16\n\x0ereminder_count\x18\x03 \x01(\x05\x12\x1a\n\x12last_reminder_sent\x18\x04 \x01(\t\"K\n\x1aGetReminderHistoryResponse\x12-\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.databasepb.ReminderLogEntry2\xfe\x03\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12t\n\x1fGetUnviewedMessagesForReminders\x12&.databasepb.GetUnviewedMessagesRequest\x1a\'.databasepb.GetUnviewedMessagesResponse\"\x00\x12K\n\x0fLogReminderSent\x12\x1e.databasepb.LogReminderRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x65\n\x12GetReminderHistory\x12%.databasepb.GetReminderHistoryRequest\x1a&.databasepb.GetReminderHistoryResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"\x83\x01\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\x12\x16\n\x0emax_view_count\x18\x05 \x01(\x05\x12\x12\n\nexpires_at\x18\x06 \x01(\t\"\x87\x01\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x16\n\x0emax_view_count\x18\x04 \x01(\x05\x12\x17\n\x0frecipient_email\x18\x05 \x01(\t\x12\x12\n\nexpires_at\x18\x06 \x01(\t\"n\n\x1aGetUnviewedMessagesRequest\x12\x18\n\x10older_than_hours\x18\x01 \x01(\x05\x12\x15\n\rmax_reminders\x18\x02 \x01(\x05\x12\x1f\n\x17reminder_interval_hours\x18\x03 \x01(\x05\"t\n\x0fUnviewedMessage\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x11\n\tunique_id\x18\x02 \x01(\t\x12\x17\n\x0frecipient_email\x18\x03 \x01(\t\x12\x0f\n\x07\x63reated\x18\x04 \x01(\t\x12\x10\n\x08\x64\x61ys_old\x18\x05 \x01(\x05\"L\n\x1bGetUnviewedMessagesResponse\x12-\n\x08messages\x18\x01 \x03(\x0b\x32\x1b.databasepb.UnviewedMessage\"?\n\x12LogReminderRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\"/\n\x19GetReminderHistoryRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\"q\n\x10ReminderLogEntry\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\x12\x16\n\x0ereminder_count\x18\x03 \x01(\x05\x12\x1a\n\x12last_reminder_sent\x18\x04 \x01(\t\"K\n\x1aGetReminderHistoryResponse\x12-\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.databasepb.ReminderLogEntry2\xfe\x03\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12t\n\x1fGetUnviewedMessagesForReminders\x12&.databasepb.GetUnviewedMessagesRequest\x1a\'.databasepb.GetUnviewedMessagesResponse\"\x00\x12K\n\x0fLogReminderSent\x12\x1e.databasepb.LogReminderRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x65\n\x12GetReminderHistory\x12%.databasepb.GetReminderHistoryRequest\x1a&.databasepb.GetReminderHistoryResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,22 +37,22 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SELECTREQUEST']._serialized_end=88
   _globals['_SELECTRESPONSE']._serialized_start=91
   _globals['_SELECTRESPONSE']._serialized_end=222
-  _globals['_INSERTREQUEST']._serialized_start=224
-  _globals['_INSERTREQUEST']._serialized_end=339
-  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_start=341
-  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_end=451
-  _globals['_UNVIEWEDMESSAGE']._serialized_start=453
-  _globals['_UNVIEWEDMESSAGE']._serialized_end=569
-  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_start=571
-  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_end=647
-  _globals['_LOGREMINDERREQUEST']._serialized_start=649
-  _globals['_LOGREMINDERREQUEST']._serialized_end=712
-  _globals['_GETREMINDERHISTORYREQUEST']._serialized_start=714
-  _globals['_GETREMINDERHISTORYREQUEST']._serialized_end=761
-  _globals['_REMINDERLOGENTRY']._serialized_start=763
-  _globals['_REMINDERLOGENTRY']._serialized_end=876
-  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_start=878
-  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_end=953
-  _globals['_DBSERVICE']._serialized_start=956
-  _globals['_DBSERVICE']._serialized_end=1466
+  _globals['_INSERTREQUEST']._serialized_start=225
+  _globals['_INSERTREQUEST']._serialized_end=360
+  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_start=362
+  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_end=472
+  _globals['_UNVIEWEDMESSAGE']._serialized_start=474
+  _globals['_UNVIEWEDMESSAGE']._serialized_end=590
+  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_start=592
+  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_end=668
+  _globals['_LOGREMINDERREQUEST']._serialized_start=670
+  _globals['_LOGREMINDERREQUEST']._serialized_end=733
+  _globals['_GETREMINDERHISTORYREQUEST']._serialized_start=735
+  _globals['_GETREMINDERHISTORYREQUEST']._serialized_end=782
+  _globals['_REMINDERLOGENTRY']._serialized_start=784
+  _globals['_REMINDERLOGENTRY']._serialized_end=897
+  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_start=899
+  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_end=974
+  _globals['_DBSERVICE']._serialized_start=977
+  _globals['_DBSERVICE']._serialized_end=1487
 # @@protoc_insertion_point(module_scope)

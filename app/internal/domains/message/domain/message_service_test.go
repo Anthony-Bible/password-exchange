@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"testing"
 	"time"
 
@@ -34,6 +35,11 @@ func (m *mockEncryptionService) GenerateID(ctx context.Context) (string, error) 
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockEncryptionService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 type mockStorageService struct{ mock.Mock }
 
 func (m *mockStorageService) StoreMessage(ctx context.Context, req MessageStorageRequest) error {
@@ -57,11 +63,21 @@ func (m *mockStorageService) GetMessage(
 	return args.Get(0).(*MessageStorageResponse), args.Error(1)
 }
 
+func (m *mockStorageService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
+}
+
 type mockNotificationService struct{ mock.Mock }
 
 func (m *mockNotificationService) SendMessageNotification(ctx context.Context, req MessageNotificationRequest) error {
 	args := m.Called(ctx, req)
 	return args.Error(0)
+}
+
+func (m *mockNotificationService) CheckHealth(ctx context.Context) (string, error) {
+	args := m.Called(ctx)
+	return args.String(0), args.Error(1)
 }
 
 type mockPasswordHasher struct{ mock.Mock }
@@ -91,6 +107,34 @@ func (m *mockTurnstileValidator) ValidateToken(ctx context.Context, token string
 }
 
 // --- Tests ---
+
+func TestHealthCheck(t *testing.T) {
+	enc := new(mockEncryptionService)
+	stor := new(mockStorageService)
+	notif := new(mockNotificationService)
+	hasher := new(mockPasswordHasher)
+	urlb := new(mockURLBuilder)
+	turnstile := new(mockTurnstileValidator)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+
+	stor.On("CheckHealth", mock.Anything).Return("healthy", nil)
+	enc.On("CheckHealth", mock.Anything).Return("healthy", nil)
+	notif.On("CheckHealth", mock.Anything).Return("unhealthy", fmt.Errorf("connection error"))
+
+	resp, err := svc.HealthCheck(context.Background())
+
+	assert.NoError(t, err)
+	assert.Equal(t, "unhealthy", resp.Status)
+	assert.Equal(t, "healthy", resp.Services["database"])
+	assert.Equal(t, "healthy", resp.Services["encryption"])
+	assert.Equal(t, "unhealthy", resp.Services["email"])
+	assert.NotZero(t, resp.Timestamp)
+
+	stor.AssertExpectations(t)
+	enc.AssertExpectations(t)
+	notif.AssertExpectations(t)
+}
 
 func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
 	// RetrieveMessage must carry ExpiresAt from storage through to the response.

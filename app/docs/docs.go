@@ -245,22 +245,34 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "documentation": {
-                    "type": "string"
+                    "description": "URL to the API documentation",
+                    "type": "string",
+                    "example": "/api/v1/docs"
                 },
                 "endpoints": {
+                    "description": "Map of available API endpoints",
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    },
+                    "example": {
+                        "submit": "POST /api/v1/messages"
                     }
                 },
                 "features": {
+                    "description": "Map of enabled features",
                     "type": "object",
                     "additionalProperties": {
                         "type": "boolean"
+                    },
+                    "example": {
+                        "emailNotifications": true
                     }
                 },
                 "version": {
-                    "type": "string"
+                    "description": "API version",
+                    "type": "string",
+                    "example": "1.0.0"
                 }
             }
         },
@@ -268,19 +280,29 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "services": {
+                    "description": "Detailed status of individual components",
                     "type": "object",
                     "additionalProperties": {
                         "type": "string"
+                    },
+                    "example": {
+                        "database": "healthy",
+                        "encryption": "healthy"
                     }
                 },
                 "status": {
-                    "type": "string"
+                    "description": "Overall status of the service",
+                    "type": "string",
+                    "example": "healthy"
                 },
                 "timestamp": {
+                    "description": "Timestamp of the health check",
                     "type": "string"
                 },
                 "version": {
-                    "type": "string"
+                    "description": "Service version",
+                    "type": "string",
+                    "example": "1.0.0"
                 }
             }
         },
@@ -288,20 +310,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "exists": {
-                    "type": "boolean"
+                    "description": "Whether the message exists and is still available",
+                    "type": "boolean",
+                    "example": true
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "When the message will expire",
                     "type": "string"
                 },
                 "hasBeenAccessed": {
-                    "type": "boolean"
+                    "description": "Whether the message has already been accessed",
+                    "type": "boolean",
+                    "example": false
                 },
                 "messageId": {
-                    "type": "string"
+                    "description": "Unique identifier for the message",
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "requiresPassphrase": {
-                    "type": "boolean"
+                    "description": "Whether a passphrase is required to decrypt the message",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -312,10 +342,14 @@ const docTemplate = `{
             ],
             "properties": {
                 "decryptionKey": {
-                    "type": "string"
+                    "description": "Base64 encoded encryption key",
+                    "type": "string",
+                    "example": "YWJjZGVmZ2hpams="
                 },
                 "passphrase": {
-                    "type": "string"
+                    "description": "Optional passphrase (required if message is passphrase protected)",
+                    "type": "string",
+                    "example": "correct-horse-battery-staple"
                 }
             }
         },
@@ -323,23 +357,32 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "content": {
-                    "type": "string"
+                    "description": "Decrypted content of the message",
+                    "type": "string",
+                    "example": "This was a secret message"
                 },
                 "decryptedAt": {
+                    "description": "When the message was decrypted",
                     "type": "string"
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "When the message will expire",
                     "type": "string"
                 },
                 "maxViewCount": {
-                    "type": "integer"
+                    "description": "Maximum allowed views for this message",
+                    "type": "integer",
+                    "example": 5
                 },
                 "messageId": {
-                    "type": "string"
+                    "description": "Unique identifier for the message",
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "viewCount": {
-                    "type": "integer"
+                    "description": "Current number of times the message has been viewed",
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -350,44 +393,70 @@ const docTemplate = `{
             ],
             "properties": {
                 "additionalInfo": {
-                    "type": "string"
+                    "description": "Optional additional information for the recipient",
+                    "type": "string",
+                    "example": "Valid for 24 hours"
                 },
                 "antiSpamAnswer": {
-                    "type": "string"
+                    "description": "Answer to the anti-spam question (required if notifications enabled)",
+                    "type": "string",
+                    "example": "blue"
                 },
                 "content": {
+                    "description": "Secret content to be encrypted",
                     "type": "string",
                     "maxLength": 10000,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "This is a secret message"
                 },
                 "expirationHours": {
                     "description": "ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.\nValid range: 1–2160 (1 hour to 90 days).",
                     "type": "integer",
                     "maximum": 2160,
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 24
                 },
                 "maxViewCount": {
+                    "description": "Maximum number of times the message can be viewed (0 for unlimited)",
                     "type": "integer",
                     "maximum": 100,
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 1
                 },
                 "passphrase": {
+                    "description": "Optional passphrase for additional security",
                     "type": "string",
-                    "maxLength": 500
+                    "maxLength": 500,
+                    "example": "correct-horse-battery-staple"
                 },
                 "questionId": {
-                    "type": "integer"
+                    "description": "ID of the anti-spam question",
+                    "type": "integer",
+                    "example": 0
                 },
                 "recipient": {
-                    "$ref": "#/definitions/models.Recipient"
+                    "description": "Recipient information (required if notifications enabled)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Recipient"
+                        }
+                    ]
                 },
                 "sendNotification": {
-                    "type": "boolean"
+                    "description": "Whether to send email notifications",
+                    "type": "boolean",
+                    "example": true
                 },
                 "sender": {
-                    "$ref": "#/definitions/models.Sender"
+                    "description": "Sender information (required if notifications enabled)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Sender"
+                        }
+                    ]
                 },
                 "turnstileToken": {
+                    "description": "Cloudflare Turnstile token for verification",
                     "type": "string",
                     "maxLength": 2048
                 }
@@ -397,23 +466,33 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "decryptUrl": {
-                    "type": "string"
+                    "description": "API URL to decrypt the message",
+                    "type": "string",
+                    "example": "https://api.password.exchange/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt?key=YWJjZGVmZ2hpams="
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "When the message will expire",
                     "type": "string"
                 },
                 "key": {
-                    "type": "string"
+                    "description": "Base64 encoded encryption key",
+                    "type": "string",
+                    "example": "YWJjZGVmZ2hpams="
                 },
                 "messageId": {
-                    "type": "string"
+                    "description": "Unique identifier for the created message",
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "notificationSent": {
-                    "type": "boolean"
+                    "description": "Whether an email notification was successfully sent",
+                    "type": "boolean",
+                    "example": true
                 },
                 "webUrl": {
-                    "type": "string"
+                    "description": "Web URL for human-friendly access",
+                    "type": "string",
+                    "example": "https://password.exchange/decrypt/123e4567-e89b-12d3-a456-426614174000/YWJjZGVmZ2hpams="
                 }
             }
         },
@@ -424,12 +503,16 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "description": "Recipient's email address",
+                    "type": "string",
+                    "example": "jane@example.com"
                 },
                 "name": {
+                    "description": "Recipient's name",
                     "type": "string",
                     "maxLength": 100,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "Jane Smith"
                 }
             }
         },
@@ -441,12 +524,16 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "description": "Sender's email address",
+                    "type": "string",
+                    "example": "john@example.com"
                 },
                 "name": {
+                    "description": "Sender's name",
                     "type": "string",
                     "maxLength": 100,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "John Doe"
                 }
             }
         },
@@ -484,8 +571,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Secure password sharing service that allows users to submit encrypted messages and share them through unique, one-time access URLs.\nThe service provides optional email notifications and passphrase protection for enhanced security.\n\n## Email Reminder System\n\nThe service includes an automated email reminder system that runs via scheduled jobs (CronJob in Kubernetes).\nThis system automatically sends reminder emails to recipients who haven't viewed their secure messages after\na configurable time period. The reminder system is not exposed through REST API endpoints but operates as\na background service with configurable timing, retry logic, and resilience patterns.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {

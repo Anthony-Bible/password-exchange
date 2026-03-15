@@ -108,6 +108,7 @@ type EncryptionService interface {
 	Encrypt(ctx context.Context, plaintext []string, key []byte) ([]string, error)
 	Decrypt(ctx context.Context, ciphertext []string, key []byte) ([]string, error)
 	GenerateID(ctx context.Context) (string, error)
+	CheckHealth(ctx context.Context) (string, error)
 }
 
 // StorageService defines the interface for message storage operations
@@ -115,11 +116,13 @@ type StorageService interface {
 	StoreMessage(ctx context.Context, req MessageStorageRequest) error
 	RetrieveMessage(ctx context.Context, req MessageRetrievalStorageRequest) (*MessageStorageResponse, error)
 	GetMessage(ctx context.Context, req MessageRetrievalStorageRequest) (*MessageStorageResponse, error)
+	CheckHealth(ctx context.Context) (string, error)
 }
 
 // NotificationService defines the interface for notification operations
 type NotificationService interface {
 	SendMessageNotification(ctx context.Context, req MessageNotificationRequest) error
+	CheckHealth(ctx context.Context) (string, error)
 }
 
 // PasswordHasher defines the interface for password hashing operations
@@ -131,6 +134,14 @@ type PasswordHasher interface {
 // URLBuilder defines the interface for building message URLs
 type URLBuilder interface {
 	BuildDecryptURL(messageID string, encryptionKey []byte) string
+}
+
+// HealthStatus represents the aggregated health status of the system
+type HealthStatus struct {
+	Status    string            `json:"status"`
+	Version   string            `json:"version"`
+	Timestamp time.Time         `json:"timestamp"`
+	Services  map[string]string `json:"services"`
 }
 
 // TurnstileValidator defines the interface for Cloudflare Turnstile validation

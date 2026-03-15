@@ -3,8 +3,13 @@ FROM ubuntu:24.04 AS builder
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y golang-go git gcc musl-dev libmariadb-dev && \
+    apt-get install -y golang-go git gcc musl-dev libmariadb-dev protobuf-compiler wget unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# Install protoc-gen-go and protoc-gen-go-grpc
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+ENV PATH="$PATH:$(go env GOPATH)/bin"
 
 # Set working directory
 WORKDIR /app
@@ -15,8 +20,20 @@ COPY app/go.mod app/go.sum ./
 # Download dependencies
 RUN go mod download
 
-# Copy the source code
+# Copy the source code and protos
+COPY protos/ /protos/
 COPY app/ ./
+
+# Generate protobuf files
+RUN protoc --proto_path=/protos \
+       --go_out=. --go_opt=module=github.com/Anthony-Bible/password-exchange/app \
+       --go-grpc_out=. --go-grpc_opt=module=github.com/Anthony-Bible/password-exchange/app \
+       /protos/database.proto /protos/encryption.proto /protos/message.proto && \
+    mkdir -p pkg/pb/{database,encryption,message} && \
+    mv databasepb/* pkg/pb/database/ 2>/dev/null || true && \
+    mv encryptionpb/* pkg/pb/encryption/ 2>/dev/null || true && \
+    mv messagepb/* pkg/pb/message/ 2>/dev/null || true && \
+    rmdir databasepb encryptionpb messagepb 2>/dev/null || true
 
 # Build the application
 RUN CGO_ENABLED=1 GOOS=linux go build -o app
