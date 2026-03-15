@@ -12,6 +12,7 @@ This document defines the technology stack and architectural patterns for Passwo
 - **Flask**: Python web framework for the Slackbot.
 - **Slack Bolt**: Framework for building Slack applications.
 - **Cobra & Viper**: For CLI commands and configuration management in Go.
+- **golang-migrate**: For automated database schema migrations and version tracking.
 - **Zerolog**: For structured logging.
 - **Prometheus**: For metrics and monitoring.
 

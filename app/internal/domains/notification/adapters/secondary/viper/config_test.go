@@ -106,13 +106,12 @@ email:
 func TestValidation(t *testing.T) {
 	configContent := `
 email:
-  url: "invalid-url"
+  url: "http://invalid-url"
 `
 	setupTestViper(t, configContent)
 
 	adapter := NewViperConfigAdapter()
 
-	// This test expects an error for invalid inputs, even if the validation logic is stubbed out.
-	// Replace the stubbed-out validation logic with actual implementation in the future.
+	// This test expects an error for invalid inputs (HTTP instead of HTTPS)
 	assert.NotNil(t, adapter.ValidatePasswordExchangeURL())
 }

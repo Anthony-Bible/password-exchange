@@ -17,7 +17,7 @@ func TestShutdownSidecar(t *testing.T) {
 		}))
 		defer istioServer.Close()
 
-		shutdownSidecar(istioServer.URL, "http://localhost:12346")
+		shutdownSidecar(istioServer.URL+"/quitquitquit", "http://localhost:12346")
 	})
 
 	// Test case 2: Linkerd sidecar is available
@@ -28,7 +28,7 @@ func TestShutdownSidecar(t *testing.T) {
 		}))
 		defer linkerdServer.Close()
 
-		shutdownSidecar("http://localhost:12345", linkerdServer.URL)
+		shutdownSidecar("http://localhost:12345", linkerdServer.URL+"/shutdown")
 	})
 
 	// Test case 3: No sidecar is available

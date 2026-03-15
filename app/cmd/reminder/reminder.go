@@ -38,7 +38,6 @@ const (
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
 
-
 // Simple logger adapter
 type loggerAdapter struct {
 	logger zerolog.Logger
@@ -53,12 +52,27 @@ type logEvent struct {
 	event *zerolog.Event
 }
 
-func (e *logEvent) Err(err error) contracts.LogEvent              { e.event = e.event.Err(err); return e }
-func (e *logEvent) Str(key, value string) contracts.LogEvent     { e.event = e.event.Str(key, value); return e }
-func (e *logEvent) Int(key string, value int) contracts.LogEvent { e.event = e.event.Int(key, value); return e }
-func (e *logEvent) Bool(key string, value bool) contracts.LogEvent { e.event = e.event.Bool(key, value); return e }
-func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent { e.event = e.event.Dur(key, value); return e }
-func (e *logEvent) Float64(key string, value float64) contracts.LogEvent { e.event = e.event.Float64(key, value); return e }
+func (e *logEvent) Err(err error) contracts.LogEvent { e.event = e.event.Err(err); return e }
+func (e *logEvent) Str(key, value string) contracts.LogEvent {
+	e.event = e.event.Str(key, value)
+	return e
+}
+func (e *logEvent) Int(key string, value int) contracts.LogEvent {
+	e.event = e.event.Int(key, value)
+	return e
+}
+func (e *logEvent) Bool(key string, value bool) contracts.LogEvent {
+	e.event = e.event.Bool(key, value)
+	return e
+}
+func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent {
+	e.event = e.event.Dur(key, value)
+	return e
+}
+func (e *logEvent) Float64(key string, value float64) contracts.LogEvent {
+	e.event = e.event.Float64(key, value)
+	return e
+}
 func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 
 // Config represents the reminder command configuration
@@ -145,7 +159,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		if mysqlAdapter, ok := storageAdapter.(*mysql.MySQLAdapter); ok {
 			// Set up defer before attempting connection
 			defer mysqlAdapter.Close()
-			
+
 			if err := mysqlAdapter.Connect(); err != nil {
 				log.Error().
 					Err(err).
@@ -171,7 +185,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			Password:  cfg.RabPass,
 			QueueName: cfg.RabQName,
 		}
-		
+
 		notificationPublisher, err := rabbitmq.NewNotificationPublisher(rabbitConfig)
 		if err != nil {
 			log.Error().
@@ -183,7 +197,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			return
 		}
 		defer notificationPublisher.Close()
-       
+
 		// Create port adapters
 		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
 		loggerPort := &loggerAdapter{logger: log.Logger}
@@ -206,7 +220,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		log.Info().
 			Str("operation", "processing_completed").
 			Msg("Reminder email processing completed")
-		
+
 		// Signal Istio sidecar to shut down for cronjob completion
 		shutdownSidecar("http://localhost:15020/quitquitquit", "http://localhost:4191/shutdown")
 	},

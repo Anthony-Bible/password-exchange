@@ -49,16 +49,16 @@ func ValidateStruct(s interface{}) map[string]interface{} {
 		return nil
 	}
 
-	errors := make(map[string]interface{})
+	errs := make(map[string]interface{})
 
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, fieldError := range validationErrors {
 			fieldName := fieldError.Field()
-			errors[fieldName] = getValidationErrorMessage(fieldError)
+			errs[fieldName] = getValidationErrorMessage(fieldError)
 		}
 	}
 
-	return errors
+	return errs
 }
 
 // ValidateMessageSubmission validates a message submission request with conditional logic

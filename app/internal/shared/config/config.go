@@ -49,10 +49,10 @@ type Config struct {
 
 // ReminderConfig contains configuration for the reminder email system
 type ReminderConfig struct {
-	Enabled           bool `mapstructure:"enabled" default:"true"`
-	CheckAfterHours   int  `mapstructure:"checkafterhours" default:"24"`   // Default: 24
-	MaxReminders      int  `mapstructure:"maxreminders" default:"3"`      // Default: 3
-	ReminderInterval  int  `mapstructure:"reminderinterval" default:"24"`  // Default: 24 hours
+	Enabled          bool `mapstructure:"enabled" default:"true"`
+	CheckAfterHours  int  `mapstructure:"checkafterhours" default:"24"`  // Default: 24
+	MaxReminders     int  `mapstructure:"maxreminders" default:"3"`      // Default: 3
+	ReminderInterval int  `mapstructure:"reminderinterval" default:"24"` // Default: 24 hours
 }
 
 // NewReminderConfig creates a new ReminderConfig with proper default values
@@ -77,7 +77,7 @@ func (r *ReminderConfig) WithDefaults() {
 	if r.ReminderInterval == 0 {
 		r.ReminderInterval = 24
 	}
-	
+
 	// Ensure values are within valid ranges, apply defaults if out of range
 	if r.CheckAfterHours < 1 || r.CheckAfterHours > 8760 {
 		r.CheckAfterHours = 24
@@ -113,6 +113,7 @@ type PassConfig struct {
 	RunningEnvironment    string `mapstructure:"runningenvironment"`
 	TurnstileSecret       string `mapstructure:"turnstile_secret"`
 	DefaultMaxViewCount   int    `mapstructure:"defaultmaxviewcount"`
+	AutoMigrate           bool   `mapstructure:"automigrate"`
 	DbPort                int    `mapstructure:"dbport"`
 	EmailPort             int    `mapstructure:"emailport"`
 	RabPort               int    `mapstructure:"rabport"`
