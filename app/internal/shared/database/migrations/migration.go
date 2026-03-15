@@ -91,6 +91,21 @@ func (m *Migrator) Version() (uint, bool, error) {
 	return version, dirty, nil
 }
 
+// Force sets the migration version.
+func (m *Migrator) Force(version int) error {
+	mig, err := m.getMigrateInstance()
+	if err != nil {
+		return err
+	}
+	defer mig.Close()
+
+	if err := mig.Force(version); err != nil {
+		return fmt.Errorf("could not force migration version: %w", err)
+	}
+
+	return nil
+}
+
 func (m *Migrator) getMigrateInstance() (*migrate.Migrate, error) {
 	var driver database.Driver
 	var err error
@@ -145,4 +160,13 @@ func Version(db *sql.DB, migrationsDir string) (uint, bool, error) {
 		return 0, false, err
 	}
 	return m.Version()
+}
+
+// Force sets the migration version using package-level wrapper.
+func Force(db *sql.DB, migrationsDir string, version int) error {
+	m, err := NewMigrator(db, migrationsDir)
+	if err != nil {
+		return err
+	}
+	return m.Force(version)
 }
