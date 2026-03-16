@@ -230,6 +230,16 @@ func (s *GRPCServer) GetReminderHistory(
 	return &database.GetReminderHistoryResponse{Entries: entries}, nil
 }
 
+// Ping handles gRPC ping requests by checking the health of the storage service
+func (s *GRPCServer) Ping(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	err := s.storageService.HealthCheck(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("gRPC ping failed - storage service unhealthy")
+		return nil, status.Errorf(codes.Unavailable, "storage service unhealthy: %v", err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
 // runExpiredMessageCleanup runs a background loop that periodically deletes expired messages.
 // It exits when ctx is cancelled (i.e., when the server shuts down).
 func (s *GRPCServer) runExpiredMessageCleanup(ctx context.Context) {

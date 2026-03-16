@@ -1,0 +1,97 @@
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpassword}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-passwordExchange}
+      MARIADB_USER: ${MARIADB_USER:-passwordexchange}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-p${MARIADB_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base service template for the Go application
+  app-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PASSWORDEXCHANGE_DBHOST: db
+      PASSWORDEXCHANGE_DBPORT: 3306
+      PASSWORDEXCHANGE_DBUSER: passwordexchange
+      PASSWORDEXCHANGE_DBPASS: password
+      PASSWORDEXCHANGE_DBNAME: passwordExchange
+      PASSWORDEXCHANGE_RABHOST: rabbitmq
+      PASSWORDEXCHANGE_RABPORT: 5672
+      PASSWORDEXCHANGE_RABUSER: guest
+      PASSWORDEXCHANGE_RABPASS: guest
+      PASSWORDEXCHANGE_RABQNAME: notifications
+      PASSWORDEXCHANGE_RUNNINGENVIRONMENT: dev
+      PASSWORDEXCHANGE_LOGLEVEL: info
+      PASSWORDEXCHANGE_DATABASEDEVSERVICE: database-service:50051
+      PASSWORDEXCHANGE_ENCRYPTIONDEVSERVICE: encryption-service:50051
+      PASSWORDEXCHANGE_DEVHOST: localhost:8080/
+      PASSWORDEXCHANGE_PRODHOST: localhost:8080/
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  database-service:
+    extends: app-base
+    command: ["database"]
+    ports:
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/50051' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  encryption-service:
+    extends: app-base
+    command: ["encryption"]
+    ports:
+      - "50052:50051"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/null > /dev/tcp/localhost/50051' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  email-service:
+    extends: app-base
+    command: ["email"]
+
+  web-service:
+    extends: app-base
+    command: ["web"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      database-service:
+        condition: service_healthy
+      encryption-service:
+        condition: service_healthy

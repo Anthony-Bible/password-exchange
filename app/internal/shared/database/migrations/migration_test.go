@@ -48,7 +48,7 @@ func TestUp(t *testing.T) {
 		dir := createTempMigrations(t)
 		defer os.RemoveAll(dir)
 
-		err := Up(db, dir)
+		err := Up(db, "sqlite3", dir)
 		assert.NoError(t, err)
 
 		// Re-open DB since Up closes it
@@ -62,7 +62,7 @@ func TestUp(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "users", name)
 
-		version, dirty, err := Version(db, dir)
+		version, dirty, err := Version(db, "sqlite3", dir)
 		assert.NoError(t, err)
 		assert.Equal(t, uint(2), version)
 		assert.False(t, dirty)
@@ -72,7 +72,7 @@ func TestUp(t *testing.T) {
 		_, db := setupTestDB(t)
 		defer db.Close()
 
-		err := Up(db, "/non/existent/path")
+		err := Up(db, "sqlite3", "/non/existent/path")
 		assert.Error(t, err)
 	})
 
@@ -84,7 +84,7 @@ func TestUp(t *testing.T) {
 
 		os.WriteFile(filepath.Join(tmpDir, "0001_bad.up.sql"), []byte("INVALID SQL;"), 0o644)
 
-		err := Up(db, tmpDir)
+		err := Up(db, "sqlite3", tmpDir)
 		assert.Error(t, err)
 	})
 }
@@ -97,7 +97,7 @@ func TestDown(t *testing.T) {
 		defer os.RemoveAll(dir)
 
 		// Apply all
-		err := Up(db, dir)
+		err := Up(db, "sqlite3", dir)
 		require.NoError(t, err)
 
 		// Re-open DB
@@ -105,7 +105,7 @@ func TestDown(t *testing.T) {
 		require.NoError(t, err)
 
 		// Roll back one
-		err = Down(db, dir)
+		err = Down(db, "sqlite3", dir)
 		assert.NoError(t, err)
 
 		// Re-open DB
@@ -113,7 +113,7 @@ func TestDown(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Close()
 
-		version, _, err := Version(db, dir)
+		version, _, err := Version(db, "sqlite3", dir)
 		assert.NoError(t, err)
 		assert.Equal(t, uint(1), version)
 	})
@@ -124,7 +124,7 @@ func TestDown(t *testing.T) {
 		dir := createTempMigrations(t)
 		defer os.RemoveAll(dir)
 
-		err := Down(db, dir)
+		err := Down(db, "sqlite3", dir)
 		assert.Error(t, err)
 	})
 }
@@ -136,7 +136,7 @@ func TestVersion(t *testing.T) {
 		dir := createTempMigrations(t)
 		defer os.RemoveAll(dir)
 
-		version, dirty, err := Version(db, dir)
+		version, dirty, err := Version(db, "sqlite3", dir)
 		assert.NoError(t, err)
 		assert.Equal(t, uint(0), version)
 		assert.False(t, dirty)
@@ -151,13 +151,13 @@ func TestVersion(t *testing.T) {
 		// Create a migration that will fail
 		os.WriteFile(filepath.Join(tmpDir, "0001_fail.up.sql"), []byte("CREATE TABLE test (id INT); FAIL ME;"), 0o644)
 
-		_ = Up(db, tmpDir) // This is expected to fail
+		_ = Up(db, "sqlite3", tmpDir) // This is expected to fail
 
 		// Re-open DB
 		db, _ = sql.Open("sqlite3", dbPath)
 		defer db.Close()
 
-		_, dirty, err := Version(db, tmpDir)
+		_, dirty, err := Version(db, "sqlite3", tmpDir)
 		assert.NoError(t, err)
 		assert.True(t, dirty)
 	})

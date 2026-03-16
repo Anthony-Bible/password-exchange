@@ -207,7 +207,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 // @Produce json
 // @Param id path string true "Message ID" format(uuid)
 // @Param request body models.MessageDecryptRequest true "Decryption request"
-// @Success 200 {object} models.MessageDecryptResponse "Message successfully decrypted"
+// @Success 200 {object} models.MessageDecryptResponse "Message decrypted successfully"
 // @Failure 401 {object} models.StandardErrorResponse "Invalid passphrase"
 // @Failure 404 {object} models.StandardErrorResponse "Message not found or expired"
 // @Failure 410 {object} models.StandardErrorResponse "Message already consumed"
@@ -317,22 +317,28 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 // @Success 200 {object} models.HealthCheckResponse "Service health status"
 // @Router /health [get]
 func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
+	ctx := c.Request.Context()
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
 	log.Debug().
 		Interface("correlation_id", correlationID).
 		Msg("Health check requested")
 
-	// TODO: Implement actual health checks for services
+	healthStatus, err := h.messageService.HealthCheck(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Health check failed")
+		// Even if it fails, we return the status if we have it
+		if healthStatus == nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Health check failed"})
+			return
+		}
+	}
+
 	response := models.HealthCheckResponse{
-		Status:    "healthy",
-		Version:   "1.0.0", // TODO: Get from build info
-		Timestamp: time.Now(),
-		Services: map[string]string{
-			"database":   "healthy", // TODO: Check database service
-			"encryption": "healthy", // TODO: Check encryption service
-			"email":      "healthy", // TODO: Check email service
-		},
+		Status:    healthStatus.Status,
+		Version:   healthStatus.Version,
+		Timestamp: healthStatus.Timestamp,
+		Services:  healthStatus.Services,
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -355,7 +361,7 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 
 	response := models.APIInfoResponse{
 		Version:       "1.0.0",
-		Documentation: "/api/v1/docs", // TODO: Implement swagger docs
+		Documentation: "/api/v1/docs",
 		Endpoints: map[string]string{
 			"submit":  "POST /api/v1/messages",
 			"access":  "GET /api/v1/messages/{id}",

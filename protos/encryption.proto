@@ -1,6 +1,7 @@
 syntax = "proto3";
-package encryptionpb;
-option go_package = "github.com/Anthony-Bible/password-exchange/app/encryptionpb";
+package encryption;
+option go_package = "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption";
+import "google/protobuf/empty.proto";
 
  /**   message PlainMessage{
       string Email = 1;
@@ -49,4 +50,5 @@ service MessageService{
   rpc encryptMessage(EncryptedMessageRequest) returns (EncryptedMessageResponse) {}
   rpc DecryptMessage(DecryptedMessageRequest) returns (DecryptedMessageResponse) {}
   rpc GenerateRandomString(Randomrequest) returns (Randomresponse) {}
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }

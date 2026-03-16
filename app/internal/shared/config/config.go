@@ -1,7 +1,11 @@
 package config
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	"github.com/spf13/viper"
 )
 
 var AppConfig PassConfig
@@ -13,6 +17,34 @@ type EmailConfig struct {
 	Body      EmailBody      `mapstructure:"body"`
 	Sender    EmailSender    `mapstructure:"sender"`
 	URL       string         `mapstructure:"url"`
+}
+
+// ... rest of the file ...
+
+// BindEnvs is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
+func BindEnvs(iface interface{}, parts ...string) {
+	ifv := reflect.ValueOf(iface)
+	if ifv.Kind() == reflect.Ptr {
+		ifv = ifv.Elem()
+	}
+	for i := 0; i < ifv.NumField(); i++ {
+		v := ifv.Field(i)
+		t := ifv.Type().Field(i)
+		tv, ok := t.Tag.Lookup("mapstructure")
+		if !ok {
+			continue
+		}
+		if tv == ",squash" {
+			BindEnvs(v.Interface(), parts...)
+			continue
+		}
+		switch v.Kind() {
+		case reflect.Struct:
+			BindEnvs(v.Interface(), append(parts, tv)...)
+		default:
+			viper.BindEnv(strings.Join(append(parts, tv), "."))
+		}
+	}
 }
 
 // EmailTemplates defines paths or inline content for email templates.

@@ -7,17 +7,17 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/database/migrations"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	migrator Migrator
+	migrator migrations.IMigrator
 	cfg      Config
 	// runDatabaseServer is a variable to allow mocking in tests.
 	runDatabaseServer = func() {
@@ -141,7 +141,7 @@ var migrateForceCmd = &cobra.Command{
 }
 
 func initConfigAndMigrator() error {
-	bindenvs(cfg)
+	config.BindEnvs(cfg)
 	if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
@@ -159,38 +159,12 @@ func initConfigAndMigrator() error {
 		return fmt.Errorf("error opening database: %w", err)
 	}
 
-	m, err := NewMigrator(db, "migrations")
+	m, err := migrations.NewMigrator(db, "mysql", "migrations")
 	if err != nil {
 		return fmt.Errorf("error initializing migrator: %w", err)
 	}
 	migrator = m
 	return nil
-}
-
-// this is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
-func bindenvs(iface interface{}, parts ...string) {
-	ifv := reflect.ValueOf(iface)
-	if ifv.Kind() == reflect.Ptr {
-		ifv = ifv.Elem()
-	}
-	for i := 0; i < ifv.NumField(); i++ {
-		v := ifv.Field(i)
-		t := ifv.Type().Field(i)
-		tv, ok := t.Tag.Lookup("mapstructure")
-		if !ok {
-			continue
-		}
-		if tv == ",squash" {
-			bindenvs(v.Interface(), parts...)
-			continue
-		}
-		switch v.Kind() {
-		case reflect.Struct:
-			bindenvs(v.Interface(), append(parts, tv)...)
-		default:
-			viper.BindEnv(strings.Join(append(parts, tv), "."))
-		}
-	}
 }
 
 func init() {

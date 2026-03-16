@@ -22,28 +22,29 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x65ncryption.proto\x12\x0c\x65ncryptionpb\":\n\x17\x45ncryptedMessageRequest\x12\x12\n\nplain_text\x18\x01 \x03(\t\x12\x0b\n\x03key\x18\x02 \x01(\x0c\".\n\x18\x45ncryptedMessageResponse\x12\x12\n\nciphertext\x18\x01 \x03(\t\":\n\x17\x44\x65\x63ryptedMessageRequest\x12\x12\n\nciphertext\x18\x01 \x03(\t\x12\x0b\n\x03key\x18\x02 \x01(\x0c\"-\n\x18\x44\x65\x63ryptedMessageResponse\x12\x11\n\tplaintext\x18\x01 \x03(\t\"E\n\x0eRandomresponse\x12\x18\n\x10\x65ncryption_bytes\x18\x01 \x01(\x0c\x12\x19\n\x11\x65ncryption_string\x18\x02 \x01(\t\"&\n\rRandomrequest\x12\x15\n\rrandom_length\x18\x01 \x01(\x05\x32\xab\x02\n\x0eMessageService\x12\x61\n\x0e\x65ncryptMessage\x12%.encryptionpb.EncryptedMessageRequest\x1a&.encryptionpb.EncryptedMessageResponse\"\x00\x12\x61\n\x0e\x44\x65\x63ryptMessage\x12%.encryptionpb.DecryptedMessageRequest\x1a&.encryptionpb.DecryptedMessageResponse\"\x00\x12S\n\x14GenerateRandomString\x12\x1b.encryptionpb.Randomrequest\x1a\x1c.encryptionpb.Randomresponse\"\x00\x42=Z;github.com/Anthony-Bible/password-exchange/app/encryptionpbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x65ncryption.proto\x12\nencryption\x1a\x1bgoogle/protobuf/empty.proto\":\n\x17\x45ncryptedMessageRequest\x12\x12\n\nplain_text\x18\x01 \x03(\t\x12\x0b\n\x03key\x18\x02 \x01(\x0c\".\n\x18\x45ncryptedMessageResponse\x12\x12\n\nciphertext\x18\x01 \x03(\t\":\n\x17\x44\x65\x63ryptedMessageRequest\x12\x12\n\nciphertext\x18\x01 \x03(\t\x12\x0b\n\x03key\x18\x02 \x01(\x0c\"-\n\x18\x44\x65\x63ryptedMessageResponse\x12\x11\n\tplaintext\x18\x01 \x03(\t\"E\n\x0eRandomresponse\x12\x18\n\x10\x65ncryption_bytes\x18\x01 \x01(\x0c\x12\x19\n\x11\x65ncryption_string\x18\x02 \x01(\t\"&\n\rRandomrequest\x12\x15\n\rrandom_length\x18\x01 \x01(\x05\x32\xd9\x02\n\x0eMessageService\x12]\n\x0e\x65ncryptMessage\x12#.encryption.EncryptedMessageRequest\x1a$.encryption.EncryptedMessageResponse\"\x00\x12]\n\x0e\x44\x65\x63ryptMessage\x12#.encryption.DecryptedMessageRequest\x1a$.encryption.DecryptedMessageResponse\"\x00\x12O\n\x14GenerateRandomString\x12\x19.encryption.Randomrequest\x1a\x1a.encryption.Randomresponse\"\x00\x12\x38\n\x04Ping\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\"\x00\x42\x42Z@github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryptionb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'encryption_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z;github.com/Anthony-Bible/password-exchange/app/encryptionpb'
-  _globals['_ENCRYPTEDMESSAGEREQUEST']._serialized_start=34
-  _globals['_ENCRYPTEDMESSAGEREQUEST']._serialized_end=92
-  _globals['_ENCRYPTEDMESSAGERESPONSE']._serialized_start=94
-  _globals['_ENCRYPTEDMESSAGERESPONSE']._serialized_end=140
-  _globals['_DECRYPTEDMESSAGEREQUEST']._serialized_start=142
-  _globals['_DECRYPTEDMESSAGEREQUEST']._serialized_end=200
-  _globals['_DECRYPTEDMESSAGERESPONSE']._serialized_start=202
-  _globals['_DECRYPTEDMESSAGERESPONSE']._serialized_end=247
-  _globals['_RANDOMRESPONSE']._serialized_start=249
-  _globals['_RANDOMRESPONSE']._serialized_end=318
-  _globals['_RANDOMREQUEST']._serialized_start=320
-  _globals['_RANDOMREQUEST']._serialized_end=358
-  _globals['_MESSAGESERVICE']._serialized_start=361
-  _globals['_MESSAGESERVICE']._serialized_end=660
+  _globals['DESCRIPTOR']._serialized_options = b'Z@github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption'
+  _globals['_ENCRYPTEDMESSAGEREQUEST']._serialized_start=61
+  _globals['_ENCRYPTEDMESSAGEREQUEST']._serialized_end=119
+  _globals['_ENCRYPTEDMESSAGERESPONSE']._serialized_start=121
+  _globals['_ENCRYPTEDMESSAGERESPONSE']._serialized_end=167
+  _globals['_DECRYPTEDMESSAGEREQUEST']._serialized_start=169
+  _globals['_DECRYPTEDMESSAGEREQUEST']._serialized_end=227
+  _globals['_DECRYPTEDMESSAGERESPONSE']._serialized_start=229
+  _globals['_DECRYPTEDMESSAGERESPONSE']._serialized_end=274
+  _globals['_RANDOMRESPONSE']._serialized_start=276
+  _globals['_RANDOMRESPONSE']._serialized_end=345
+  _globals['_RANDOMREQUEST']._serialized_start=347
+  _globals['_RANDOMREQUEST']._serialized_end=385
+  _globals['_MESSAGESERVICE']._serialized_start=388
+  _globals['_MESSAGESERVICE']._serialized_end=733
 # @@protoc_insertion_point(module_scope)

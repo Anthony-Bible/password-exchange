@@ -2,7 +2,7 @@ syntax = "proto3";
 package messagepb;
 
 
-option go_package = "github.com/Anthony-Bible/password-exchange/app/messagepb";
+option go_package = "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message";
 message Message {
     string email = 1;
     string first_name = 2;

@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GRPCServer implements the gRPC encryption service
@@ -46,6 +47,12 @@ func (s *GRPCServer) Start() error {
 	}
 
 	return nil
+}
+
+// Ping handles health check requests
+func (s *GRPCServer) Ping(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
+	log.Debug().Msg("Received Ping request")
+	return &emptypb.Empty{}, nil
 }
 
 // EncryptMessage handles encryption requests

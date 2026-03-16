@@ -47,6 +47,11 @@ func (m *MockMessageService) RetrieveMessage(
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
 }
 
+func (m *MockMessageService) HealthCheck(ctx context.Context) (*domain.HealthStatus, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*domain.HealthStatus), args.Error(1)
+}
+
 func setupTestRouter(mockService *MockMessageService) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
@@ -214,6 +219,19 @@ func TestHealthCheck(t *testing.T) {
 	mockService := new(MockMessageService)
 	router := setupTestRouter(mockService)
 
+	expectedHealth := &domain.HealthStatus{
+		Status:    "unhealthy",
+		Version:   "1.0.0",
+		Timestamp: time.Now(),
+		Services: map[string]string{
+			"database":   "healthy",
+			"encryption": "healthy",
+			"email":      "unhealthy",
+		},
+	}
+
+	mockService.On("HealthCheck", mock.Anything).Return(expectedHealth, nil)
+
 	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -224,11 +242,13 @@ func TestHealthCheck(t *testing.T) {
 	var response models.HealthCheckResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "healthy", response.Status)
+	assert.Equal(t, "unhealthy", response.Status)
 	assert.Equal(t, "1.0.0", response.Version)
-	assert.Contains(t, response.Services, "database")
-	assert.Contains(t, response.Services, "encryption")
-	assert.Contains(t, response.Services, "email")
+	assert.Equal(t, "healthy", response.Services["database"])
+	assert.Equal(t, "healthy", response.Services["encryption"])
+	assert.Equal(t, "unhealthy", response.Services["email"])
+
+	mockService.AssertExpectations(t)
 }
 
 func TestAPIInfo(t *testing.T) {

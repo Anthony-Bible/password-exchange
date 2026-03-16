@@ -3,16 +3,26 @@ definitions:
   models.APIInfoResponse:
     properties:
       documentation:
+        description: URL to the API documentation
+        example: /api/v1/docs
         type: string
       endpoints:
         additionalProperties:
           type: string
+        description: Map of available API endpoints
+        example:
+          submit: POST /api/v1/messages
         type: object
       features:
         additionalProperties:
           type: boolean
+        description: Map of enabled features
+        example:
+          emailNotifications: true
         type: object
       version:
+        description: API version
+        example: 1.0.0
         type: string
     type: object
   models.HealthCheckResponse:
@@ -20,34 +30,54 @@ definitions:
       services:
         additionalProperties:
           type: string
+        description: Detailed status of individual components
+        example:
+          database: healthy
+          encryption: healthy
         type: object
       status:
+        description: Overall status of the service
+        example: healthy
         type: string
       timestamp:
+        description: Timestamp of the health check
         type: string
       version:
+        description: Service version
+        example: 1.0.0
         type: string
     type: object
   models.MessageAccessInfoResponse:
     properties:
       exists:
+        description: Whether the message exists and is still available
+        example: true
         type: boolean
       expiresAt:
-        description: ExpiresAt is the time the message will expire. Null for legacy
-          messages that predate expiry tracking.
+        description: When the message will expire
         type: string
       hasBeenAccessed:
+        description: Whether the message has already been accessed
+        example: false
         type: boolean
       messageId:
+        description: Unique identifier for the message
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       requiresPassphrase:
+        description: Whether a passphrase is required to decrypt the message
+        example: true
         type: boolean
     type: object
   models.MessageDecryptRequest:
     properties:
       decryptionKey:
+        description: Base64 encoded encryption key
+        example: YWJjZGVmZ2hpams=
         type: string
       passphrase:
+        description: Optional passphrase (required if message is passphrase protected)
+        example: correct-horse-battery-staple
         type: string
     required:
     - decryptionKey
@@ -55,27 +85,41 @@ definitions:
   models.MessageDecryptResponse:
     properties:
       content:
+        description: Decrypted content of the message
+        example: This was a secret message
         type: string
       decryptedAt:
+        description: When the message was decrypted
         type: string
       expiresAt:
-        description: ExpiresAt is the time the message will expire. Null for legacy
-          messages that predate expiry tracking.
+        description: When the message will expire
         type: string
       maxViewCount:
+        description: Maximum allowed views for this message
+        example: 5
         type: integer
       messageId:
+        description: Unique identifier for the message
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       viewCount:
+        description: Current number of times the message has been viewed
+        example: 1
         type: integer
     type: object
   models.MessageSubmissionRequest:
     properties:
       additionalInfo:
+        description: Optional additional information for the recipient
+        example: Valid for 24 hours
         type: string
       antiSpamAnswer:
+        description: Answer to the anti-spam question (required if notifications enabled)
+        example: blue
         type: string
       content:
+        description: Secret content to be encrypted
+        example: This is a secret message
         maxLength: 10000
         minLength: 1
         type: string
@@ -83,25 +127,39 @@ definitions:
         description: |-
           ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.
           Valid range: 1–2160 (1 hour to 90 days).
+        example: 24
         maximum: 2160
         minimum: 0
         type: integer
       maxViewCount:
+        description: Maximum number of times the message can be viewed (0 for unlimited)
+        example: 1
         maximum: 100
         minimum: 0
         type: integer
       passphrase:
+        description: Optional passphrase for additional security
+        example: correct-horse-battery-staple
         maxLength: 500
         type: string
       questionId:
+        description: ID of the anti-spam question
+        example: 0
         type: integer
       recipient:
-        $ref: '#/definitions/models.Recipient'
+        allOf:
+        - $ref: '#/definitions/models.Recipient'
+        description: Recipient information (required if notifications enabled)
       sendNotification:
+        description: Whether to send email notifications
+        example: true
         type: boolean
       sender:
-        $ref: '#/definitions/models.Sender'
+        allOf:
+        - $ref: '#/definitions/models.Sender'
+        description: Sender information (required if notifications enabled)
       turnstileToken:
+        description: Cloudflare Turnstile token for verification
         maxLength: 2048
         type: string
     required:
@@ -110,25 +168,38 @@ definitions:
   models.MessageSubmissionResponse:
     properties:
       decryptUrl:
+        description: API URL to decrypt the message
+        example: https://api.password.exchange/api/v1/messages/123e4567-e89b-12d3-a456-426614174000/decrypt?key=YWJjZGVmZ2hpams=
         type: string
       expiresAt:
-        description: ExpiresAt is the time the message will expire. Null for legacy
-          messages that predate expiry tracking.
+        description: When the message will expire
         type: string
       key:
+        description: Base64 encoded encryption key
+        example: YWJjZGVmZ2hpams=
         type: string
       messageId:
+        description: Unique identifier for the created message
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       notificationSent:
+        description: Whether an email notification was successfully sent
+        example: true
         type: boolean
       webUrl:
+        description: Web URL for human-friendly access
+        example: https://password.exchange/decrypt/123e4567-e89b-12d3-a456-426614174000/YWJjZGVmZ2hpams=
         type: string
     type: object
   models.Recipient:
     properties:
       email:
+        description: Recipient's email address
+        example: jane@example.com
         type: string
       name:
+        description: Recipient's name
+        example: Jane Smith
         maxLength: 100
         minLength: 1
         type: string
@@ -138,8 +209,12 @@ definitions:
   models.Sender:
     properties:
       email:
+        description: Sender's email address
+        example: john@example.com
         type: string
       name:
+        description: Sender's name
+        example: John Doe
         maxLength: 100
         minLength: 1
         type: string
@@ -308,7 +383,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Message successfully decrypted
+          description: Message decrypted successfully
           schema:
             $ref: '#/definitions/models.MessageDecryptResponse'
         "401":
