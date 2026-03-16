@@ -6,11 +6,11 @@ RUN apt-get update && \
     apt-get install -y git gcc musl-dev libmariadb-dev protobuf-compiler wget unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install pinned Go toolchain matching app/go.mod (Go 1.25)
-RUN wget https://go.dev/dl/go1.25.linux-amd64.tar.gz && \
+# Install pinned Go toolchain matching app/go.mod (Go 1.25.0)
+RUN wget https://go.dev/dl/go1.25.0.linux-amd64.tar.gz && \
     rm -rf /usr/local/go && \
-    tar -C /usr/local -xzf go1.25.linux-amd64.tar.gz && \
-    rm go1.25.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.25.0.linux-amd64.tar.gz && \
+    rm go1.25.0.linux-amd64.tar.gz
 
 # Ensure Go toolchain and Go-installed binaries are on PATH
 ENV PATH="/usr/local/go/bin:/root/go/bin:${PATH}"
