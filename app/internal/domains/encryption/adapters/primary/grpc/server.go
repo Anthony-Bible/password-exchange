@@ -9,7 +9,9 @@ import (
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -52,6 +54,11 @@ func (s *GRPCServer) Start() error {
 // Ping handles health check requests
 func (s *GRPCServer) Ping(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
 	log.Debug().Msg("Received Ping request")
+	err := s.encryptionService.HealthCheck(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("gRPC ping failed - encryption service unhealthy")
+		return nil, status.Error(codes.Unavailable, "encryption service unhealthy")
+	}
 	return &emptypb.Empty{}, nil
 }
 
