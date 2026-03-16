@@ -235,7 +235,7 @@ func (s *GRPCServer) Ping(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty
 	err := s.storageService.HealthCheck(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("gRPC ping failed - storage service unhealthy")
-		return nil, status.Errorf(codes.Unavailable, "storage service unhealthy: %v", err)
+		return nil, status.Error(codes.Unavailable, "storage service unhealthy")
 	}
 	return &emptypb.Empty{}, nil
 }

@@ -2,25 +2,54 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // mockStorageService is a minimal stub implementing primary.StorageServicePort for testing.
 type mockStorageService struct {
-	storeErr error
+	storeErr       error
+	healthCheckErr error
 }
 
-func (m *mockStorageService) StoreMessage(ctx context.Context, msg interface{}) error {
+func (m *mockStorageService) StoreMessage(ctx context.Context, msg *domain.Message) error {
 	return m.storeErr
 }
 
-// Insert_ExpiresAt tests exercise only the validation logic in GRPCServer.Insert.
-// A nil storageService is safe because validation happens before StoreMessage is called.
+func (m *mockStorageService) RetrieveMessage(ctx context.Context, uniqueID string) (*domain.Message, error) {
+	return nil, nil
+}
+
+func (m *mockStorageService) GetMessage(ctx context.Context, uniqueID string) (*domain.Message, error) {
+	return nil, nil
+}
+
+func (m *mockStorageService) CleanupExpiredMessages(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockStorageService) GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error) {
+	return nil, nil
+}
+
+func (m *mockStorageService) LogReminderSent(ctx context.Context, messageID int, emailAddress string) error {
+	return nil
+}
+
+func (m *mockStorageService) GetReminderHistory(ctx context.Context, messageID int) ([]*domain.ReminderLogEntry, error) {
+	return nil, nil
+}
+
+func (m *mockStorageService) HealthCheck(ctx context.Context) error {
+	return m.healthCheckErr
+}
 
 func newServerForTest() *GRPCServer {
 	return &GRPCServer{storageService: nil}
@@ -107,5 +136,60 @@ func TestParseExpiresAt_ValidRFC3339(t *testing.T) {
 	expected, _ := time.Parse(time.RFC3339, input)
 	if !result.Equal(expected) {
 		t.Errorf("expected %v, got %v", expected, *result)
+	}
+}
+
+func TestPing(t *testing.T) {
+	tests := []struct {
+		name           string
+		healthCheckErr error
+		wantCode       codes.Code
+		wantMsg        string
+	}{
+		{
+			name:           "success",
+			healthCheckErr: nil,
+			wantCode:       codes.OK,
+			wantMsg:        "",
+		},
+		{
+			name:           "unhealthy - generic error message",
+			healthCheckErr: errors.New("database connection refused: internal detail 123"),
+			wantCode:       codes.Unavailable,
+			wantMsg:        "storage service unhealthy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &mockStorageService{healthCheckErr: tt.healthCheckErr}
+			s := &GRPCServer{storageService: mock}
+
+			_, err := s.Ping(context.Background(), &emptypb.Empty{})
+
+			if tt.wantCode == codes.OK {
+				if err != nil {
+					t.Fatalf("expected nil error, got %v", err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Fatal("expected error, got nil")
+			}
+
+			st, ok := status.FromError(err)
+			if !ok {
+				t.Fatalf("expected gRPC status error, got %v", err)
+			}
+
+			if st.Code() != tt.wantCode {
+				t.Errorf("expected code %v, got %v", tt.wantCode, st.Code())
+			}
+
+			if st.Message() != tt.wantMsg {
+				t.Errorf("expected message %q, got %q", tt.wantMsg, st.Message())
+			}
+		})
 	}
 }
