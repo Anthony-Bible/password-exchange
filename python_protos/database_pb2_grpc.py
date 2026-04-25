@@ -36,34 +36,39 @@ class dbServiceStub(object):
             channel: A grpc.Channel.
         """
         self.Select = channel.unary_unary(
-                '/databasepb.dbService/Select',
+                '/database.dbService/Select',
                 request_serializer=database__pb2.SelectRequest.SerializeToString,
                 response_deserializer=database__pb2.SelectResponse.FromString,
                 _registered_method=True)
         self.Insert = channel.unary_unary(
-                '/databasepb.dbService/Insert',
+                '/database.dbService/Insert',
                 request_serializer=database__pb2.InsertRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
         self.GetMessage = channel.unary_unary(
-                '/databasepb.dbService/GetMessage',
+                '/database.dbService/GetMessage',
                 request_serializer=database__pb2.SelectRequest.SerializeToString,
                 response_deserializer=database__pb2.SelectResponse.FromString,
                 _registered_method=True)
         self.GetUnviewedMessagesForReminders = channel.unary_unary(
-                '/databasepb.dbService/GetUnviewedMessagesForReminders',
+                '/database.dbService/GetUnviewedMessagesForReminders',
                 request_serializer=database__pb2.GetUnviewedMessagesRequest.SerializeToString,
                 response_deserializer=database__pb2.GetUnviewedMessagesResponse.FromString,
                 _registered_method=True)
         self.LogReminderSent = channel.unary_unary(
-                '/databasepb.dbService/LogReminderSent',
+                '/database.dbService/LogReminderSent',
                 request_serializer=database__pb2.LogReminderRequest.SerializeToString,
                 response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
         self.GetReminderHistory = channel.unary_unary(
-                '/databasepb.dbService/GetReminderHistory',
+                '/database.dbService/GetReminderHistory',
                 request_serializer=database__pb2.GetReminderHistoryRequest.SerializeToString,
                 response_deserializer=database__pb2.GetReminderHistoryResponse.FromString,
+                _registered_method=True)
+        self.Ping = channel.unary_unary(
+                '/database.dbService/Ping',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
 
 
@@ -106,6 +111,12 @@ class dbServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Ping(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_dbServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -139,11 +150,16 @@ def add_dbServiceServicer_to_server(servicer, server):
                     request_deserializer=database__pb2.GetReminderHistoryRequest.FromString,
                     response_serializer=database__pb2.GetReminderHistoryResponse.SerializeToString,
             ),
+            'Ping': grpc.unary_unary_rpc_method_handler(
+                    servicer.Ping,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'databasepb.dbService', rpc_method_handlers)
+            'database.dbService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('databasepb.dbService', rpc_method_handlers)
+    server.add_registered_method_handlers('database.dbService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -164,7 +180,7 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/Select',
+            '/database.dbService/Select',
             database__pb2.SelectRequest.SerializeToString,
             database__pb2.SelectResponse.FromString,
             options,
@@ -191,7 +207,7 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/Insert',
+            '/database.dbService/Insert',
             database__pb2.InsertRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
@@ -218,7 +234,7 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/GetMessage',
+            '/database.dbService/GetMessage',
             database__pb2.SelectRequest.SerializeToString,
             database__pb2.SelectResponse.FromString,
             options,
@@ -245,7 +261,7 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/GetUnviewedMessagesForReminders',
+            '/database.dbService/GetUnviewedMessagesForReminders',
             database__pb2.GetUnviewedMessagesRequest.SerializeToString,
             database__pb2.GetUnviewedMessagesResponse.FromString,
             options,
@@ -272,7 +288,7 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/LogReminderSent',
+            '/database.dbService/LogReminderSent',
             database__pb2.LogReminderRequest.SerializeToString,
             google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
@@ -299,9 +315,36 @@ class dbService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/databasepb.dbService/GetReminderHistory',
+            '/database.dbService/GetReminderHistory',
             database__pb2.GetReminderHistoryRequest.SerializeToString,
             database__pb2.GetReminderHistoryResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Ping(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/database.dbService/Ping',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
             insecure,

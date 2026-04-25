@@ -24,14 +24,14 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rmessage.proto\x12\tmessagepb\"\xd6\x01\n\x07Message\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nfirst_name\x18\x02 \x01(\t\x12\x18\n\x10other_first_name\x18\x03 \x01(\t\x12\x17\n\x0fother_last_name\x18\x04 \x01(\t\x12\x13\n\x0bother_email\x18\x05 \x01(\t\x12\x11\n\tunique_id\x18\x06 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x07 \x01(\t\x12\x0e\n\x06\x65rrors\x18\x08 \x01(\t\x12\x0b\n\x03url\x18\t \x01(\t\x12\x0e\n\x06hidden\x18\n \x01(\t\x12\x0f\n\x07\x63\x61ptcha\x18\x0b \x01(\tB:Z8github.com/Anthony-Bible/password-exchange/app/messagepbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rmessage.proto\x12\tmessagepb\"\xd6\x01\n\x07Message\x12\r\n\x05\x65mail\x18\x01 \x01(\t\x12\x12\n\nfirst_name\x18\x02 \x01(\t\x12\x18\n\x10other_first_name\x18\x03 \x01(\t\x12\x17\n\x0fother_last_name\x18\x04 \x01(\t\x12\x13\n\x0bother_email\x18\x05 \x01(\t\x12\x11\n\tunique_id\x18\x06 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x07 \x01(\t\x12\x0e\n\x06\x65rrors\x18\x08 \x01(\t\x12\x0b\n\x03url\x18\t \x01(\t\x12\x0e\n\x06hidden\x18\n \x01(\t\x12\x0f\n\x07\x63\x61ptcha\x18\x0b \x01(\tB?Z=github.com/Anthony-Bible/password-exchange/app/pkg/pb/messageb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'message_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'Z8github.com/Anthony-Bible/password-exchange/app/messagepb'
+  _globals['DESCRIPTOR']._serialized_options = b'Z=github.com/Anthony-Bible/password-exchange/app/pkg/pb/message'
   _globals['_MESSAGE']._serialized_start=29
   _globals['_MESSAGE']._serialized_end=243
 # @@protoc_insertion_point(module_scope)

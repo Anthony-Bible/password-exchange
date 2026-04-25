@@ -47,7 +47,7 @@ func TestIntegration_CleanDatabase(t *testing.T) {
 	defer db.Close()
 
 	// 2. Run Up
-	err = Up(db, testMigrationsDir)
+	err = Up(db, "sqlite3", testMigrationsDir)
 	assert.NoError(t, err)
 
 	// Re-open DB
@@ -66,7 +66,7 @@ func TestIntegration_CleanDatabase(t *testing.T) {
 	assert.Equal(t, "email_reminders", tableName)
 
 	// Check version
-	version, dirty, err := Version(db, testMigrationsDir)
+	version, dirty, err := Version(db, "sqlite3", testMigrationsDir)
 	assert.NoError(t, err)
 	assert.Equal(t, uint(2), version)
 	assert.False(t, dirty)
@@ -109,7 +109,7 @@ func TestIntegration_ExistingDatabase(t *testing.T) {
 	db, err = sql.Open("sqlite3", dbPath)
 	require.NoError(t, err)
 
-	err = Up(db, testMigrationsDir)
+	err = Up(db, "sqlite3", testMigrationsDir)
 	// This might fail if the library expects to manage the schema from the start
 	// But since it's "IF NOT EXISTS", it should pass.
 	assert.NoError(t, err)
@@ -124,7 +124,7 @@ func TestIntegration_ExistingDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "new_table", tableName)
 
-	version, _, err := Version(db, testMigrationsDir)
+	version, _, err := Version(db, "sqlite3", testMigrationsDir)
 	assert.NoError(t, err)
 	assert.Equal(t, uint(2), version)
 }

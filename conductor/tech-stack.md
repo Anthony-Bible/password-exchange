@@ -15,6 +15,7 @@ This document defines the technology stack and architectural patterns for Passwo
 - **golang-migrate**: For automated database schema migrations and version tracking.
 - **Zerolog**: For structured logging.
 - **Prometheus**: For metrics and monitoring.
+- **Swaggo/swag**: For automated Swagger/OpenAPI documentation generation.
 
 ## Data Storage & Messaging
 - **MySQL/MariaDB**: Primary database for storing encrypted content and metadata.

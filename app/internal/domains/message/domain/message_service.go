@@ -288,6 +288,63 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 	return accessInfo, nil
 }
 
+// HealthCheck returns the aggregated health status of all system components
+func (s *MessageService) HealthCheck(ctx context.Context) (*HealthStatus, error) {
+	type result struct {
+		name   string
+		status string
+	}
+	resultChan := make(chan result, 3)
+
+	checkFunc := func(name string, check func(context.Context) (string, error)) {
+		status, err := check(ctx)
+		if err != nil || status != "healthy" {
+			resultChan <- result{name: name, status: "unhealthy"}
+		} else {
+			resultChan <- result{name: name, status: "healthy"}
+		}
+	}
+
+	go checkFunc("database", s.storageService.CheckHealth)
+	go checkFunc("encryption", s.encryptionService.CheckHealth)
+	go checkFunc("email", s.notificationService.CheckHealth)
+
+	services := make(map[string]string)
+	overallStatus := "healthy"
+	remaining := 3
+
+loop:
+	for i := 0; i < 3; i++ {
+		select {
+		case res := <-resultChan:
+			services[res.name] = res.status
+			if res.status != "healthy" {
+				overallStatus = "unhealthy"
+			}
+			remaining--
+		case <-ctx.Done():
+			overallStatus = "unhealthy"
+			break loop
+		}
+	}
+
+	// Mark remaining services as timeout if context finished early
+	if remaining > 0 {
+		for _, name := range []string{"database", "encryption", "email"} {
+			if _, ok := services[name]; !ok {
+				services[name] = "timeout"
+			}
+		}
+	}
+
+	return &HealthStatus{
+		Status:    overallStatus,
+		Version:   "1.0.0", // TODO: Get from build info/config
+		Timestamp: time.Now(),
+		Services:  services,
+	}, nil
+}
+
 // validateSubmissionRequest validates the message submission request
 func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest) error {
 	if strings.TrimSpace(req.Content) == "" {

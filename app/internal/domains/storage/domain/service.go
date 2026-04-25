@@ -154,8 +154,6 @@ func (s *StorageService) GetReminderHistory(ctx context.Context, messageID int) 
 
 // HealthCheck verifies the storage service is healthy
 func (s *StorageService) HealthCheck(ctx context.Context) error {
-	// For now, just log that health check was called
-	// In a real implementation, this might check repository connectivity
 	log.Debug().Msg("Storage service health check requested")
-	return nil
+	return s.repository.Ping()
 }

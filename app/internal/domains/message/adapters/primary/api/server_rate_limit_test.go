@@ -167,6 +167,8 @@ func TestServerRateLimiting(t *testing.T) {
 		server := NewServer(mockService)
 		router := server.GetRouter()
 
+		mockService.On("HealthCheck", mock.Anything).Return(&domain.HealthStatus{Status: "healthy"}, nil)
+
 		// Test that 300 requests succeed (within rate limit)
 		for i := 0; i < 300; i++ {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)

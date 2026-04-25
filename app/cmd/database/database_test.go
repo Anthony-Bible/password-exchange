@@ -2,6 +2,7 @@ package database
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockMigrator is a mock of the Migrator interface.
+// MockMigrator is a mock of the migrations.IMigrator interface.
 type MockMigrator struct {
 	mock.Mock
 }
@@ -32,6 +33,21 @@ func (m *MockMigrator) Version() (uint, bool, error) {
 
 func (m *MockMigrator) Create(name string) error {
 	args := m.Called(name)
+	return args.Error(0)
+}
+
+func (m *MockMigrator) Force(version int) error {
+	args := m.Called(version)
+	return args.Error(0)
+}
+
+func (m *MockMigrator) Ping(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockMigrator) Close() error {
+	args := m.Called()
 	return args.Error(0)
 }
 

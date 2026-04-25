@@ -7,6 +7,7 @@ import (
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // EncryptionClient implements the EncryptionServicePort using gRPC
@@ -105,6 +106,21 @@ func (c *EncryptionClient) GenerateID(ctx context.Context) (string, error) {
 	id := resp.GetEncryptionString()
 	log.Debug().Str("id", id).Msg("Generated unique ID successfully")
 	return id, nil
+}
+
+// CheckHealth returns the health status of the encryption service
+func (c *EncryptionClient) CheckHealth(ctx context.Context) (string, error) {
+	if c.client == nil {
+		return "unhealthy", fmt.Errorf("encryption client is nil")
+	}
+
+	_, err := c.client.Ping(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Error().Err(err).Msg("gRPC ping to encryption service failed")
+		return "unhealthy", err
+	}
+
+	return "healthy", nil
 }
 
 // Close closes the gRPC connection

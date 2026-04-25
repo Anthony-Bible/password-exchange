@@ -141,3 +141,11 @@ func (s *EncryptionService) GenerateRandomKey(ctx context.Context, req RandomReq
 func (s *EncryptionService) GenerateID(ctx context.Context) string {
 	return s.keyGenerator.GenerateID(ctx)
 }
+
+// HealthCheck verifies the encryption service is healthy
+func (s *EncryptionService) HealthCheck(ctx context.Context) error {
+	log.Debug().Msg("Encryption service health check requested")
+	// If the service is running, it's generally healthy as it has no external dependencies
+	// like a database or message queue.
+	return nil
+}

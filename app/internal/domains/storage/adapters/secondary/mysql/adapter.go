@@ -378,3 +378,13 @@ func (m *MySQLAdapter) Close() error {
 	}
 	return nil
 }
+
+// Ping checks the health of the database connection
+func (m *MySQLAdapter) Ping() error {
+	if m.db == nil {
+		if err := m.Connect(); err != nil {
+			return err
+		}
+	}
+	return m.db.Ping()
+}

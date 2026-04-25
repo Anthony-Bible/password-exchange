@@ -7,12 +7,12 @@ import (
 // Message represents a stored encrypted message with metadata
 type Message struct {
 	ID             int64      `json:"id"`
-	Content        string     `json:"content"`        // Base64 encoded encrypted message
-	UniqueID       string     `json:"unique_id"`      // UUID for message retrieval
-	Passphrase     string     `json:"passphrase"`     // Additional security passphrase
+	Content        string     `json:"content"`         // Base64 encoded encrypted message
+	UniqueID       string     `json:"unique_id"`       // UUID for message retrieval
+	Passphrase     string     `json:"passphrase"`      // Additional security passphrase
 	RecipientEmail string     `json:"recipient_email"` // Email address of the recipient
-	ViewCount      int        `json:"view_count"`     // Number of times the message has been viewed
-	MaxViewCount   int        `json:"max_view_count"` // Maximum number of views allowed
+	ViewCount      int        `json:"view_count"`      // Number of times the message has been viewed
+	MaxViewCount   int        `json:"max_view_count"`  // Maximum number of views allowed
 	CreatedAt      time.Time  `json:"created_at"`
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 }
@@ -28,10 +28,10 @@ type UnviewedMessage struct {
 
 // ReminderLogEntry represents a logged reminder attempt
 type ReminderLogEntry struct {
-	MessageID         int       `json:"message_id"`
-	EmailAddress      string    `json:"email_address"`
-	ReminderCount     int       `json:"reminder_count"`
-	LastReminderSent  time.Time `json:"last_reminder_sent"`
+	MessageID        int       `json:"message_id"`
+	EmailAddress     string    `json:"email_address"`
+	ReminderCount    int       `json:"reminder_count"`
+	LastReminderSent time.Time `json:"last_reminder_sent"`
 }
 
 // MessageRepository defines the contract for message storage operations
@@ -44,6 +44,7 @@ type MessageRepository interface {
 	GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error)
 	LogReminderSent(messageID int, emailAddress string) error
 	GetReminderHistory(messageID int) ([]*ReminderLogEntry, error)
+	Ping() error
 	Close() error
 }
 

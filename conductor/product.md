@@ -15,6 +15,7 @@ The platform provides a simple, secure, and auditable way to share credentials w
 ## Core Features
 - **Self-Destructing Messages**: Secrets automatically disappear after being viewed or after a predefined time (7 days by default).
 - **Multi-Interface Access**: Securely submit and retrieve secrets via a web UI, a complete REST API, or directly within Slack.
+- **API Documentation & Observability**: Fully documented REST API via Swagger (OpenAPI) and comprehensive service health monitoring.
 
 ## Goals & Objectives
 - **End-to-End Encryption**: Ensuring data is encrypted at rest and in transit.

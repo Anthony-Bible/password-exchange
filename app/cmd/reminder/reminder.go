@@ -7,9 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
@@ -57,18 +55,22 @@ func (e *logEvent) Str(key, value string) contracts.LogEvent {
 	e.event = e.event.Str(key, value)
 	return e
 }
+
 func (e *logEvent) Int(key string, value int) contracts.LogEvent {
 	e.event = e.event.Int(key, value)
 	return e
 }
+
 func (e *logEvent) Bool(key string, value bool) contracts.LogEvent {
 	e.event = e.event.Bool(key, value)
 	return e
 }
+
 func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent {
 	e.event = e.event.Dur(key, value)
 	return e
 }
+
 func (e *logEvent) Float64(key string, value float64) contracts.LogEvent {
 	e.event = e.event.Float64(key, value)
 	return e
@@ -78,35 +80,6 @@ func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 // Config represents the reminder command configuration
 type Config struct {
 	config.Config `mapstructure:",squash"`
-}
-
-// bindenvs is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584
-func bindenvs(iface interface{}, parts ...string) {
-	ifv := reflect.ValueOf(iface)
-	if ifv.Kind() == reflect.Ptr {
-		ifv = ifv.Elem()
-	}
-	for i := 0; i < ifv.NumField(); i++ {
-		v := ifv.Field(i)
-		t := ifv.Type().Field(i)
-		tv, ok := t.Tag.Lookup("mapstructure")
-		if !ok {
-			continue
-		}
-		if tv == ",squash" {
-			bindenvs(v.Interface(), parts...)
-			continue
-		}
-		switch v.Kind() {
-		case reflect.Struct:
-			bindenvs(v.Interface(), append(parts, tv)...)
-		default:
-			key := strings.Join(append(parts, tv), ".")
-			// Build environment variable name from key
-			envKey := "PASSWORDEXCHANGE_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
-			viper.BindEnv(key, envKey)
-		}
-	}
 }
 
 // reminderCmd represents the reminder command
@@ -126,7 +99,7 @@ PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, def
 PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		var cfg Config
-		bindenvs(&cfg)
+		config.BindEnvs(&cfg)
 		viper.Unmarshal(&cfg)
 
 		// Apply default values for any unset reminder configuration

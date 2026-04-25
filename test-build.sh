@@ -35,17 +35,6 @@ if [ $? -ne 0 ]; then
 fi
 echo "Protobuf generation successful!"
 
-echo "Testing Go build..."
-cd app
-go mod tidy
-go build -o app
-if [ $? -eq 0 ]; then
-  echo "Go build successful!"
-else
-  echo "Go build failed!"
-  exit 1
-fi
-
 echo "Generating Swagger documentation..."
 # Check if swag is installed, install if needed
 if ! command -v swag &> /dev/null; then
@@ -53,6 +42,7 @@ if ! command -v swag &> /dev/null; then
   go install github.com/swaggo/swag/cmd/swag@latest
 fi
 
+cd app
 # Generate swagger docs
 swag init -g internal/domains/message/adapters/primary/api/docs.go -o docs --parseDependency
 if [ $? -eq 0 ]; then
@@ -82,6 +72,16 @@ if [ $? -eq 0 ]; then
   echo "Documentation available at /api/v1/docs when server is running"
 else
   echo "Swagger documentation generation failed!"
+  exit 1
+fi
+
+echo "Testing Go build..."
+go mod tidy
+go build -o app
+if [ $? -eq 0 ]; then
+  echo "Go build successful!"
+else
+  echo "Go build failed!"
   exit 1
 fi
 

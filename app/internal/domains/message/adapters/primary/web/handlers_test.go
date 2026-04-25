@@ -50,6 +50,14 @@ func (m *MockMessageService) RetrieveMessage(
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
 }
 
+func (m *MockMessageService) HealthCheck(ctx context.Context) (*domain.HealthStatus, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.HealthStatus), args.Error(1)
+}
+
 func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 	// This test verifies the fix: DisplayDecrypted should NOT call RetrieveMessage
 	// regardless of whether a passphrase is required or not

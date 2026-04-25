@@ -1,6 +1,6 @@
 syntax = "proto3";
-package databasepb;
-option go_package = "github.com/Anthony-Bible/password-exchange/app/databasepb";
+package database;
+option go_package = "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database";
 import "google/protobuf/empty.proto";
 
 message SelectRequest{
@@ -71,4 +71,5 @@ service dbService{
     rpc GetUnviewedMessagesForReminders(GetUnviewedMessagesRequest) returns (GetUnviewedMessagesResponse) {}
     rpc LogReminderSent(LogReminderRequest) returns (google.protobuf.Empty) {}
     rpc GetReminderHistory(GetReminderHistoryRequest) returns (GetReminderHistoryResponse) {}
+    rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   }

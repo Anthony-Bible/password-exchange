@@ -108,7 +108,7 @@ func TestConfigurationLoading(t *testing.T) {
 			defer tt.teardown(t)
 
 			var cfg Config
-			bindenvs(&cfg)
+			config.BindEnvs(&cfg)
 			err := viper.Unmarshal(&cfg)
 			require.NoError(t, err)
 
@@ -161,7 +161,7 @@ func TestBindEnvs(t *testing.T) {
 
 			// Test
 			var cfg Config
-			bindenvs(&cfg)
+			config.BindEnvs(&cfg)
 
 			// Verify environment binding worked
 			assert.Equal(t, tt.expectedVal, viper.GetString(tt.expectedKey))
@@ -523,7 +523,7 @@ func TestCompleteConfigurationFlow(t *testing.T) {
 
 		// Load configuration
 		var cfg Config
-		bindenvs(&cfg)
+		config.BindEnvs(&cfg)
 		err := viper.Unmarshal(&cfg)
 		require.NoError(t, err)
 

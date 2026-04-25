@@ -104,7 +104,6 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 			ContentType:  "application/protobuf",
 			Body:         data,
 		})
-
 	if err != nil {
 		log.Error().Err(err).Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Msg("Failed to publish notification message")
 		return fmt.Errorf("failed to publish notification message: %w", err)
@@ -112,6 +111,19 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 
 	log.Info().Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Str("queue", p.queueName).Msg("Notification message published successfully")
 	return nil
+}
+
+// CheckHealth returns the health status of the email service (RabbitMQ)
+func (p *NotificationPublisher) CheckHealth(ctx context.Context) (string, error) {
+	if p.connection == nil || p.connection.IsClosed() {
+		return "unhealthy", fmt.Errorf("rabbitmq connection is closed or nil")
+	}
+
+	if p.channel == nil || p.channel.IsClosed() {
+		return "unhealthy", fmt.Errorf("rabbitmq channel is closed or nil")
+	}
+
+	return "healthy", nil
 }
 
 // Close closes the RabbitMQ connection

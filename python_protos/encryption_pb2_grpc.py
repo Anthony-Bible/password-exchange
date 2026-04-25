@@ -4,6 +4,7 @@ import grpc
 import warnings
 
 import encryption_pb2 as encryption__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 GRPC_GENERATED_VERSION = '1.71.0'
 GRPC_VERSION = grpc.__version__
@@ -35,19 +36,24 @@ class MessageServiceStub(object):
             channel: A grpc.Channel.
         """
         self.encryptMessage = channel.unary_unary(
-                '/encryptionpb.MessageService/encryptMessage',
+                '/encryption.MessageService/encryptMessage',
                 request_serializer=encryption__pb2.EncryptedMessageRequest.SerializeToString,
                 response_deserializer=encryption__pb2.EncryptedMessageResponse.FromString,
                 _registered_method=True)
         self.DecryptMessage = channel.unary_unary(
-                '/encryptionpb.MessageService/DecryptMessage',
+                '/encryption.MessageService/DecryptMessage',
                 request_serializer=encryption__pb2.DecryptedMessageRequest.SerializeToString,
                 response_deserializer=encryption__pb2.DecryptedMessageResponse.FromString,
                 _registered_method=True)
         self.GenerateRandomString = channel.unary_unary(
-                '/encryptionpb.MessageService/GenerateRandomString',
+                '/encryption.MessageService/GenerateRandomString',
                 request_serializer=encryption__pb2.Randomrequest.SerializeToString,
                 response_deserializer=encryption__pb2.Randomresponse.FromString,
+                _registered_method=True)
+        self.Ping = channel.unary_unary(
+                '/encryption.MessageService/Ping',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
                 _registered_method=True)
 
 
@@ -72,6 +78,12 @@ class MessageServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Ping(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MessageServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -90,11 +102,16 @@ def add_MessageServiceServicer_to_server(servicer, server):
                     request_deserializer=encryption__pb2.Randomrequest.FromString,
                     response_serializer=encryption__pb2.Randomresponse.SerializeToString,
             ),
+            'Ping': grpc.unary_unary_rpc_method_handler(
+                    servicer.Ping,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'encryptionpb.MessageService', rpc_method_handlers)
+            'encryption.MessageService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('encryptionpb.MessageService', rpc_method_handlers)
+    server.add_registered_method_handlers('encryption.MessageService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -115,7 +132,7 @@ class MessageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/encryptionpb.MessageService/encryptMessage',
+            '/encryption.MessageService/encryptMessage',
             encryption__pb2.EncryptedMessageRequest.SerializeToString,
             encryption__pb2.EncryptedMessageResponse.FromString,
             options,
@@ -142,7 +159,7 @@ class MessageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/encryptionpb.MessageService/DecryptMessage',
+            '/encryption.MessageService/DecryptMessage',
             encryption__pb2.DecryptedMessageRequest.SerializeToString,
             encryption__pb2.DecryptedMessageResponse.FromString,
             options,
@@ -169,9 +186,36 @@ class MessageService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/encryptionpb.MessageService/GenerateRandomString',
+            '/encryption.MessageService/GenerateRandomString',
             encryption__pb2.Randomrequest.SerializeToString,
             encryption__pb2.Randomresponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Ping(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/encryption.MessageService/Ping',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            google_dot_protobuf_dot_empty__pb2.Empty.FromString,
             options,
             channel_credentials,
             insecure,

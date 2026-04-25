@@ -9,6 +9,7 @@ import (
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // StorageClient implements the StorageServicePort using gRPC
@@ -141,6 +142,21 @@ func (c *StorageClient) GetMessage(
 		Bool("hasPassphrase", hasPassphrase).
 		Msg("Retrieved message without incrementing view count successfully")
 	return response, nil
+}
+
+// CheckHealth returns the health status of the database service
+func (c *StorageClient) CheckHealth(ctx context.Context) (string, error) {
+	if c.client == nil {
+		return "unhealthy", fmt.Errorf("storage client is nil")
+	}
+
+	_, err := c.client.Ping(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.Error().Err(err).Msg("gRPC ping to storage service failed")
+		return "unhealthy", err
+	}
+
+	return "healthy", nil
 }
 
 // Close closes the gRPC connection
