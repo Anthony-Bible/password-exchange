@@ -58,6 +58,11 @@ func (s *WebServer) SetupRoutes() {
 	s.router.GET("/about", s.messageHandler.About)
 	s.router.GET("/confirmation", s.messageHandler.Confirmation)
 
+	// Agent discovery (sitemap, robots, API catalog)
+	s.router.GET("/robots.txt", s.messageHandler.RobotsTxt)
+	s.router.GET("/sitemap.xml", s.messageHandler.SitemapXML)
+	s.router.GET("/.well-known/api-catalog", s.messageHandler.APICatalog)
+
 	// Message operations
 	s.router.POST("/", s.messageHandler.SubmitMessage)
 	s.router.GET("/decrypt/:uuid/*key", s.messageHandler.DisplayDecrypted)
