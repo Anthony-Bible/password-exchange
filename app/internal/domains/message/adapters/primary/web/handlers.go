@@ -1,8 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,6 +12,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -18,6 +21,19 @@ import (
 type MessageHandler struct {
 	messageService primary.MessageServicePort
 }
+
+const (
+	acceptHeaderName       = "Accept"
+	markdownMediaType      = "text/markdown"
+	markdownContentType    = markdownMediaType + "; charset=utf-8"
+	wrongPassphraseMessage = "Wrong Passphrase/Lastname. Please try again(can be empty)"
+)
+
+// markdownBuilder produces markdown directly from handler data, bypassing the
+// HTML template. Used for pages whose templates rely on JavaScript to inject
+// the user-facing content, where HTML→markdown conversion would yield an
+// empty shell.
+type markdownBuilder func(data gin.H) string
 
 // NewMessageHandler creates a new message handler
 func NewMessageHandler(messageService primary.MessageServicePort) *MessageHandler {
@@ -146,7 +162,7 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		"HasPassword": accessInfo.RequiresPassphrase,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "decryption.html", data, displayDecryptedMarkdown)
 }
 
 // DecryptMessage handles POST requests to decrypt a message with passphrase
@@ -186,9 +202,10 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		if err == domain.ErrInvalidPassphrase {
 			data := gin.H{
 				"Title":            "passwordExchange Decrypted",
-				"DecryptedMessage": "Wrong Passphrase/Lastname. Please try again(can be empty)",
+				"DecryptedMessage": wrongPassphraseMessage,
+				"WrongPassphrase":  true,
 			}
-			c.HTML(http.StatusOK, "decryption.html", data)
+			h.renderHTMLOrMarkdown(c, http.StatusOK, "decryption.html", data, decryptMessageMarkdown)
 			return
 		}
 
@@ -204,7 +221,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		"MaxViewCount":     response.MaxViewCount,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "decryption.html", data, decryptMessageMarkdown)
 	log.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
 }
 
@@ -212,23 +229,26 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 func (h *MessageHandler) Home(c *gin.Context) {
 	c.Writer.Header().Add("Link", `</.well-known/api-catalog>; rel="api-catalog"`)
 	c.Writer.Header().Add("Link", `</api/v1/docs/>; rel="service-doc"`)
-	c.HTML(http.StatusOK, "home.html", gin.H{
+	data := gin.H{
 		"Title": "Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data, nil)
 }
 
 func (h *MessageHandler) About(c *gin.Context) {
-	c.HTML(http.StatusOK, "about.html", gin.H{
+	data := gin.H{
 		"Title": "About - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "about.html", data, nil)
 }
 
 func (h *MessageHandler) Confirmation(c *gin.Context) {
 	content := c.Query("content")
-	c.HTML(http.StatusOK, "confirmation.html", gin.H{
+	data := gin.H{
 		"Title": "passwordExchange",
 		"Url":   content,
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "confirmation.html", data, nil)
 }
 
 func (h *MessageHandler) NotFound(c *gin.Context) {
@@ -244,7 +264,7 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 		"Errors": map[string]string{"general": message},
 	}
 
-	c.HTML(http.StatusInternalServerError, "home.html", data)
+	h.renderHTMLOrMarkdown(c, http.StatusInternalServerError, "home.html", data, nil)
 }
 
 func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
@@ -255,13 +275,224 @@ func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, fi
 		"Errors": map[string]string{field: message},
 	}
 
-	c.HTML(http.StatusBadRequest, "home.html", data)
+	h.renderHTMLOrMarkdown(c, http.StatusBadRequest, "home.html", data, nil)
 }
 
 func (h *MessageHandler) render404(c *gin.Context) {
-	c.HTML(http.StatusNotFound, "404.html", gin.H{
+	data := gin.H{
 		"Title": "Not Found - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusNotFound, "404.html", data, nil)
+}
+
+func (h *MessageHandler) renderHTMLOrMarkdown(
+	c *gin.Context,
+	statusCode int,
+	templateName string,
+	data gin.H,
+	mdBuilder markdownBuilder,
+) {
+	c.Writer.Header().Add("Vary", acceptHeaderName)
+
+	if !wantsMarkdown(c) {
+		c.HTML(statusCode, templateName, data)
+		return
+	}
+
+	// Pages whose templates rely on JavaScript to inject content provide a
+	// direct builder so we don't ship an empty HTML shell as markdown.
+	if mdBuilder != nil {
+		c.Data(statusCode, markdownContentType, []byte(mdBuilder(data)))
+		return
+	}
+
+	html, capturedStatus := renderTemplateToString(c, statusCode, templateName, data)
+	md, err := htmltomarkdown.ConvertString(html)
+	if err != nil {
+		log.Error().Err(err).Str("template", templateName).Msg("html→markdown conversion failed")
+		c.Data(http.StatusInternalServerError, markdownContentType, []byte("# Conversion error\n"))
+		return
+	}
+	c.Data(capturedStatus, markdownContentType, []byte(md))
+}
+
+// renderTemplateToString runs gin's HTML pipeline (c.HTML) but redirects the
+// template output and any headers it sets into a buffer, so nothing reaches
+// the real socket. Status comes back as a separate value because gin's
+// WriteHeader is intercepted.
+func renderTemplateToString(c *gin.Context, statusCode int, templateName string, data gin.H) (string, int) {
+	original := c.Writer
+	w := &bufferingWriter{
+		ResponseWriter: original,
+		header:         http.Header{},
+		status:         statusCode,
+	}
+	c.Writer = w
+	defer func() { c.Writer = original }()
+
+	c.HTML(statusCode, templateName, data)
+	return w.body.String(), w.status
+}
+
+// bufferingWriter intercepts the body, headers, and status that gin's HTML
+// renderer would write, keeping them in-process. It embeds the real
+// gin.ResponseWriter only to satisfy the interface; the methods that could
+// touch the underlying socket (Write, Header, WriteHeader) are all overridden,
+// and the renderer never calls the streaming methods (Flush/Hijack/Pusher/...)
+// that remain promoted.
+type bufferingWriter struct {
+	gin.ResponseWriter
+	body   bytes.Buffer
+	header http.Header
+	status int
+}
+
+func (w *bufferingWriter) Header() http.Header               { return w.header }
+func (w *bufferingWriter) Write(b []byte) (int, error)       { return w.body.Write(b) }
+func (w *bufferingWriter) WriteString(s string) (int, error) { return w.body.WriteString(s) }
+func (w *bufferingWriter) WriteHeader(code int)              { w.status = code }
+func (w *bufferingWriter) WriteHeaderNow()                   {}
+func (w *bufferingWriter) Status() int                       { return w.status }
+func (w *bufferingWriter) Size() int                         { return w.body.Len() }
+func (w *bufferingWriter) Written() bool                     { return w.body.Len() > 0 }
+
+// displayDecryptedMarkdown emits markdown for the GET /decrypt page. The HTML
+// template is a JavaScript shell — the secret is only populated client-side —
+// so we explain the situation and point agents to the POST flow.
+func displayDecryptedMarkdown(data gin.H) string {
+	requires, _ := data["HasPassword"].(bool)
+	var b strings.Builder
+	b.WriteString("# Decrypt Message\n\n")
+	b.WriteString("This page is rendered by JavaScript in a browser. ")
+	b.WriteString("To retrieve the message programmatically, POST to this URL ")
+	b.WriteString("with `Accept: text/markdown` and form field `passphrase` ")
+	b.WriteString("(may be empty if no passphrase was set).\n\n")
+	fmt.Fprintf(&b, "- requires_passphrase: %t\n", requires)
+	return b.String()
+}
+
+// decryptMessageMarkdown emits markdown for the POST /decrypt response,
+// covering both the success path and the wrong-passphrase case.
+func decryptMessageMarkdown(data gin.H) string {
+	if wrong, _ := data["WrongPassphrase"].(bool); wrong {
+		return "# Decryption failed\n\nWrong passphrase. Please try again (may be empty).\n"
+	}
+	msg, _ := data["DecryptedMessage"].(string)
+	if msg == "" {
+		return "# Decrypted message\n\n(empty)\n"
+	}
+	fence := pickFence(msg)
+	var b strings.Builder
+	b.WriteString("# Decrypted message\n\n")
+	b.WriteString(fence)
+	b.WriteByte('\n')
+	b.WriteString(msg)
+	if !strings.HasSuffix(msg, "\n") {
+		b.WriteByte('\n')
+	}
+	b.WriteString(fence)
+	b.WriteByte('\n')
+	if vc, ok := data["ViewCount"].(int); ok {
+		mvc, _ := data["MaxViewCount"].(int)
+		fmt.Fprintf(&b, "\n- view_count: %d\n- max_view_count: %d\n", vc, mvc)
+	}
+	return b.String()
+}
+
+// pickFence returns a backtick run long enough to safely fence content
+// containing any number of consecutive backticks.
+func pickFence(content string) string {
+	longest, run := 0, 0
+	for _, r := range content {
+		if r == '`' {
+			run++
+			if run > longest {
+				longest = run
+			}
+		} else {
+			run = 0
+		}
+	}
+	length := longest + 1
+	if length < 3 {
+		length = 3
+	}
+	return strings.Repeat("`", length)
+}
+
+// wantsMarkdown negotiates Accept preferences and serves markdown only when
+// markdown has positive quality and is at least as preferred as HTML. The
+// Accept header is parsed once and both qualities are extracted in a single
+// pass.
+func wantsMarkdown(c *gin.Context) bool {
+	acceptHeader := strings.TrimSpace(c.GetHeader(acceptHeaderName))
+	if acceptHeader == "" {
+		return false
+	}
+
+	mdQ := -1.0
+	htmlExactQ, textWildcardQ, anyWildcardQ := -1.0, -1.0, -1.0
+	for _, entry := range strings.Split(acceptHeader, ",") {
+		mediaType, params, err := mime.ParseMediaType(strings.TrimSpace(entry))
+		if err != nil {
+			continue
+		}
+		q, ok := parseQuality(params)
+		if !ok {
+			continue
+		}
+		switch {
+		case strings.EqualFold(mediaType, markdownMediaType):
+			if q > mdQ {
+				mdQ = q
+			}
+		case strings.EqualFold(mediaType, "text/html"):
+			if q > htmlExactQ {
+				htmlExactQ = q
+			}
+		case strings.EqualFold(mediaType, "text/*"):
+			if q > textWildcardQ {
+				textWildcardQ = q
+			}
+		case mediaType == "*/*":
+			if q > anyWildcardQ {
+				anyWildcardQ = q
+			}
+		}
+	}
+
+	if mdQ <= 0 {
+		return false
+	}
+
+	// Derive the effective HTML quality from the most-specific match available.
+	// Absence of any HTML-compatible media range is treated as quality 0 — the
+	// client expressed no preference for HTML, so it should not outrank markdown.
+	htmlQ := 0.0
+	switch {
+	case htmlExactQ >= 0:
+		htmlQ = htmlExactQ
+	case textWildcardQ >= 0:
+		htmlQ = textWildcardQ
+	case anyWildcardQ >= 0:
+		htmlQ = anyWildcardQ
+	}
+	return mdQ >= htmlQ
+}
+
+// parseQuality parses the q parameter and returns the RFC default of 1 when q is omitted.
+func parseQuality(params map[string]string) (float64, bool) {
+	qValue, ok := params["q"]
+	if !ok {
+		return 1, true
+	}
+
+	q, err := strconv.ParseFloat(strings.TrimSpace(qValue), 64)
+	if err != nil || q < 0 || q > 1 {
+		return 0, false
+	}
+
+	return q, true
 }
 
 // webAntiSpamCheck validates antispam answer for web form (converts string questionId to int)

@@ -276,6 +276,371 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 	}
 }
 
+func TestHTMLEndpoints_DefaultBrowserBehaviorReturnsHTML(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name         string
+		path         string
+		acceptHeader string
+	}{
+		{name: "HomeWithoutAcceptHeader", path: "/"},
+		{name: "HomeWithBrowserAcceptHeader", path: "/", acceptHeader: "text/html"},
+		{name: "ConfirmationWithBrowserAcceptHeader", path: "/confirmation?content=https://password.exchange/test", acceptHeader: "text/html"},
+		{name: "DisplayDecryptedWithBrowserAcceptHeader", path: "/decrypt/test-message-id/somekey", acceptHeader: "text/html"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			if tc.acceptHeader != "" {
+				req.Header.Set("Accept", tc.acceptHeader)
+			}
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
+func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name                 string
+		path                 string
+		acceptHeader         string
+		expectedContentType  string
+		expectedBodyContains string
+	}{
+		{
+			name:                 "MarkdownPreferredByDefaultWhenOnlyMarkdownPresent",
+			path:                 "/",
+			acceptHeader:         "text/markdown",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Share secrets securely.",
+		},
+		{
+			name:                 "MarkdownSelectedWhenEqualToHTMLQuality",
+			path:                 "/confirmation?content=https://password.exchange/test",
+			acceptHeader:         "text/html;q=0.5, text/markdown;q=0.5",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Save this link carefully.",
+		},
+		{
+			name:                "MarkdownNotSelectedWhenLowerThanHTMLQuality",
+			path:                "/decrypt/test-message-id/somekey",
+			acceptHeader:        "text/html;q=0.8, text/markdown;q=0.5",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroPointZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                 "MarkdownSelectedWhenHTMLAbsentFromAccept",
+			path:                 "/",
+			acceptHeader:         "text/markdown;q=0.9",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Share secrets securely.",
+		},
+		{
+			name:                 "MarkdownSelectedWhenOnlyWildcardCompetes",
+			path:                 "/",
+			acceptHeader:         "text/markdown;q=0.9, */*;q=0.1",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Share secrets securely.",
+		},
+		{
+			name:                "TextWildcardOutranksLowerMarkdown",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.3, text/*;q=0.8",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownSelectedWhenHTMLExplicitlyZero",
+			path:                "/",
+			acceptHeader:        "text/html;q=0, text/markdown;q=0.1",
+			expectedContentType: "text/markdown",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			req.Header.Set("Accept", tc.acceptHeader)
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), tc.expectedContentType))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+			if tc.expectedContentType == "text/markdown" {
+				assert.NotContains(t, strings.ToLower(w.Body.String()), "<html")
+				if tc.expectedBodyContains != "" {
+					assert.Contains(t, w.Body.String(), tc.expectedBodyContains)
+				}
+			}
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
+func TestDisplayDecryptedMarkdown_RendersInstructions(t *testing.T) {
+	testCases := []struct {
+		name               string
+		requiresPassphrase bool
+		expectedSuffix     string
+	}{
+		{"PassphraseRequired", true, "- requires_passphrase: true\n"},
+		{"NoPassphraseRequired", false, "- requires_passphrase: false\n"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := displayDecryptedMarkdown(gin.H{
+				"Title":       "passwordExchange Decrypted",
+				"HasPassword": tc.requiresPassphrase,
+			})
+			assert.Contains(t, body, "# Decrypt Message")
+			assert.Contains(t, body, "POST to this URL")
+			assert.True(t, strings.HasSuffix(body, tc.expectedSuffix),
+				"body should end with %q, got %q", tc.expectedSuffix, body)
+		})
+	}
+}
+
+func TestDecryptMessageMarkdown_RendersFencedContent(t *testing.T) {
+	body := decryptMessageMarkdown(gin.H{
+		"DecryptedMessage": "hello\nworld",
+		"ViewCount":        2,
+		"MaxViewCount":     5,
+	})
+
+	assert.Contains(t, body, "# Decrypted message")
+	assert.Contains(t, body, "```\nhello\nworld\n```")
+	assert.Contains(t, body, "- view_count: 2")
+	assert.Contains(t, body, "- max_view_count: 5")
+}
+
+func TestDecryptMessageMarkdown_WrongPassphrase(t *testing.T) {
+	body := decryptMessageMarkdown(gin.H{
+		"DecryptedMessage": wrongPassphraseMessage,
+		"WrongPassphrase":  true,
+	})
+	assert.True(t, strings.HasPrefix(body, "# Decryption failed"))
+	assert.Contains(t, body, "Wrong passphrase")
+	assert.NotContains(t, body, "```")
+}
+
+func TestDecryptMessageMarkdown_EmptyContent(t *testing.T) {
+	body := decryptMessageMarkdown(gin.H{"DecryptedMessage": ""})
+	assert.Equal(t, "# Decrypted message\n\n(empty)\n", body)
+}
+
+func TestPickFence_AvoidsBacktickCollision(t *testing.T) {
+	testCases := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{"NoBackticks", "plain text", "```"},
+		{"SingleBacktick", "a `b` c", "```"},
+		{"TripleBacktick", "code: ```bash\necho hi\n```", "````"},
+		{"QuintupleBacktick", "five: `````", "``````"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, pickFence(tc.content))
+		})
+	}
+}
+
+func TestDecryptMessage_MarkdownPathReturnsBuilderOutput(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("RetrieveMessage", mock.Anything, mock.Anything).
+		Return(&domain.MessageRetrievalResponse{
+			Content:      "supersecret",
+			ViewCount:    1,
+			MaxViewCount: 3,
+		}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.POST("/decrypt/:uuid/*key", handler.DecryptMessage)
+
+	w := httptest.NewRecorder()
+	form := url.Values{}
+	form.Set("passphrase", "secret")
+	req, _ := http.NewRequest("POST", "/decrypt/abc/Zm9v", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "text/markdown")
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown"))
+	body := w.Body.String()
+	assert.Contains(t, body, "# Decrypted message")
+	assert.Contains(t, body, "supersecret")
+	assert.Contains(t, body, "- view_count: 1")
+	assert.NotContains(t, body, "<html")
+}
+
+func TestDecryptMessage_MarkdownPathReturnsWrongPassphrase(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("RetrieveMessage", mock.Anything, mock.Anything).
+		Return(nil, domain.ErrInvalidPassphrase)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.POST("/decrypt/:uuid/*key", handler.DecryptMessage)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/decrypt/abc/Zm9v", strings.NewReader(""))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "text/markdown")
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown"))
+	assert.True(t, strings.HasPrefix(w.Body.String(), "# Decryption failed"))
+}
+
+func TestDisplayDecrypted_MarkdownPathReturnsInstructions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "abc").
+		Return(&domain.MessageAccessInfo{Exists: true, RequiresPassphrase: true}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/decrypt/abc/Zm9v", nil)
+	req.Header.Set("Accept", "text/markdown")
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown"))
+	body := w.Body.String()
+	assert.Contains(t, body, "# Decrypt Message")
+	assert.Contains(t, body, "requires_passphrase: true")
+	assert.NotContains(t, body, "<html")
+}
+
+func TestMarkdownPath_StripsScriptsAndStyles(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("home.html").Parse(
+		`<html><head><style>:root { --x: 1px; }</style></head><body>` +
+			`<h1>{{.Title}}</h1><p>Share secrets securely.</p>` +
+			`<script>function leak(){var x=1;}</script>` +
+			`</body></html>`,
+	)
+
+	router := gin.New()
+	router.SetHTMLTemplate(tmpl)
+	router.GET("/", handler.Home)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Set("Accept", "text/markdown")
+
+	router.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown"))
+	assert.Contains(t, body, "Share secrets securely")
+	assert.NotContains(t, body, "function leak")
+	assert.NotContains(t, body, ":root")
+	assert.NotContains(t, body, "--x:")
+}
+
+// TestMarkdownPath_VaryHeaderMergesWithUpstream verifies that the Vary header
+// is appended rather than replacing any Vary value an upstream middleware set
+// (e.g. for cookie- or encoding-based negotiation).
+func TestMarkdownPath_VaryHeaderMergesWithUpstream(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Add("Vary", "Cookie")
+		c.Next()
+	})
+	router.GET("/", handler.Home)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	req.Header.Set("Accept", "text/markdown")
+
+	router.ServeHTTP(w, req)
+
+	vary := w.Header().Values("Vary")
+	assert.Contains(t, vary, "Cookie", "upstream Vary value must be preserved")
+	assert.Contains(t, vary, "Accept", "handler must contribute Accept to Vary")
+}
+
 // createMockTemplate creates a simple mock template for testing
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")
@@ -283,7 +648,7 @@ func createMockTemplate() *template.Template {
 		Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
 	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
 	tmpl, _ = tmpl.New("home.html").
-		Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
-	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p></body></html>`)
+		Parse(`<html><body><h1>{{.Title}}</h1><p>Share secrets securely.</p>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
+	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p><p>Save this link carefully.</p></body></html>`)
 	return tmpl
 }
