@@ -276,6 +276,138 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 	}
 }
 
+func TestHTMLEndpoints_DefaultBrowserBehaviorReturnsHTML(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name         string
+		path         string
+		acceptHeader string
+	}{
+		{name: "HomeWithoutAcceptHeader", path: "/"},
+		{name: "HomeWithBrowserAcceptHeader", path: "/", acceptHeader: "text/html"},
+		{name: "ConfirmationWithBrowserAcceptHeader", path: "/confirmation?content=https://password.exchange/test", acceptHeader: "text/html"},
+		{name: "DisplayDecryptedWithBrowserAcceptHeader", path: "/decrypt/test-message-id/somekey", acceptHeader: "text/html"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			if tc.acceptHeader != "" {
+				req.Header.Set("Accept", tc.acceptHeader)
+			}
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
+func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name                string
+		path                string
+		acceptHeader        string
+		expectedContentType string
+	}{
+		{
+			name:                "MarkdownPreferredByDefaultWhenOnlyMarkdownPresent",
+			path:                "/",
+			acceptHeader:        "text/markdown",
+			expectedContentType: "text/markdown",
+		},
+		{
+			name:                "MarkdownSelectedWhenEqualToHTMLQuality",
+			path:                "/confirmation?content=https://password.exchange/test",
+			acceptHeader:        "text/html;q=0.5, text/markdown;q=0.5",
+			expectedContentType: "text/markdown",
+		},
+		{
+			name:                "MarkdownNotSelectedWhenLowerThanHTMLQuality",
+			path:                "/decrypt/test-message-id/somekey",
+			acceptHeader:        "text/html;q=0.8, text/markdown;q=0.5",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroPointZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownPositiveButLowerThanDefaultHTMLRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.9",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownSelectedWhenHTMLExplicitlyZero",
+			path:                "/",
+			acceptHeader:        "text/html;q=0, text/markdown;q=0.1",
+			expectedContentType: "text/markdown",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			req.Header.Set("Accept", tc.acceptHeader)
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), tc.expectedContentType))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+			if tc.expectedContentType == "text/markdown" {
+				assert.NotContains(t, strings.ToLower(w.Body.String()), "<html")
+			}
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
 // createMockTemplate creates a simple mock template for testing
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")

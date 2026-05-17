@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/base64"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,12 @@ import (
 type MessageHandler struct {
 	messageService primary.MessageServicePort
 }
+
+const (
+	acceptHeaderName    = "Accept"
+	markdownMediaType   = "text/markdown"
+	markdownContentType = markdownMediaType + "; charset=utf-8"
+)
 
 // NewMessageHandler creates a new message handler
 func NewMessageHandler(messageService primary.MessageServicePort) *MessageHandler {
@@ -146,7 +153,13 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		"HasPassword": accessInfo.RequiresPassphrase,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"decryption.html",
+		data,
+		fmt.Sprintf("# %s\n\nRequiresPassphrase: %t\n", data["Title"], accessInfo.RequiresPassphrase),
+	)
 }
 
 // DecryptMessage handles POST requests to decrypt a message with passphrase
@@ -188,7 +201,13 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 				"Title":            "passwordExchange Decrypted",
 				"DecryptedMessage": "Wrong Passphrase/Lastname. Please try again(can be empty)",
 			}
-			c.HTML(http.StatusOK, "decryption.html", data)
+			h.renderHTMLOrMarkdown(
+				c,
+				http.StatusOK,
+				"decryption.html",
+				data,
+				fmt.Sprintf("# %s\n\n%s\n", data["Title"], data["DecryptedMessage"]),
+			)
 			return
 		}
 
@@ -204,29 +223,50 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		"MaxViewCount":     response.MaxViewCount,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"decryption.html",
+		data,
+		fmt.Sprintf(
+			"# %s\n\n%s\n\nView Count: %d/%d\n",
+			data["Title"],
+			response.Content,
+			response.ViewCount,
+			response.MaxViewCount,
+		),
+	)
 	log.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
 }
 
 // Static page handlers
 func (h *MessageHandler) Home(c *gin.Context) {
-	c.HTML(http.StatusOK, "home.html", gin.H{
+	data := gin.H{
 		"Title": "Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data, fmt.Sprintf("# %s\n", data["Title"]))
 }
 
 func (h *MessageHandler) About(c *gin.Context) {
-	c.HTML(http.StatusOK, "about.html", gin.H{
+	data := gin.H{
 		"Title": "About - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "about.html", data, fmt.Sprintf("# %s\n", data["Title"]))
 }
 
 func (h *MessageHandler) Confirmation(c *gin.Context) {
 	content := c.Query("content")
-	c.HTML(http.StatusOK, "confirmation.html", gin.H{
+	data := gin.H{
 		"Title": "passwordExchange",
 		"Url":   content,
-	})
+	}
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"confirmation.html",
+		data,
+		fmt.Sprintf("# %s\n\nURL: %s\n", data["Title"], content),
+	)
 }
 
 func (h *MessageHandler) NotFound(c *gin.Context) {
@@ -242,7 +282,13 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 		"Errors": map[string]string{"general": message},
 	}
 
-	c.HTML(http.StatusInternalServerError, "home.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusInternalServerError,
+		"home.html",
+		data,
+		fmt.Sprintf("# %s\n\nError: %s\n", data["Title"], message),
+	)
 }
 
 func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
@@ -253,13 +299,97 @@ func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, fi
 		"Errors": map[string]string{field: message},
 	}
 
-	c.HTML(http.StatusBadRequest, "home.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusBadRequest,
+		"home.html",
+		data,
+		fmt.Sprintf("# %s\n\n%s: %s\n", data["Title"], field, message),
+	)
 }
 
 func (h *MessageHandler) render404(c *gin.Context) {
-	c.HTML(http.StatusNotFound, "404.html", gin.H{
+	data := gin.H{
 		"Title": "Not Found - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusNotFound, "404.html", data, fmt.Sprintf("# %s\n", data["Title"]))
+}
+
+func (h *MessageHandler) renderHTMLOrMarkdown(
+	c *gin.Context,
+	statusCode int,
+	templateName string,
+	data gin.H,
+	markdown string,
+) {
+	c.Header("Vary", acceptHeaderName)
+
+	if wantsMarkdown(c) {
+		c.Data(statusCode, markdownContentType, []byte(markdown))
+		return
+	}
+	c.HTML(statusCode, templateName, data)
+}
+
+// wantsMarkdown negotiates Accept preferences and serves markdown only when
+// markdown has positive quality and is at least as preferred as HTML.
+func wantsMarkdown(c *gin.Context) bool {
+	acceptHeader := strings.TrimSpace(c.GetHeader(acceptHeaderName))
+	if acceptHeader == "" {
+		return false
+	}
+
+	markdownQuality, markdownFound := mediaTypeMaxQuality(acceptHeader, markdownMediaType)
+	if !markdownFound || markdownQuality <= 0 {
+		return false
+	}
+
+	htmlQuality, htmlFound := mediaTypeMaxQuality(acceptHeader, "text/html")
+	if !htmlFound {
+		htmlQuality = 1
+	}
+
+	return markdownQuality >= htmlQuality
+}
+
+// mediaTypeMaxQuality returns the highest valid q value for a media type in an Accept header.
+func mediaTypeMaxQuality(acceptHeader, mediaType string) (float64, bool) {
+	highest := 0.0
+	found := false
+
+	for _, entry := range strings.Split(acceptHeader, ",") {
+		parsedMediaType, params, err := mime.ParseMediaType(strings.TrimSpace(entry))
+		if err != nil || !strings.EqualFold(parsedMediaType, mediaType) {
+			continue
+		}
+
+		quality, ok := parseQuality(params)
+		if !ok {
+			continue
+		}
+
+		if !found || quality > highest {
+			highest = quality
+			found = true
+		}
+	}
+
+	return highest, found
+}
+
+// parseQuality parses the q parameter and returns the RFC default of 1 when q is omitted.
+func parseQuality(params map[string]string) (float64, bool) {
+	qValue, ok := params["q"]
+	if !ok {
+		return 1, true
+	}
+
+	q, err := strconv.ParseFloat(strings.TrimSpace(qValue), 64)
+	if err != nil || q < 0 || q > 1 {
+		return 0, false
+	}
+
+	return q, true
 }
 
 // webAntiSpamCheck validates antispam answer for web form (converts string questionId to int)
