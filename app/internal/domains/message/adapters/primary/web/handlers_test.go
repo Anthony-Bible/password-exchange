@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"html/template"
 	"net/http"
@@ -276,6 +277,222 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 	}
 }
 
+func TestHTMLEndpoints_DefaultBrowserBehaviorReturnsHTML(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name         string
+		path         string
+		acceptHeader string
+	}{
+		{name: "HomeWithoutAcceptHeader", path: "/"},
+		{name: "HomeWithBrowserAcceptHeader", path: "/", acceptHeader: "text/html"},
+		{name: "ConfirmationWithBrowserAcceptHeader", path: "/confirmation?content=https://password.exchange/test", acceptHeader: "text/html"},
+		{name: "DisplayDecryptedWithBrowserAcceptHeader", path: "/decrypt/test-message-id/somekey", acceptHeader: "text/html"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			if tc.acceptHeader != "" {
+				req.Header.Set("Accept", tc.acceptHeader)
+			}
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), "text/html"))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
+func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(&domain.MessageAccessInfo{
+		Exists:             true,
+		RequiresPassphrase: false,
+	}, nil)
+
+	router := gin.New()
+	router.SetHTMLTemplate(createMockTemplate())
+	router.GET("/", handler.Home)
+	router.GET("/confirmation", handler.Confirmation)
+	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
+
+	testCases := []struct {
+		name                 string
+		path                 string
+		acceptHeader         string
+		expectedContentType  string
+		expectedBodyContains string
+	}{
+		{
+			name:                 "MarkdownPreferredByDefaultWhenOnlyMarkdownPresent",
+			path:                 "/",
+			acceptHeader:         "text/markdown",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Share secrets securely.",
+		},
+		{
+			name:                 "MarkdownSelectedWhenEqualToHTMLQuality",
+			path:                 "/confirmation?content=https://password.exchange/test",
+			acceptHeader:         "text/html;q=0.5, text/markdown;q=0.5",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Save this link carefully.",
+		},
+		{
+			name:                "MarkdownNotSelectedWhenLowerThanHTMLQuality",
+			path:                "/decrypt/test-message-id/somekey",
+			acceptHeader:        "text/html;q=0.8, text/markdown;q=0.5",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownQZeroPointZeroRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.0",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownPositiveButLowerThanDefaultHTMLRejected",
+			path:                "/",
+			acceptHeader:        "text/markdown;q=0.9",
+			expectedContentType: "text/html",
+		},
+		{
+			name:                "MarkdownSelectedWhenHTMLExplicitlyZero",
+			path:                "/",
+			acceptHeader:        "text/html;q=0, text/markdown;q=0.1",
+			expectedContentType: "text/markdown",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", tc.path, nil)
+			req.Header.Set("Accept", tc.acceptHeader)
+
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			assert.True(t, strings.HasPrefix(w.Header().Get("Content-Type"), tc.expectedContentType))
+			assert.Equal(t, "Accept", w.Header().Get("Vary"))
+			if tc.expectedContentType == "text/markdown" {
+				assert.NotContains(t, strings.ToLower(w.Body.String()), "<html")
+				if tc.expectedBodyContains != "" {
+					assert.Contains(t, w.Body.String(), tc.expectedBodyContains)
+				}
+			}
+		})
+	}
+
+	mockService.AssertExpectations(t)
+}
+
+func TestConvertHTMLToMarkdown(t *testing.T) {
+	testCases := []struct {
+		name     string
+		html     string
+		expected string
+	}{
+		{
+			name:     "ConvertsHeadingAndParagraphs",
+			html:     `<html><body><h1>Password Exchange</h1><p>Share secrets securely.</p><p>URL: https://password.exchange/test</p></body></html>`,
+			expected: "# Password Exchange\n\nShare secrets securely.\n\nURL: https://password.exchange/test\n",
+		},
+		{
+			name:     "ConvertsDivText",
+			html:     `<html><body><div>general: Failed to submit message</div></body></html>`,
+			expected: "general: Failed to submit message\n",
+		},
+		{
+			name:     "NormalizesWhitespace",
+			html:     `<html><body><h1> Password   Exchange </h1><p>  Keep   it   simple </p></body></html>`,
+			expected: "# Password Exchange\n\nKeep it simple\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, convertHTMLToMarkdown(tc.html))
+		})
+	}
+}
+
+func TestCaptureHTMLResponse_CapturesStatusAndRestoresWriter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.SetHTMLTemplate(createMockTemplate())
+
+	responseRecorder := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/missing", nil)
+	context := gin.CreateTestContextOnly(responseRecorder, engine)
+	context.Request = req
+	originalWriter := context.Writer
+
+	htmlOutput, status := captureHTMLResponse(context, http.StatusNotFound, "404.html", gin.H{
+		"Title": "Missing",
+	})
+
+	assert.Equal(t, http.StatusNotFound, status)
+	assert.Contains(t, htmlOutput, "<h1>Missing</h1>")
+	assert.Same(t, originalWriter, context.Writer)
+	assert.Empty(t, responseRecorder.Body.String())
+}
+
+func TestMarkdownCaptureWriter_TracksStatusAndBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	responseRecorder := httptest.NewRecorder()
+	context := gin.CreateTestContextOnly(responseRecorder, engine)
+
+	writer := &markdownCaptureWriter{
+		ResponseWriter: context.Writer,
+		body:           &bytes.Buffer{},
+		status:         http.StatusOK,
+		size:           -1,
+	}
+
+	assert.False(t, writer.Written())
+	assert.Equal(t, -1, writer.Size())
+
+	writer.WriteHeader(http.StatusTeapot)
+	assert.Equal(t, http.StatusTeapot, writer.Status())
+
+	n, err := writer.WriteString("hello")
+	assert.NoError(t, err)
+	assert.Equal(t, 5, n)
+	assert.True(t, writer.Written())
+	assert.Equal(t, 5, writer.Size())
+	assert.Equal(t, "hello", writer.body.String())
+}
+
 // createMockTemplate creates a simple mock template for testing
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")
@@ -283,7 +500,7 @@ func createMockTemplate() *template.Template {
 		Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
 	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
 	tmpl, _ = tmpl.New("home.html").
-		Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
-	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p></body></html>`)
+		Parse(`<html><body><h1>{{.Title}}</h1><p>Share secrets securely.</p>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
+	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p><p>Save this link carefully.</p></body></html>`)
 	return tmpl
 }

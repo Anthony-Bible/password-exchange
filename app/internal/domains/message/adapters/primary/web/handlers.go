@@ -1,8 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	stdhtml "html"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,12 +15,19 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/html"
 )
 
 // MessageHandler handles HTTP requests for message operations
 type MessageHandler struct {
 	messageService primary.MessageServicePort
 }
+
+const (
+	acceptHeaderName    = "Accept"
+	markdownMediaType   = "text/markdown"
+	markdownContentType = markdownMediaType + "; charset=utf-8"
+)
 
 // NewMessageHandler creates a new message handler
 func NewMessageHandler(messageService primary.MessageServicePort) *MessageHandler {
@@ -146,7 +156,12 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		"HasPassword": accessInfo.RequiresPassphrase,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"decryption.html",
+		data,
+	)
 }
 
 // DecryptMessage handles POST requests to decrypt a message with passphrase
@@ -188,7 +203,12 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 				"Title":            "passwordExchange Decrypted",
 				"DecryptedMessage": "Wrong Passphrase/Lastname. Please try again(can be empty)",
 			}
-			c.HTML(http.StatusOK, "decryption.html", data)
+			h.renderHTMLOrMarkdown(
+				c,
+				http.StatusOK,
+				"decryption.html",
+				data,
+			)
 			return
 		}
 
@@ -204,7 +224,12 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		"MaxViewCount":     response.MaxViewCount,
 	}
 
-	c.HTML(http.StatusOK, "decryption.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"decryption.html",
+		data,
+	)
 	log.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
 }
 
@@ -212,23 +237,31 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 func (h *MessageHandler) Home(c *gin.Context) {
 	c.Writer.Header().Add("Link", `</.well-known/api-catalog>; rel="api-catalog"`)
 	c.Writer.Header().Add("Link", `</api/v1/docs/>; rel="service-doc"`)
-	c.HTML(http.StatusOK, "home.html", gin.H{
+	data := gin.H{
 		"Title": "Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data)
 }
 
 func (h *MessageHandler) About(c *gin.Context) {
-	c.HTML(http.StatusOK, "about.html", gin.H{
+	data := gin.H{
 		"Title": "About - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "about.html", data)
 }
 
 func (h *MessageHandler) Confirmation(c *gin.Context) {
 	content := c.Query("content")
-	c.HTML(http.StatusOK, "confirmation.html", gin.H{
+	data := gin.H{
 		"Title": "passwordExchange",
 		"Url":   content,
-	})
+	}
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusOK,
+		"confirmation.html",
+		data,
+	)
 }
 
 func (h *MessageHandler) NotFound(c *gin.Context) {
@@ -244,7 +277,12 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 		"Errors": map[string]string{"general": message},
 	}
 
-	c.HTML(http.StatusInternalServerError, "home.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusInternalServerError,
+		"home.html",
+		data,
+	)
 }
 
 func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
@@ -255,13 +293,250 @@ func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, fi
 		"Errors": map[string]string{field: message},
 	}
 
-	c.HTML(http.StatusBadRequest, "home.html", data)
+	h.renderHTMLOrMarkdown(
+		c,
+		http.StatusBadRequest,
+		"home.html",
+		data,
+	)
 }
 
 func (h *MessageHandler) render404(c *gin.Context) {
-	c.HTML(http.StatusNotFound, "404.html", gin.H{
+	data := gin.H{
 		"Title": "Not Found - Password Exchange",
-	})
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusNotFound, "404.html", data)
+}
+
+func (h *MessageHandler) renderHTMLOrMarkdown(
+	c *gin.Context,
+	statusCode int,
+	templateName string,
+	data gin.H,
+) {
+	c.Header("Vary", acceptHeaderName)
+
+	if wantsMarkdown(c) {
+		htmlOutput, capturedStatus := captureHTMLResponse(c, statusCode, templateName, data)
+		c.Writer.Header().Del("Content-Type")
+		c.Data(capturedStatus, markdownContentType, []byte(convertHTMLToMarkdown(htmlOutput)))
+		return
+	}
+	c.HTML(statusCode, templateName, data)
+}
+
+func captureHTMLResponse(c *gin.Context, statusCode int, templateName string, data gin.H) (string, int) {
+	originalWriter := c.Writer
+	captureWriter := &markdownCaptureWriter{
+		ResponseWriter: originalWriter,
+		body:           &bytes.Buffer{},
+		status:         statusCode,
+		size:           -1,
+	}
+
+	c.Writer = captureWriter
+	defer func() {
+		c.Writer = originalWriter
+	}()
+	c.HTML(statusCode, templateName, data)
+
+	return captureWriter.body.String(), captureWriter.Status()
+}
+
+type markdownCaptureWriter struct {
+	gin.ResponseWriter
+	body   *bytes.Buffer
+	status int
+	size   int
+}
+
+func (w *markdownCaptureWriter) WriteHeader(code int) {
+	if code >= 100 && code <= 999 {
+		w.status = code
+	}
+}
+
+func (w *markdownCaptureWriter) WriteHeaderNow() {
+	if !w.Written() {
+		w.size = 0
+	}
+}
+
+func (w *markdownCaptureWriter) Write(data []byte) (int, error) {
+	w.WriteHeaderNow()
+	n, err := w.body.Write(data)
+	w.size += n
+	return n, err
+}
+
+func (w *markdownCaptureWriter) WriteString(s string) (int, error) {
+	w.WriteHeaderNow()
+	n, err := w.body.WriteString(s)
+	w.size += n
+	return n, err
+}
+
+func (w *markdownCaptureWriter) Status() int {
+	return w.status
+}
+
+func (w *markdownCaptureWriter) Size() int {
+	return w.size
+}
+
+func (w *markdownCaptureWriter) Written() bool {
+	return w.size != -1
+}
+
+func convertHTMLToMarkdown(input string) string {
+	root, err := html.Parse(strings.NewReader(input))
+	if err != nil {
+		return strings.TrimSpace(input)
+	}
+
+	var builder strings.Builder
+	renderMarkdownNode(&builder, root)
+
+	output := strings.TrimSpace(builder.String())
+	if output == "" {
+		return output
+	}
+	return output + "\n"
+}
+
+func renderMarkdownNode(builder *strings.Builder, node *html.Node) {
+	if node == nil {
+		return
+	}
+
+	switch node.Type {
+	case html.TextNode:
+		appendLine(builder, normalizeText(node.Data))
+	case html.ElementNode:
+		switch node.Data {
+		case "h1":
+			appendLine(builder, "# "+extractElementText(node))
+		case "h2":
+			appendLine(builder, "## "+extractElementText(node))
+		case "h3":
+			appendLine(builder, "### "+extractElementText(node))
+		case "p", "div":
+			appendLine(builder, extractElementText(node))
+		case "br":
+			builder.WriteString("\n")
+		default:
+			for child := node.FirstChild; child != nil; child = child.NextSibling {
+				renderMarkdownNode(builder, child)
+			}
+		}
+	default:
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			renderMarkdownNode(builder, child)
+		}
+	}
+}
+
+func appendLine(builder *strings.Builder, line string) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return
+	}
+	if builder.Len() > 0 {
+		builder.WriteString("\n\n")
+	}
+	builder.WriteString(line)
+}
+
+func extractElementText(node *html.Node) string {
+	var parts []string
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		if n == nil {
+			return
+		}
+
+		if n.Type == html.TextNode {
+			text := normalizeText(n.Data)
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		walk(child)
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func normalizeText(text string) string {
+	return strings.Join(strings.Fields(stdhtml.UnescapeString(text)), " ")
+}
+
+// wantsMarkdown negotiates Accept preferences and serves markdown only when
+// markdown has positive quality and is at least as preferred as HTML.
+func wantsMarkdown(c *gin.Context) bool {
+	acceptHeader := strings.TrimSpace(c.GetHeader(acceptHeaderName))
+	if acceptHeader == "" {
+		return false
+	}
+
+	markdownQuality, markdownFound := mediaTypeMaxQuality(acceptHeader, markdownMediaType)
+	if !markdownFound || markdownQuality <= 0 {
+		return false
+	}
+
+	htmlQuality, htmlFound := mediaTypeMaxQuality(acceptHeader, "text/html")
+	if !htmlFound {
+		htmlQuality = 1
+	}
+
+	return markdownQuality >= htmlQuality
+}
+
+// mediaTypeMaxQuality returns the highest valid q value for a media type in an Accept header.
+func mediaTypeMaxQuality(acceptHeader, mediaType string) (float64, bool) {
+	highest := 0.0
+	found := false
+
+	for _, entry := range strings.Split(acceptHeader, ",") {
+		parsedMediaType, params, err := mime.ParseMediaType(strings.TrimSpace(entry))
+		if err != nil || !strings.EqualFold(parsedMediaType, mediaType) {
+			continue
+		}
+
+		quality, ok := parseQuality(params)
+		if !ok {
+			continue
+		}
+
+		if !found || quality > highest {
+			highest = quality
+			found = true
+		}
+	}
+
+	return highest, found
+}
+
+// parseQuality parses the q parameter and returns the RFC default of 1 when q is omitted.
+func parseQuality(params map[string]string) (float64, bool) {
+	qValue, ok := params["q"]
+	if !ok {
+		return 1, true
+	}
+
+	q, err := strconv.ParseFloat(strings.TrimSpace(qValue), 64)
+	if err != nil || q < 0 || q > 1 {
+		return 0, false
+	}
+
+	return q, true
 }
 
 // webAntiSpamCheck validates antispam answer for web form (converts string questionId to int)
