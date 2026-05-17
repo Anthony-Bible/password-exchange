@@ -328,13 +328,15 @@ func captureHTMLResponse(c *gin.Context, statusCode int, templateName string, da
 	captureWriter := &markdownCaptureWriter{
 		ResponseWriter: originalWriter,
 		body:           &bytes.Buffer{},
-		status:         http.StatusOK,
+		status:         statusCode,
 		size:           -1,
 	}
 
 	c.Writer = captureWriter
+	defer func() {
+		c.Writer = originalWriter
+	}()
 	c.HTML(statusCode, templateName, data)
-	c.Writer = originalWriter
 
 	return captureWriter.body.String(), captureWriter.Status()
 }
@@ -347,7 +349,7 @@ type markdownCaptureWriter struct {
 }
 
 func (w *markdownCaptureWriter) WriteHeader(code int) {
-	if code > 0 {
+	if code >= 100 && code <= 999 {
 		w.status = code
 	}
 }
@@ -407,10 +409,7 @@ func renderMarkdownNode(builder *strings.Builder, node *html.Node) {
 
 	switch node.Type {
 	case html.TextNode:
-		text := normalizeText(node.Data)
-		if text != "" {
-			appendText(builder, text)
-		}
+		appendLine(builder, normalizeText(node.Data))
 	case html.ElementNode:
 		switch node.Data {
 		case "h1":
@@ -471,19 +470,6 @@ func extractElementText(node *html.Node) string {
 	}
 
 	return strings.Join(parts, " ")
-}
-
-func appendText(builder *strings.Builder, text string) {
-	if text == "" {
-		return
-	}
-	if builder.Len() > 0 {
-		last := builder.String()[builder.Len()-1]
-		if last != '\n' && last != ' ' {
-			builder.WriteString(" ")
-		}
-	}
-	builder.WriteString(text)
 }
 
 func normalizeText(text string) string {

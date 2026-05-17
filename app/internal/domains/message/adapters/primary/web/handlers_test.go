@@ -1,6 +1,7 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"html/template"
 	"net/http"
@@ -412,6 +413,84 @@ func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
 	}
 
 	mockService.AssertExpectations(t)
+}
+
+func TestConvertHTMLToMarkdown(t *testing.T) {
+	testCases := []struct {
+		name     string
+		html     string
+		expected string
+	}{
+		{
+			name:     "ConvertsHeadingAndParagraphs",
+			html:     `<html><body><h1>Password Exchange</h1><p>Share secrets securely.</p><p>URL: https://password.exchange/test</p></body></html>`,
+			expected: "# Password Exchange\n\nShare secrets securely.\n\nURL: https://password.exchange/test\n",
+		},
+		{
+			name:     "ConvertsDivText",
+			html:     `<html><body><div>general: Failed to submit message</div></body></html>`,
+			expected: "general: Failed to submit message\n",
+		},
+		{
+			name:     "NormalizesWhitespace",
+			html:     `<html><body><h1> Password   Exchange </h1><p>  Keep   it   simple </p></body></html>`,
+			expected: "# Password Exchange\n\nKeep it simple\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, convertHTMLToMarkdown(tc.html))
+		})
+	}
+}
+
+func TestCaptureHTMLResponse_CapturesStatusAndRestoresWriter(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.SetHTMLTemplate(createMockTemplate())
+
+	responseRecorder := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/missing", nil)
+	context := gin.CreateTestContextOnly(responseRecorder, engine)
+	context.Request = req
+	originalWriter := context.Writer
+
+	htmlOutput, status := captureHTMLResponse(context, http.StatusNotFound, "404.html", gin.H{
+		"Title": "Missing",
+	})
+
+	assert.Equal(t, http.StatusNotFound, status)
+	assert.Contains(t, htmlOutput, "<h1>Missing</h1>")
+	assert.Same(t, originalWriter, context.Writer)
+	assert.Empty(t, responseRecorder.Body.String())
+}
+
+func TestMarkdownCaptureWriter_TracksStatusAndBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	responseRecorder := httptest.NewRecorder()
+	context := gin.CreateTestContextOnly(responseRecorder, engine)
+
+	writer := &markdownCaptureWriter{
+		ResponseWriter: context.Writer,
+		body:           &bytes.Buffer{},
+		status:         http.StatusOK,
+		size:           -1,
+	}
+
+	assert.False(t, writer.Written())
+	assert.Equal(t, -1, writer.Size())
+
+	writer.WriteHeader(http.StatusTeapot)
+	assert.Equal(t, http.StatusTeapot, writer.Status())
+
+	n, err := writer.WriteString("hello")
+	assert.NoError(t, err)
+	assert.Equal(t, 5, n)
+	assert.True(t, writer.Written())
+	assert.Equal(t, 5, writer.Size())
+	assert.Equal(t, "hello", writer.body.String())
 }
 
 // createMockTemplate creates a simple mock template for testing
