@@ -339,22 +339,25 @@ func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
 	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
 
 	testCases := []struct {
-		name                string
-		path                string
-		acceptHeader        string
-		expectedContentType string
+		name                 string
+		path                 string
+		acceptHeader         string
+		expectedContentType  string
+		expectedBodyContains string
 	}{
 		{
-			name:                "MarkdownPreferredByDefaultWhenOnlyMarkdownPresent",
-			path:                "/",
-			acceptHeader:        "text/markdown",
-			expectedContentType: "text/markdown",
+			name:                 "MarkdownPreferredByDefaultWhenOnlyMarkdownPresent",
+			path:                 "/",
+			acceptHeader:         "text/markdown",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Share secrets securely.",
 		},
 		{
-			name:                "MarkdownSelectedWhenEqualToHTMLQuality",
-			path:                "/confirmation?content=https://password.exchange/test",
-			acceptHeader:        "text/html;q=0.5, text/markdown;q=0.5",
-			expectedContentType: "text/markdown",
+			name:                 "MarkdownSelectedWhenEqualToHTMLQuality",
+			path:                 "/confirmation?content=https://password.exchange/test",
+			acceptHeader:         "text/html;q=0.5, text/markdown;q=0.5",
+			expectedContentType:  "text/markdown",
+			expectedBodyContains: "Save this link carefully.",
 		},
 		{
 			name:                "MarkdownNotSelectedWhenLowerThanHTMLQuality",
@@ -401,6 +404,9 @@ func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
 			assert.Equal(t, "Accept", w.Header().Get("Vary"))
 			if tc.expectedContentType == "text/markdown" {
 				assert.NotContains(t, strings.ToLower(w.Body.String()), "<html")
+				if tc.expectedBodyContains != "" {
+					assert.Contains(t, w.Body.String(), tc.expectedBodyContains)
+				}
 			}
 		})
 	}
@@ -415,7 +421,7 @@ func createMockTemplate() *template.Template {
 		Parse(`<html><body><h1>{{.Title}}</h1><p>HasPassword: {{.HasPassword}}</p></body></html>`)
 	tmpl, _ = tmpl.New("404.html").Parse(`<html><body><h1>{{.Title}}</h1><p>404 Not Found</p></body></html>`)
 	tmpl, _ = tmpl.New("home.html").
-		Parse(`<html><body><h1>{{.Title}}</h1>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
-	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p></body></html>`)
+		Parse(`<html><body><h1>{{.Title}}</h1><p>Share secrets securely.</p>{{range $key, $value := .Errors}}<div class="error">{{$key}}: {{$value}}</div>{{end}}</body></html>`)
+	tmpl, _ = tmpl.New("confirmation.html").Parse(`<html><body><h1>{{.Title}}</h1><p>URL: {{.Url}}</p><p>Save this link carefully.</p></body></html>`)
 	return tmpl
 }

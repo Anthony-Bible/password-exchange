@@ -1,8 +1,10 @@
 package web
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	stdhtml "html"
 	"mime"
 	"net/http"
 	"strconv"
@@ -13,6 +15,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/net/html"
 )
 
 // MessageHandler handles HTTP requests for message operations
@@ -158,7 +161,6 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 		http.StatusOK,
 		"decryption.html",
 		data,
-		fmt.Sprintf("# %s\n\nRequiresPassphrase: %t\n", data["Title"], accessInfo.RequiresPassphrase),
 	)
 }
 
@@ -206,7 +208,6 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 				http.StatusOK,
 				"decryption.html",
 				data,
-				fmt.Sprintf("# %s\n\n%s\n", data["Title"], data["DecryptedMessage"]),
 			)
 			return
 		}
@@ -228,13 +229,6 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 		http.StatusOK,
 		"decryption.html",
 		data,
-		fmt.Sprintf(
-			"# %s\n\n%s\n\nView Count: %d/%d\n",
-			data["Title"],
-			response.Content,
-			response.ViewCount,
-			response.MaxViewCount,
-		),
 	)
 	log.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
 }
@@ -244,14 +238,14 @@ func (h *MessageHandler) Home(c *gin.Context) {
 	data := gin.H{
 		"Title": "Password Exchange",
 	}
-	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data, fmt.Sprintf("# %s\n", data["Title"]))
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data)
 }
 
 func (h *MessageHandler) About(c *gin.Context) {
 	data := gin.H{
 		"Title": "About - Password Exchange",
 	}
-	h.renderHTMLOrMarkdown(c, http.StatusOK, "about.html", data, fmt.Sprintf("# %s\n", data["Title"]))
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "about.html", data)
 }
 
 func (h *MessageHandler) Confirmation(c *gin.Context) {
@@ -265,7 +259,6 @@ func (h *MessageHandler) Confirmation(c *gin.Context) {
 		http.StatusOK,
 		"confirmation.html",
 		data,
-		fmt.Sprintf("# %s\n\nURL: %s\n", data["Title"], content),
 	)
 }
 
@@ -287,7 +280,6 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 		http.StatusInternalServerError,
 		"home.html",
 		data,
-		fmt.Sprintf("# %s\n\nError: %s\n", data["Title"], message),
 	)
 }
 
@@ -304,7 +296,6 @@ func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, fi
 		http.StatusBadRequest,
 		"home.html",
 		data,
-		fmt.Sprintf("# %s\n\n%s: %s\n", data["Title"], field, message),
 	)
 }
 
@@ -312,7 +303,7 @@ func (h *MessageHandler) render404(c *gin.Context) {
 	data := gin.H{
 		"Title": "Not Found - Password Exchange",
 	}
-	h.renderHTMLOrMarkdown(c, http.StatusNotFound, "404.html", data, fmt.Sprintf("# %s\n", data["Title"]))
+	h.renderHTMLOrMarkdown(c, http.StatusNotFound, "404.html", data)
 }
 
 func (h *MessageHandler) renderHTMLOrMarkdown(
@@ -320,15 +311,183 @@ func (h *MessageHandler) renderHTMLOrMarkdown(
 	statusCode int,
 	templateName string,
 	data gin.H,
-	markdown string,
 ) {
 	c.Header("Vary", acceptHeaderName)
 
 	if wantsMarkdown(c) {
-		c.Data(statusCode, markdownContentType, []byte(markdown))
+		htmlOutput, capturedStatus := captureHTMLResponse(c, statusCode, templateName, data)
+		c.Writer.Header().Del("Content-Type")
+		c.Data(capturedStatus, markdownContentType, []byte(convertHTMLToMarkdown(htmlOutput)))
 		return
 	}
 	c.HTML(statusCode, templateName, data)
+}
+
+func captureHTMLResponse(c *gin.Context, statusCode int, templateName string, data gin.H) (string, int) {
+	originalWriter := c.Writer
+	captureWriter := &markdownCaptureWriter{
+		ResponseWriter: originalWriter,
+		body:           &bytes.Buffer{},
+		status:         http.StatusOK,
+		size:           -1,
+	}
+
+	c.Writer = captureWriter
+	c.HTML(statusCode, templateName, data)
+	c.Writer = originalWriter
+
+	return captureWriter.body.String(), captureWriter.Status()
+}
+
+type markdownCaptureWriter struct {
+	gin.ResponseWriter
+	body   *bytes.Buffer
+	status int
+	size   int
+}
+
+func (w *markdownCaptureWriter) WriteHeader(code int) {
+	if code > 0 {
+		w.status = code
+	}
+}
+
+func (w *markdownCaptureWriter) WriteHeaderNow() {
+	if !w.Written() {
+		w.size = 0
+	}
+}
+
+func (w *markdownCaptureWriter) Write(data []byte) (int, error) {
+	w.WriteHeaderNow()
+	n, err := w.body.Write(data)
+	w.size += n
+	return n, err
+}
+
+func (w *markdownCaptureWriter) WriteString(s string) (int, error) {
+	w.WriteHeaderNow()
+	n, err := w.body.WriteString(s)
+	w.size += n
+	return n, err
+}
+
+func (w *markdownCaptureWriter) Status() int {
+	return w.status
+}
+
+func (w *markdownCaptureWriter) Size() int {
+	return w.size
+}
+
+func (w *markdownCaptureWriter) Written() bool {
+	return w.size != -1
+}
+
+func convertHTMLToMarkdown(input string) string {
+	root, err := html.Parse(strings.NewReader(input))
+	if err != nil {
+		return strings.TrimSpace(input)
+	}
+
+	var builder strings.Builder
+	renderMarkdownNode(&builder, root)
+
+	output := strings.TrimSpace(builder.String())
+	if output == "" {
+		return output
+	}
+	return output + "\n"
+}
+
+func renderMarkdownNode(builder *strings.Builder, node *html.Node) {
+	if node == nil {
+		return
+	}
+
+	switch node.Type {
+	case html.TextNode:
+		text := normalizeText(node.Data)
+		if text != "" {
+			appendText(builder, text)
+		}
+	case html.ElementNode:
+		switch node.Data {
+		case "h1":
+			appendLine(builder, "# "+extractElementText(node))
+		case "h2":
+			appendLine(builder, "## "+extractElementText(node))
+		case "h3":
+			appendLine(builder, "### "+extractElementText(node))
+		case "p", "div":
+			appendLine(builder, extractElementText(node))
+		case "br":
+			builder.WriteString("\n")
+		default:
+			for child := node.FirstChild; child != nil; child = child.NextSibling {
+				renderMarkdownNode(builder, child)
+			}
+		}
+	default:
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			renderMarkdownNode(builder, child)
+		}
+	}
+}
+
+func appendLine(builder *strings.Builder, line string) {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return
+	}
+	if builder.Len() > 0 {
+		builder.WriteString("\n\n")
+	}
+	builder.WriteString(line)
+}
+
+func extractElementText(node *html.Node) string {
+	var parts []string
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		if n == nil {
+			return
+		}
+
+		if n.Type == html.TextNode {
+			text := normalizeText(n.Data)
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		walk(child)
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func appendText(builder *strings.Builder, text string) {
+	if text == "" {
+		return
+	}
+	if builder.Len() > 0 {
+		last := builder.String()[builder.Len()-1]
+		if last != '\n' && last != ' ' {
+			builder.WriteString(" ")
+		}
+	}
+	builder.WriteString(text)
+}
+
+func normalizeText(text string) string {
+	return strings.Join(strings.Fields(stdhtml.UnescapeString(text)), " ")
 }
 
 // wantsMarkdown negotiates Accept preferences and serves markdown only when
