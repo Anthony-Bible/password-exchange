@@ -8,62 +8,62 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
-type ZerologAdapter struct{}
+type Adapter struct{}
 
 func NewZerologAdapter() secondary.LoggerPort {
-	return &ZerologAdapter{}
+	return &Adapter{}
 }
 
-func (z *ZerologAdapter) Debug() contracts.LogEvent {
-	return &ZerologEvent{event: log.Debug()}
+func (z *Adapter) Debug() contracts.LogEvent {
+	return &Event{event: log.Debug()}
 }
 
-func (z *ZerologAdapter) Info() contracts.LogEvent {
-	return &ZerologEvent{event: log.Info()}
+func (z *Adapter) Info() contracts.LogEvent {
+	return &Event{event: log.Info()}
 }
 
-func (z *ZerologAdapter) Warn() contracts.LogEvent {
-	return &ZerologEvent{event: log.Warn()}
+func (z *Adapter) Warn() contracts.LogEvent {
+	return &Event{event: log.Warn()}
 }
 
-func (z *ZerologAdapter) Error() contracts.LogEvent {
-	return &ZerologEvent{event: log.Error()}
+func (z *Adapter) Error() contracts.LogEvent {
+	return &Event{event: log.Error()}
 }
 
-type ZerologEvent struct {
+type Event struct {
 	event *log.Event
 }
 
-func (e *ZerologEvent) Err(err error) contracts.LogEvent {
+func (e *Event) Err(err error) contracts.LogEvent {
 	e.event = e.event.Err(err)
 	return e
 }
 
-func (e *ZerologEvent) Str(key, value string) contracts.LogEvent {
+func (e *Event) Str(key, value string) contracts.LogEvent {
 	e.event = e.event.Str(key, value)
 	return e
 }
 
-func (e *ZerologEvent) Int(key string, value int) contracts.LogEvent {
+func (e *Event) Int(key string, value int) contracts.LogEvent {
 	e.event = e.event.Int(key, value)
 	return e
 }
 
-func (e *ZerologEvent) Bool(key string, value bool) contracts.LogEvent {
+func (e *Event) Bool(key string, value bool) contracts.LogEvent {
 	e.event = e.event.Bool(key, value)
 	return e
 }
 
-func (e *ZerologEvent) Dur(key string, value time.Duration) contracts.LogEvent {
+func (e *Event) Dur(key string, value time.Duration) contracts.LogEvent {
 	e.event = e.event.Dur(key, value)
 	return e
 }
 
-func (e *ZerologEvent) Float64(key string, value float64) contracts.LogEvent {
+func (e *Event) Float64(key string, value float64) contracts.LogEvent {
 	e.event = e.event.Float64(key, value)
 	return e
 }
 
-func (e *ZerologEvent) Msg(msg string) {
+func (e *Event) Msg(msg string) {
 	e.event.Msg(msg)
 }
