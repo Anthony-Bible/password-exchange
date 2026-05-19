@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 

@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package email
 
@@ -8,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 
 	"reflect"
 	"strings"

@@ -5,38 +5,33 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
-	"github.com/rs/zerolog"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
-// ZerologAdapter implements LoggerPort using zerolog
-type ZerologAdapter struct {
-	logger zerolog.Logger
-}
+type ZerologAdapter struct{}
 
-// NewZerologAdapter creates a new zerolog adapter
-func NewZerologAdapter(logger zerolog.Logger) secondary.LoggerPort {
-	return &ZerologAdapter{logger: logger}
+func NewZerologAdapter() secondary.LoggerPort {
+	return &ZerologAdapter{}
 }
 
 func (z *ZerologAdapter) Debug() contracts.LogEvent {
-	return &ZerologEvent{event: z.logger.Debug()}
+	return &ZerologEvent{event: log.Debug()}
 }
 
 func (z *ZerologAdapter) Info() contracts.LogEvent {
-	return &ZerologEvent{event: z.logger.Info()}
+	return &ZerologEvent{event: log.Info()}
 }
 
 func (z *ZerologAdapter) Warn() contracts.LogEvent {
-	return &ZerologEvent{event: z.logger.Warn()}
+	return &ZerologEvent{event: log.Warn()}
 }
 
 func (z *ZerologAdapter) Error() contracts.LogEvent {
-	return &ZerologEvent{event: z.logger.Error()}
+	return &ZerologEvent{event: log.Error()}
 }
 
-// ZerologEvent implements LogEvent for zerolog
 type ZerologEvent struct {
-	event *zerolog.Event
+	event *log.Event
 }
 
 func (e *ZerologEvent) Err(err error) contracts.LogEvent {

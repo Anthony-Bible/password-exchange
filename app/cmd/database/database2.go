@@ -5,7 +5,7 @@ import (
 	storageMySQL "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 type Config struct {

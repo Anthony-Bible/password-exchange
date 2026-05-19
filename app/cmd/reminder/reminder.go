@@ -22,8 +22,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,17 +38,15 @@ const (
 )
 
 // Simple logger adapter
-type loggerAdapter struct {
-	logger zerolog.Logger
-}
+type loggerAdapter struct{}
 
-func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{l.logger.Debug()} }
-func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{l.logger.Info()} }
-func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{l.logger.Warn()} }
-func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{l.logger.Error()} }
+func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{log.Debug()} }
+func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{log.Info()} }
+func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{log.Warn()} }
+func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{log.Error()} }
 
 type logEvent struct {
-	event *zerolog.Event
+	event *log.Event
 }
 
 func (e *logEvent) Err(err error) contracts.LogEvent { e.event = e.event.Err(err); return e }
@@ -200,7 +197,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Create port adapters
 		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
-		loggerPort := &loggerAdapter{logger: log.Logger}
+		loggerPort := &loggerAdapter{}
 		validationPort := validator.NewValidationAdapter()
 
 		// Create reminder service with storage adapter and notification publisher

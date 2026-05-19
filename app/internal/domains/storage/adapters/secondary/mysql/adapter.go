@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/rs/zerolog/log"
 )
 
 // defaultMessageTTL is the default time-to-live for messages stored in MySQL.

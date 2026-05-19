@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 // EncryptionService provides cryptographic operations

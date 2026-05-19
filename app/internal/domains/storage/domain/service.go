@@ -3,8 +3,8 @@ package domain
 import (
 	"context"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
-	"github.com/rs/zerolog/log"
 )
 
 // StorageService implements the primary port and provides business logic for storage operations

@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -8,7 +7,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -75,4 +74,5 @@ func initConfig() {
 	}
 	viper.SetEnvPrefix("passwordexchange")
 	viper.AutomaticEnv()
+	log.SetLevel(viper.GetString("loglevel"))
 }

@@ -5,7 +5,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/primary"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 // NotificationConsumer implements the notification consumer service

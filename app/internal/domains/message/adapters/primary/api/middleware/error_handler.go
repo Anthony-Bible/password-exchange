@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
 )
 
 // ErrorHandler middleware handles panics and converts them to JSON error responses

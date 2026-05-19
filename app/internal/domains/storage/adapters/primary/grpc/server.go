@@ -8,9 +8,9 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"

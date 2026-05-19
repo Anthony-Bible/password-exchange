@@ -7,11 +7,11 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/golang/protobuf/proto"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog/log"
 )
 
 // RabbitMQConsumer implements the QueuePort using RabbitMQ
@@ -28,7 +28,7 @@ func NewRabbitMQConsumer() *RabbitMQConsumer {
 // Connect establishes a connection to RabbitMQ
 func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn contracts.QueueConnection) error {
 	rabbitURL := fmt.Sprintf("amqp://%s:%s@%s:%d/", queueConn.User, queueConn.Password, queueConn.Host, queueConn.Port)
-	
+
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
 		log.Error().Err(err).Str("url", rabbitURL).Msg("Failed to connect to RabbitMQ")

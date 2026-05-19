@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	messagepb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
 

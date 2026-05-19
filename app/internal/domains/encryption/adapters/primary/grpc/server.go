@@ -6,8 +6,8 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )

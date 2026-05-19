@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
-	"github.com/rs/zerolog/log"
 )
 
 // MessageService provides message sharing operations

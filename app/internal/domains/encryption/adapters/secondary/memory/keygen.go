@@ -7,8 +7,8 @@ import (
 	"io"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/rs/xid"
-	"github.com/rs/zerolog/log"
 )
 
 // KeyGenerator implements the KeyGeneratorPort using in-memory operations

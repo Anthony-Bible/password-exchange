@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 

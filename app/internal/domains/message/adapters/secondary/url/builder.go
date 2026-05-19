@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 // URLBuilder implements the URLBuilderPort
@@ -23,7 +23,7 @@ func NewURLBuilder(baseURL string) *URLBuilder {
 func (u *URLBuilder) BuildDecryptURL(messageID string, encryptionKey []byte) string {
 	encodedKey := base64.URLEncoding.EncodeToString(encryptionKey)
 	decryptURL := fmt.Sprintf("%sdecrypt/%s/%s", u.baseURL, messageID, encodedKey)
-	
+
 	log.Debug().Str("messageId", messageID).Str("url", decryptURL).Msg("Built decrypt URL")
 	return decryptURL
 }
