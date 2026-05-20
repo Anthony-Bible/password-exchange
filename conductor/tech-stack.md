@@ -13,7 +13,7 @@ This document defines the technology stack and architectural patterns for Passwo
 - **Slack Bolt**: Framework for building Slack applications.
 - **Cobra & Viper**: For CLI commands and configuration management in Go.
 - **golang-migrate**: For automated database schema migrations and version tracking.
-- **Zerolog**: For structured logging.
+- **Slog**: For standard library structured logging.
 - **Prometheus**: For metrics and monitoring.
 
 ## Data Storage & Messaging

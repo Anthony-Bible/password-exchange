@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
@@ -36,41 +36,6 @@ const (
 	MinReminderInterval = 1    // Minimum 1 hour between reminders
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
-
-// Simple logger adapter
-type loggerAdapter struct{}
-
-func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{log.Debug()} }
-func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{log.Info()} }
-func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{log.Warn()} }
-func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{log.Error()} }
-
-type logEvent struct {
-	event *log.Event
-}
-
-func (e *logEvent) Err(err error) contracts.LogEvent { e.event = e.event.Err(err); return e }
-func (e *logEvent) Str(key, value string) contracts.LogEvent {
-	e.event = e.event.Str(key, value)
-	return e
-}
-func (e *logEvent) Int(key string, value int) contracts.LogEvent {
-	e.event = e.event.Int(key, value)
-	return e
-}
-func (e *logEvent) Bool(key string, value bool) contracts.LogEvent {
-	e.event = e.event.Bool(key, value)
-	return e
-}
-func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent {
-	e.event = e.event.Dur(key, value)
-	return e
-}
-func (e *logEvent) Float64(key string, value float64) contracts.LogEvent {
-	e.event = e.event.Float64(key, value)
-	return e
-}
-func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 
 // Config represents the reminder command configuration
 type Config struct {
@@ -197,7 +162,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Create port adapters
 		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
-		loggerPort := &loggerAdapter{}
+		loggerPort := logger.NewAdapter()
 		validationPort := validator.NewValidationAdapter()
 
 		// Create reminder service with storage adapter and notification publisher

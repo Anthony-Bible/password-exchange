@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var Logger = slog.Default()
+var Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
 type Event struct {
 	logger *slog.Logger
@@ -101,5 +101,5 @@ func SetLevel(level string) {
 		l = slog.LevelInfo
 	}
 
-	Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: l}))
+	Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: l}))
 }

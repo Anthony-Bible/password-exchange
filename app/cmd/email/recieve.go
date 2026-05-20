@@ -4,54 +4,19 @@ import (
 	"context"
 
 	notificationConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/consumer"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	rabbitMQConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	smtpSender "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/smtp"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
-	"time"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
 }
-
-type loggerAdapter struct{}
-
-func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{log.Debug()} }
-func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{log.Info()} }
-func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{log.Warn()} }
-func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{log.Error()} }
-
-type logEvent struct {
-	event *log.Event
-}
-
-func (e *logEvent) Err(err error) contracts.LogEvent { e.event = e.event.Err(err); return e }
-func (e *logEvent) Str(key, value string) contracts.LogEvent {
-	e.event = e.event.Str(key, value)
-	return e
-}
-func (e *logEvent) Int(key string, value int) contracts.LogEvent {
-	e.event = e.event.Int(key, value)
-	return e
-}
-func (e *logEvent) Bool(key string, value bool) contracts.LogEvent {
-	e.event = e.event.Bool(key, value)
-	return e
-}
-func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent {
-	e.event = e.event.Dur(key, value)
-	return e
-}
-func (e *logEvent) Float64(key string, value float64) contracts.LogEvent {
-	e.event = e.event.Float64(key, value)
-	return e
-}
-func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 
 // Simple validation adapter using existing validation package
 type validationAdapter struct{}
@@ -92,7 +57,7 @@ func (conf Config) startHexagonalProcessing() {
 
 	// Create port adapters using existing functionality
 	configPort := sharedConfig.NewSharedConfigAdapter(conf.PassConfig)
-	loggerPort := &loggerAdapter{}
+	loggerPort := logger.NewAdapter()
 	validationPort := &validationAdapter{}
 
 	// Create secondary adapters

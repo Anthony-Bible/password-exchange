@@ -1,16 +1,18 @@
-package zerolog
+package logger
 
 import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	log "github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
+// Adapter implements LoggerPort using the shared slog-based logging package
 type Adapter struct{}
 
-func NewZerologAdapter() secondary.LoggerPort {
+// NewAdapter creates a new logger adapter
+func NewAdapter() secondary.LoggerPort {
 	return &Adapter{}
 }
 
@@ -30,6 +32,7 @@ func (z *Adapter) Error() contracts.LogEvent {
 	return &Event{event: log.Error()}
 }
 
+// Event implements LogEvent for the shared logger
 type Event struct {
 	event *log.Event
 }
