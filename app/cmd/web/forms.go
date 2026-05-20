@@ -31,13 +31,13 @@ func (conf Config) startHexagonalServer() {
 	// Create secondary adapters (clients to other services)
 	encryptionClient, err := grpcClients.NewEncryptionClient(encryptionServiceName)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create encryption client")
+		logging.Fatal().Err(err).Msg("Failed to create encryption client")
 	}
 	defer encryptionClient.Close()
 
 	storageClient, err := grpcClients.NewStorageClient(dbServiceName)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create storage client")
+		logging.Fatal().Err(err).Msg("Failed to create storage client")
 	}
 	defer storageClient.Close()
 
@@ -52,7 +52,7 @@ func (conf Config) startHexagonalServer() {
 
 	notificationPublisher, err := rabbitMQAdapter.NewNotificationPublisher(notificationConfig)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create notification publisher")
+		logging.Fatal().Err(err).Msg("Failed to create notification publisher")
 	}
 	defer notificationPublisher.Close()
 
@@ -62,7 +62,7 @@ func (conf Config) startHexagonalServer() {
 	environment := conf.RunningEnvironment
 	siteHost, err := validation.GetViperVariable(environment + "Host")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to get site host")
+		logging.Fatal().Err(err).Msg("Failed to get site host")
 	}
 	urlBuilder := urlAdapter.NewURLBuilder(siteHost)
 
@@ -83,22 +83,22 @@ func (conf Config) startHexagonalServer() {
 	webServer := webAdapter.NewWebServer(messageService)
 
 	// Start the server
-	log.Info().Msg("Starting message service with hexagonal architecture")
+	logging.Info().Msg("Starting message service with hexagonal architecture")
 	if err := webServer.Start(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start hexagonal web server")
+		logging.Fatal().Err(err).Msg("Failed to start hexagonal web server")
 	}
 }
 
 func (conf Config) getServiceNames() (string, string) {
 	encryptionServiceName, err := validation.GetViperVariable(fmt.Sprintf("Encryption%sService", conf.RunningEnvironment))
 	dbServiceName, err := validation.GetViperVariable(fmt.Sprintf("Database%sService", conf.RunningEnvironment))
-	log.Debug().Msg(dbServiceName)
+	logging.Debug().Msg(dbServiceName)
 
 	encryptionServiceName += ":50051"
-	log.Debug().Msg(encryptionServiceName)
+	logging.Debug().Msg(encryptionServiceName)
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
+		logging.Fatal().Err(err).Msg("something went wrong with getting the encryption-service address")
 	}
 	return encryptionServiceName, dbServiceName
 }

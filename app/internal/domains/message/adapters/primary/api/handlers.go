@@ -42,7 +42,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
-	log.Info().
+	logging.Info().
 		Interface("correlation_id", correlationID).
 		Msg("Processing API message submission request")
 
@@ -102,7 +102,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	// Submit the message
 	response, err := h.messageService.SubmitMessage(ctxWithIP, domainReq)
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Interface("correlation_id", correlationID).
 			Msg("Failed to submit message")
@@ -127,7 +127,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 		NotificationSent: req.SendNotification && response.Success,
 	}
 
-	log.Info().
+	logging.Info().
 		Str("messageId", response.MessageID).
 		Interface("correlation_id", correlationID).
 		Msg("Message submitted successfully via API")
@@ -152,7 +152,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	messageID := c.Param("id")
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
-	log.Debug().
+	logging.Debug().
 		Str("messageId", messageID).
 		Interface("correlation_id", correlationID).
 		Msg("Checking message access via API")
@@ -160,7 +160,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	// Check if message exists and get access info
 	accessInfo, err := h.messageService.CheckMessageAccess(ctx, messageID)
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Str("messageId", messageID).
 			Interface("correlation_id", correlationID).
@@ -218,7 +218,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	messageID := c.Param("id")
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
-	log.Debug().
+	logging.Debug().
 		Str("messageId", messageID).
 		Interface("correlation_id", correlationID).
 		Msg("Processing message decryption via API")
@@ -261,7 +261,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	// Retrieve and decrypt the message
 	response, err := h.messageService.RetrieveMessage(ctx, domainReq)
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Str("messageId", messageID).
 			Interface("correlation_id", correlationID).
@@ -300,7 +300,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 		ExpiresAt:    response.ExpiresAt,
 	}
 
-	log.Debug().
+	logging.Debug().
 		Str("messageId", messageID).
 		Interface("correlation_id", correlationID).
 		Msg("Message decrypted successfully via API")
@@ -319,7 +319,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
-	log.Debug().
+	logging.Debug().
 		Interface("correlation_id", correlationID).
 		Msg("Health check requested")
 
@@ -349,7 +349,7 @@ func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
-	log.Debug().
+	logging.Debug().
 		Interface("correlation_id", correlationID).
 		Msg("API info requested")
 

@@ -96,7 +96,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Apply CLI flag overrides with validation
 		if err := applyFlagOverrides(&cfg); err != nil {
-			log.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
+			logging.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
 			return
 		}
 
@@ -123,7 +123,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			defer mysqlAdapter.Close()
 
 			if err := mysqlAdapter.Connect(); err != nil {
-				log.Error().
+				logging.Error().
 					Err(err).
 					Str("operation", "database_connect").
 					Str("host", cfg.DbHost).
@@ -150,7 +150,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		notificationPublisher, err := rabbitmq.NewNotificationPublisher(rabbitConfig)
 		if err != nil {
-			log.Error().
+			logging.Error().
 				Err(err).
 				Str("operation", "rabbitmq_connect").
 				Str("host", cfg.RabHost).
@@ -172,14 +172,14 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		// Process reminders
 		ctx := context.Background()
 		if err := reminderService.ProcessReminders(ctx, reminderConfig); err != nil {
-			log.Error().
+			logging.Error().
 				Err(err).
 				Str("operation", "process_reminders").
 				Msg("Failed to process reminders")
 			return
 		}
 
-		log.Info().
+		logging.Info().
 			Str("operation", "processing_completed").
 			Msg("Reminder email processing completed")
 
@@ -222,7 +222,7 @@ func applyFlagOverrides(cfg *Config) error {
 		cfg.Reminder.ReminderInterval = intervalValue
 	}
 
-	log.Info().
+	logging.Info().
 		Bool("enabled", cfg.Reminder.Enabled).
 		Int("checkAfterHours", cfg.Reminder.CheckAfterHours).
 		Int("maxReminders", cfg.Reminder.MaxReminders).
@@ -268,24 +268,24 @@ func shutdown(fullURL, sidecarName string) bool {
 	client := &http.Client{Timeout: 5 * time.Second}
 	req, err := http.NewRequest("POST", fullURL, nil)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
+		logging.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
 		return false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to shutdown %s sidecar (may not be present)", sidecarName)
+		logging.Debug().Err(err).Msgf("Failed to shutdown %s sidecar (may not be present)", sidecarName)
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Info().Msgf("Successfully signaled %s sidecar shutdown", sidecarName)
+		logging.Info().Msgf("Successfully signaled %s sidecar shutdown", sidecarName)
 		// Give the sidecar a moment to shut down gracefully
 		time.Sleep(2 * time.Second)
 		return true
 	}
 
-	log.Debug().Int("status", resp.StatusCode).Msgf("Unexpected response from %s sidecar shutdown endpoint", sidecarName)
+	logging.Debug().Int("status", resp.StatusCode).Msgf("Unexpected response from %s sidecar shutdown endpoint", sidecarName)
 	return false
 }

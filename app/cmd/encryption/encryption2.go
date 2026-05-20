@@ -32,8 +32,8 @@ func (conf Config) startHexagonalServer() {
 	grpcServer := encryptionGRPC.NewGRPCServer(encryptionService, address)
 
 	// Start the server
-	log.Info().Str("address", address).Msg("Starting encryption service with hexagonal architecture")
+	logging.Info().Str("address", address).Msg("Starting encryption service with hexagonal architecture")
 	if err := grpcServer.Start(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start hexagonal encryption server")
+		logging.Fatal().Err(err).Msg("Failed to start hexagonal encryption server")
 	}
 }

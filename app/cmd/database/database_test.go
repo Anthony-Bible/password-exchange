@@ -35,6 +35,11 @@ func (m *MockMigrator) Create(name string) error {
 	return args.Error(0)
 }
 
+func (m *MockMigrator) Force(version int) error {
+	args := m.Called(version)
+	return args.Error(0)
+}
+
 func TestMigrateUpCommand(t *testing.T) {
 	mockMigrator := new(MockMigrator)
 	mockMigrator.On("Up").Return(nil)

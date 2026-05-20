@@ -5,7 +5,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
-	log "github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 // Adapter implements LoggerPort using the shared slog-based logging package
@@ -16,25 +16,25 @@ func NewAdapter() secondary.LoggerPort {
 	return &Adapter{}
 }
 
-func (z *Adapter) Debug() contracts.LogEvent {
-	return &Event{event: log.Debug()}
+func (a *Adapter) Debug() contracts.LogEvent {
+	return &Event{event: logging.Debug()}
 }
 
-func (z *Adapter) Info() contracts.LogEvent {
-	return &Event{event: log.Info()}
+func (a *Adapter) Info() contracts.LogEvent {
+	return &Event{event: logging.Info()}
 }
 
-func (z *Adapter) Warn() contracts.LogEvent {
-	return &Event{event: log.Warn()}
+func (a *Adapter) Warn() contracts.LogEvent {
+	return &Event{event: logging.Warn()}
 }
 
-func (z *Adapter) Error() contracts.LogEvent {
-	return &Event{event: log.Error()}
+func (a *Adapter) Error() contracts.LogEvent {
+	return &Event{event: logging.Error()}
 }
 
 // Event implements LogEvent for the shared logger
 type Event struct {
-	event *log.Event
+	event *logging.Event
 }
 
 func (e *Event) Err(err error) contracts.LogEvent {

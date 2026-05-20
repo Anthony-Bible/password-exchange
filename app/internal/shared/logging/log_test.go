@@ -1,4 +1,4 @@
-package log
+package logging
 
 import (
 	"bytes"
@@ -33,10 +33,35 @@ func TestSetLevelAndMsgf(t *testing.T) {
 	original := Logger
 	t.Cleanup(func() { Logger = original })
 
+	var buf bytes.Buffer
 	SetLevel("debug")
+	Logger = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
 	if Logger == nil {
 		t.Fatal("expected logger to be initialized")
 	}
 
 	Debug().Msgf("message %d", 1)
+	output := buf.String()
+	if !strings.Contains(output, `"level":"DEBUG"`) {
+		t.Errorf("expected level DEBUG, got output: %s", output)
+	}
+	if !strings.Contains(output, `"msg":"message 1"`) {
+		t.Errorf("expected message 1, got output: %s", output)
+	}
+}
+
+func TestFatalLog(t *testing.T) {
+	// We can't easily test os.Exit(1), so we just test the attribute is added
+	e := Fatal()
+	found := false
+	for _, attr := range e.attrs {
+		if a, ok := attr.(slog.Attr); ok && a.Key == "fatal" && a.Value.Bool() == true {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("expected fatal=true attribute in Fatal() event")
+	}
 }

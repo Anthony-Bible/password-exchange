@@ -1,4 +1,4 @@
-package log
+package logging
 
 import (
 	"context"
@@ -26,7 +26,11 @@ func Debug() *Event { return newEvent(slog.LevelDebug, false) }
 func Info() *Event  { return newEvent(slog.LevelInfo, false) }
 func Warn() *Event  { return newEvent(slog.LevelWarn, false) }
 func Error() *Event { return newEvent(slog.LevelError, false) }
-func Fatal() *Event { return newEvent(slog.LevelError, true) }
+func Fatal() *Event {
+	e := newEvent(slog.LevelError, true)
+	e.attrs = append(e.attrs, slog.Bool("fatal", true))
+	return e
+}
 
 func (e *Event) Err(err error) *Event {
 	if err != nil {

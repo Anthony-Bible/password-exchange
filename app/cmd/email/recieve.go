@@ -71,8 +71,8 @@ func (conf Config) startHexagonalProcessing() {
 	consumer := notificationConsumer.NewNotificationConsumer(notificationService, queueConn, 100)
 
 	// Start processing
-	log.Info().Msg("Starting notification service with hexagonal architecture")
+	logging.Info().Msg("Starting notification service with hexagonal architecture")
 	if err := consumer.Start(ctx); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start hexagonal notification consumer")
+		logging.Fatal().Err(err).Msg("Failed to start hexagonal notification consumer")
 	}
 }

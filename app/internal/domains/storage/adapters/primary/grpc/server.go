@@ -63,11 +63,11 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 
 	err = s.storageService.StoreMessage(ctx, message)
 	if err != nil {
-		log.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to insert message via gRPC")
+		logging.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to insert message via gRPC")
 		return nil, err
 	}
 
-	log.Info().
+	logging.Info().
 		Str("uuid", request.GetUuid()).
 		Int32("maxViewCount", request.GetMaxViewCount()).
 		Str("recipientEmail", validation.SanitizeEmailForLogging(request.GetRecipientEmail())).
@@ -101,7 +101,7 @@ func formatTime(t *time.Time) string {
 func (s *GRPCServer) Select(ctx context.Context, request *database.SelectRequest) (*database.SelectResponse, error) {
 	message, err := s.storageService.RetrieveMessage(ctx, request.GetUuid())
 	if err != nil {
-		log.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to select message via gRPC")
+		logging.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to select message via gRPC")
 		return nil, err
 	}
 
@@ -113,7 +113,7 @@ func (s *GRPCServer) Select(ctx context.Context, request *database.SelectRequest
 		ExpiresAt:    formatTime(message.ExpiresAt),
 	}
 
-	log.Info().
+	logging.Info().
 		Str("uuid", request.GetUuid()).
 		Int("viewCount", message.ViewCount).
 		Msg("Message selected successfully via gRPC")
@@ -127,7 +127,7 @@ func (s *GRPCServer) GetMessage(
 ) (*database.SelectResponse, error) {
 	message, err := s.storageService.GetMessage(ctx, request.GetUuid())
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Str("uuid", request.GetUuid()).
 			Msg("Failed to select message without incrementing view count via gRPC")
@@ -142,7 +142,7 @@ func (s *GRPCServer) GetMessage(
 		ExpiresAt:    formatTime(message.ExpiresAt),
 	}
 
-	log.Info().
+	logging.Info().
 		Str("uuid", request.GetUuid()).
 		Int("viewCount", message.ViewCount).
 		Msg("Message selected successfully without incrementing view count via gRPC")
@@ -161,7 +161,7 @@ func (s *GRPCServer) GetUnviewedMessagesForReminders(
 		int(request.GetReminderIntervalHours()),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get unviewed messages for reminders via gRPC")
+		logging.Error().Err(err).Msg("Failed to get unviewed messages for reminders via gRPC")
 		return nil, err
 	}
 
@@ -176,7 +176,7 @@ func (s *GRPCServer) GetUnviewedMessagesForReminders(
 		})
 	}
 
-	log.Info().Int("count", len(unviewedMessages)).Msg("Retrieved unviewed messages for reminders via gRPC")
+	logging.Info().Int("count", len(unviewedMessages)).Msg("Retrieved unviewed messages for reminders via gRPC")
 	return &database.GetUnviewedMessagesResponse{Messages: unviewedMessages}, nil
 }
 
@@ -187,7 +187,7 @@ func (s *GRPCServer) LogReminderSent(
 ) (*emptypb.Empty, error) {
 	err := s.storageService.LogReminderSent(ctx, int(request.GetMessageId()), request.GetEmailAddress())
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Int32("messageID", request.GetMessageId()).
 			Str("emailAddress", validation.SanitizeEmailForLogging(request.GetEmailAddress())).
@@ -195,7 +195,7 @@ func (s *GRPCServer) LogReminderSent(
 		return nil, err
 	}
 
-	log.Info().
+	logging.Info().
 		Int32("messageID", request.GetMessageId()).
 		Str("emailAddress", validation.SanitizeEmailForLogging(request.GetEmailAddress())).
 		Msg("Reminder sent logged successfully via gRPC")
@@ -209,7 +209,7 @@ func (s *GRPCServer) GetReminderHistory(
 ) (*database.GetReminderHistoryResponse, error) {
 	history, err := s.storageService.GetReminderHistory(ctx, int(request.GetMessageId()))
 	if err != nil {
-		log.Error().Err(err).Int32("messageID", request.GetMessageId()).Msg("Failed to get reminder history via gRPC")
+		logging.Error().Err(err).Int32("messageID", request.GetMessageId()).Msg("Failed to get reminder history via gRPC")
 		return nil, err
 	}
 
@@ -223,7 +223,7 @@ func (s *GRPCServer) GetReminderHistory(
 		})
 	}
 
-	log.Info().
+	logging.Info().
 		Int32("messageID", request.GetMessageId()).
 		Int("count", len(entries)).
 		Msg("Retrieved reminder history via gRPC")
@@ -242,7 +242,7 @@ func (s *GRPCServer) runExpiredMessageCleanup(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := s.storageService.CleanupExpiredMessages(context.Background()); err != nil {
-				log.Error().Err(err).Msg("Failed to cleanup expired messages")
+				logging.Error().Err(err).Msg("Failed to cleanup expired messages")
 			}
 		}
 	}
@@ -252,7 +252,7 @@ func (s *GRPCServer) runExpiredMessageCleanup(ctx context.Context) {
 func (s *GRPCServer) Start() error {
 	lis, err := net.Listen("tcp", s.address)
 	if err != nil {
-		log.Fatal().Err(err).Str("address", s.address).Msg("Failed to listen on gRPC address")
+		logging.Fatal().Err(err).Str("address", s.address).Msg("Failed to listen on gRPC address")
 		return err
 	}
 
@@ -265,10 +265,10 @@ func (s *GRPCServer) Start() error {
 	defer cancel()
 	go s.runExpiredMessageCleanup(ctx)
 
-	log.Info().Str("address", s.address).Msg("Starting gRPC storage server")
+	logging.Info().Str("address", s.address).Msg("Starting gRPC storage server")
 
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatal().Err(err).Msg("Failed to serve gRPC storage server")
+		logging.Fatal().Err(err).Msg("Failed to serve gRPC storage server")
 		return err
 	}
 

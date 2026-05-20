@@ -23,15 +23,15 @@ func NewStorageService(repository MessageRepository) *StorageService {
 func (s *StorageService) StoreMessage(ctx context.Context, message *Message) error {
 	// Business rule validation
 	if message.Content == "" {
-		log.Warn().Msg("Attempted to store message with empty content")
+		logging.Warn().Msg("Attempted to store message with empty content")
 		return ErrEmptyContent
 	}
 	if message.UniqueID == "" {
-		log.Warn().Msg("Attempted to store message with empty unique ID")
+		logging.Warn().Msg("Attempted to store message with empty unique ID")
 		return ErrEmptyUniqueID
 	}
 	if message.MaxViewCount < 1 {
-		log.Warn().Int("maxViewCount", message.MaxViewCount).Msg("Attempted to store message with invalid max view count")
+		logging.Warn().Int("maxViewCount", message.MaxViewCount).Msg("Attempted to store message with invalid max view count")
 		return ErrInvalidMaxViewCount
 	}
 
@@ -43,18 +43,18 @@ func (s *StorageService) StoreMessage(ctx context.Context, message *Message) err
 func (s *StorageService) RetrieveMessage(ctx context.Context, uniqueID string) (*Message, error) {
 	// Business rule validation
 	if uniqueID == "" {
-		log.Warn().Msg("Attempted to retrieve message with empty unique ID")
+		logging.Warn().Msg("Attempted to retrieve message with empty unique ID")
 		return nil, ErrEmptyUniqueID
 	}
 
 	// Increment view count and get message atomically
 	message, err := s.repository.IncrementViewCountAndGet(uniqueID)
 	if err != nil {
-		log.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count and retrieve message")
+		logging.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count and retrieve message")
 		return nil, err
 	}
 
-	log.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message retrieved and view count incremented")
+	logging.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("Message retrieved and view count incremented")
 	return message, nil
 }
 
@@ -62,24 +62,24 @@ func (s *StorageService) RetrieveMessage(ctx context.Context, uniqueID string) (
 func (s *StorageService) GetMessage(ctx context.Context, uniqueID string) (*Message, error) {
 	// Business rule validation
 	if uniqueID == "" {
-		log.Warn().Msg("Attempted to get message with empty unique ID")
+		logging.Warn().Msg("Attempted to get message with empty unique ID")
 		return nil, ErrEmptyUniqueID
 	}
 
 	// Delegate to repository
 	message, err := s.repository.GetMessage(uniqueID)
 	if err != nil {
-		log.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to retrieve message")
+		logging.Warn().Err(err).Str("uniqueID", uniqueID).Msg("Failed to retrieve message")
 		return nil, err
 	}
 
-	log.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
+	logging.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
 	return message, nil
 }
 
 // CleanupExpiredMessages removes expired messages from storage
 func (s *StorageService) CleanupExpiredMessages(ctx context.Context) error {
-	log.Info().Msg("Starting cleanup of expired messages")
+	logging.Info().Msg("Starting cleanup of expired messages")
 	return s.repository.DeleteExpiredMessages()
 }
 
@@ -87,26 +87,26 @@ func (s *StorageService) CleanupExpiredMessages(ctx context.Context) error {
 func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*UnviewedMessage, error) {
 	// Business rule validation
 	if olderThanHours < 1 {
-		log.Warn().Int("olderThanHours", olderThanHours).Msg("Invalid olderThanHours parameter")
+		logging.Warn().Int("olderThanHours", olderThanHours).Msg("Invalid olderThanHours parameter")
 		return nil, ErrInvalidParameter
 	}
 	if maxReminders < 1 {
-		log.Warn().Int("maxReminders", maxReminders).Msg("Invalid maxReminders parameter")
+		logging.Warn().Int("maxReminders", maxReminders).Msg("Invalid maxReminders parameter")
 		return nil, ErrInvalidParameter
 	}
 	if reminderIntervalHours < 1 {
-		log.Warn().Int("reminderIntervalHours", reminderIntervalHours).Msg("Invalid reminderIntervalHours parameter")
+		logging.Warn().Int("reminderIntervalHours", reminderIntervalHours).Msg("Invalid reminderIntervalHours parameter")
 		return nil, ErrInvalidParameter
 	}
 
 	// Delegate to repository
 	messages, err := s.repository.GetUnviewedMessagesForReminders(olderThanHours, maxReminders, reminderIntervalHours)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to retrieve unviewed messages for reminders")
+		logging.Error().Err(err).Msg("Failed to retrieve unviewed messages for reminders")
 		return nil, err
 	}
 
-	log.Info().Int("count", len(messages)).Int("olderThanHours", olderThanHours).Int("maxReminders", maxReminders).Int("reminderIntervalHours", reminderIntervalHours).Msg("Retrieved unviewed messages for reminders")
+	logging.Info().Int("count", len(messages)).Int("olderThanHours", olderThanHours).Int("maxReminders", maxReminders).Int("reminderIntervalHours", reminderIntervalHours).Msg("Retrieved unviewed messages for reminders")
 	return messages, nil
 }
 
@@ -114,22 +114,22 @@ func (s *StorageService) GetUnviewedMessagesForReminders(ctx context.Context, ol
 func (s *StorageService) LogReminderSent(ctx context.Context, messageID int, emailAddress string) error {
 	// Business rule validation
 	if messageID < 1 {
-		log.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
+		logging.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
 		return ErrInvalidParameter
 	}
 	if emailAddress == "" {
-		log.Warn().Msg("Attempted to log reminder with empty email address")
+		logging.Warn().Msg("Attempted to log reminder with empty email address")
 		return ErrEmptyEmailAddress
 	}
 
 	// Delegate to repository
 	err := s.repository.LogReminderSent(messageID, emailAddress)
 	if err != nil {
-		log.Error().Err(err).Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Failed to log reminder sent")
+		logging.Error().Err(err).Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Failed to log reminder sent")
 		return err
 	}
 
-	log.Info().Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Reminder sent logged successfully")
+	logging.Info().Int("messageID", messageID).Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).Msg("Reminder sent logged successfully")
 	return nil
 }
 
@@ -137,18 +137,18 @@ func (s *StorageService) LogReminderSent(ctx context.Context, messageID int, ema
 func (s *StorageService) GetReminderHistory(ctx context.Context, messageID int) ([]*ReminderLogEntry, error) {
 	// Business rule validation
 	if messageID < 1 {
-		log.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
+		logging.Warn().Int("messageID", messageID).Msg("Invalid messageID parameter")
 		return nil, ErrInvalidParameter
 	}
 
 	// Delegate to repository
 	history, err := s.repository.GetReminderHistory(messageID)
 	if err != nil {
-		log.Error().Err(err).Int("messageID", messageID).Msg("Failed to retrieve reminder history")
+		logging.Error().Err(err).Int("messageID", messageID).Msg("Failed to retrieve reminder history")
 		return nil, err
 	}
 
-	log.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
+	logging.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
 	return history, nil
 }
 
@@ -156,6 +156,6 @@ func (s *StorageService) GetReminderHistory(ctx context.Context, messageID int) 
 func (s *StorageService) HealthCheck(ctx context.Context) error {
 	// For now, just log that health check was called
 	// In a real implementation, this might check repository connectivity
-	log.Debug().Msg("Storage service health check requested")
+	logging.Debug().Msg("Storage service health check requested")
 	return nil
 }
