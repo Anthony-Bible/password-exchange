@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/viper"
 )
 
@@ -16,7 +16,7 @@ func GetViperVariable(envname string) (string, error) {
 		return viperReturn, nil
 	} else {
 		err := errors.New(fmt.Sprintf("Environment  variable not set %s", envname))
-		log.Fatal().Err(err).Msg("")
+		logging.Fatal().Err(err).Msg("")
 		return "not right", err
 
 	}

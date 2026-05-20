@@ -145,7 +145,7 @@ protoc --proto_path=protos \
 
 `app/internal/shared/` contains cross-cutting concerns used across domains:
 - `config/`: Viper-based config loading
-- `logging/`: Zerolog logger setup
+- `logging/`: Slog logger setup
 - `validation/`: Input validation utilities
 
 `app/pkg/clients/` contains the email notification client (separate from gRPC secondary adapters in domain layer).
@@ -194,7 +194,7 @@ protoc --proto_path=protos \
 The notification domain demonstrates complete hexagonal architecture:
 - **Domain Services**: `NotificationService` and `ReminderService` with pure business logic
 - **Secondary Ports**: `ConfigPort`, `EmailPort`, `LoggerPort`, `QueuePort`, `StoragePort`, `TemplatePort`, `URLBuilderPort`, `ValidationPort`
-- **Adapters**: SMTP email sender, RabbitMQ consumer/publisher, gRPC storage client, Viper config, Zerolog logger
+- **Adapters**: SMTP email sender, RabbitMQ consumer/publisher, gRPC storage client, Viper config, Slog logger
 - **No hardcoded values**: All configuration externalized through `ConfigPort`
 - **Clean imports**: Domain layer has zero external dependencies
 

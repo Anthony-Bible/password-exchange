@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,7 +21,7 @@ var (
 	cfg      Config
 	// runDatabaseServer is a variable to allow mocking in tests.
 	runDatabaseServer = func() {
-		log.Info().Msg("Starting database server...")
+		logging.Info().Msg("Starting database server...")
 		cfg.startServer()
 	}
 )
@@ -42,7 +42,7 @@ var databaseCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runAutoMigrations(); err != nil {
-			log.Error().Err(err).Msg("Failed to run auto-migrations")
+			logging.Error().Err(err).Msg("Failed to run auto-migrations")
 			return
 		}
 		runDatabaseServer()
@@ -59,7 +59,7 @@ func runAutoMigrations() error {
 		return errors.New("migrator not initialized")
 	}
 
-	log.Info().Msg("Running auto-migrations...")
+	logging.Info().Msg("Running auto-migrations...")
 	if err := migrator.Up(); err != nil {
 		return fmt.Errorf("error running auto-migrations: %w", err)
 	}

@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -8,7 +7,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -65,14 +64,15 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		log.Error().Err(errors.New("config file not set")).Msg("Config file not set")
+		logging.Error().Err(errors.New("config file not set")).Msg("Config file not set")
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Info().Msg("no config file can be found")
+		logging.Info().Msg("no config file can be found")
 	} else {
-		log.Info().Msgf("Using config file: %s", cfgFile)
+		logging.Info().Msgf("Using config file: %s", cfgFile)
 	}
 	viper.SetEnvPrefix("passwordexchange")
 	viper.AutomaticEnv()
+	logging.SetLevel(viper.GetString("loglevel"))
 }

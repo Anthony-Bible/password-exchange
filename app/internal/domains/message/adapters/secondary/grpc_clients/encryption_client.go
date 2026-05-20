@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -19,7 +19,7 @@ type EncryptionClient struct {
 func NewEncryptionClient(endpoint string) (*EncryptionClient, error) {
 	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Err(err).Str("endpoint", endpoint).Msg("Failed to connect to encryption service")
+		logging.Error().Err(err).Str("endpoint", endpoint).Msg("Failed to connect to encryption service")
 		return nil, fmt.Errorf("failed to connect to encryption service: %w", err)
 	}
 
@@ -39,11 +39,11 @@ func (c *EncryptionClient) GenerateKey(ctx context.Context, length int32) ([]byt
 
 	resp, err := c.client.GenerateRandomString(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Int32("length", length).Msg("Failed to generate encryption key")
+		logging.Error().Err(err).Int32("length", length).Msg("Failed to generate encryption key")
 		return nil, fmt.Errorf("failed to generate encryption key: %w", err)
 	}
 
-	log.Debug().Int32("length", length).Msg("Generated encryption key successfully")
+	logging.Debug().Int32("length", length).Msg("Generated encryption key successfully")
 	return resp.GetEncryptionBytes(), nil
 }
 
@@ -56,11 +56,11 @@ func (c *EncryptionClient) Encrypt(ctx context.Context, plaintext []string, key 
 
 	resp, err := c.client.EncryptMessage(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Int("plaintextCount", len(plaintext)).Msg("Failed to encrypt message")
+		logging.Error().Err(err).Int("plaintextCount", len(plaintext)).Msg("Failed to encrypt message")
 		return nil, fmt.Errorf("failed to encrypt message: %w", err)
 	}
 
-	log.Debug().
+	logging.Debug().
 		Int("plaintextCount", len(plaintext)).
 		Int("ciphertextCount", len(resp.GetCiphertext())).
 		Msg("Encrypted message successfully")
@@ -76,11 +76,11 @@ func (c *EncryptionClient) Decrypt(ctx context.Context, ciphertext []string, key
 
 	resp, err := c.client.DecryptMessage(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Int("ciphertextCount", len(ciphertext)).Msg("Failed to decrypt message")
+		logging.Error().Err(err).Int("ciphertextCount", len(ciphertext)).Msg("Failed to decrypt message")
 		return nil, fmt.Errorf("failed to decrypt message: %w", err)
 	}
 
-	log.Debug().
+	logging.Debug().
 		Int("ciphertextCount", len(ciphertext)).
 		Int("plaintextCount", len(resp.GetPlaintext())).
 		Msg("Decrypted message successfully")
@@ -97,13 +97,13 @@ func (c *EncryptionClient) GenerateID(ctx context.Context) (string, error) {
 
 	resp, err := c.client.GenerateRandomString(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to generate unique ID")
+		logging.Error().Err(err).Msg("Failed to generate unique ID")
 		return "", fmt.Errorf("failed to generate unique ID: %w", err)
 	}
 
 	// Use the string representation of the key as the ID
 	id := resp.GetEncryptionString()
-	log.Debug().Str("id", id).Msg("Generated unique ID successfully")
+	logging.Debug().Str("id", id).Msg("Generated unique ID successfully")
 	return id, nil
 }
 

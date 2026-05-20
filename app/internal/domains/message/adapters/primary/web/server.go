@@ -7,8 +7,8 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -71,7 +71,7 @@ func (s *WebServer) SetupRoutes() {
 	// 404 handler
 	s.router.NoRoute(s.messageHandler.NotFound)
 
-	log.Info().Msg("Web routes and API routes configured")
+	logging.Info().Msg("Web routes and API routes configured")
 }
 
 // setupAPIRoutes adds API routes to the main router
@@ -117,14 +117,14 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	log.Info().Msg("API routes configured directly on main router")
+	logging.Info().Msg("API routes configured directly on main router")
 }
 
 // Start starts the web server
 func (s *WebServer) Start() error {
 	s.SetupRoutes()
 
-	log.Info().Msg("Starting web server")
+	logging.Info().Msg("Starting web server")
 	return s.router.Run() // Default port :8080
 }
 

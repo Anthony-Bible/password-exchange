@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	messagepb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -37,13 +37,13 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
-		log.Error().Err(err).Str("url", rabbitURL).Msg("Failed to connect to RabbitMQ")
+		logging.Error().Err(err).Str("url", rabbitURL).Msg("Failed to connect to RabbitMQ")
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to open RabbitMQ channel")
+		logging.Error().Err(err).Msg("Failed to open RabbitMQ channel")
 		conn.Close()
 		return nil, fmt.Errorf("failed to open RabbitMQ channel: %w", err)
 	}
@@ -58,7 +58,7 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 // PublishNotification publishes a notification message to RabbitMQ for processing
 // Used by the reminder service to queue reminder emails instead of sending them directly
 func (p *NotificationPublisher) PublishNotification(ctx context.Context, req contracts.NotificationRequest) error {
-	log.Debug().Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Msg("Publishing notification message")
+	logging.Debug().Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Msg("Publishing notification message")
 
 	// Declare the queue
 	q, err := p.channel.QueueDeclare(
@@ -70,7 +70,7 @@ func (p *NotificationPublisher) PublishNotification(ctx context.Context, req con
 		nil,         // arguments
 	)
 	if err != nil {
-		log.Error().Err(err).Str("queue", p.queueName).Msg("Failed to declare queue")
+		logging.Error().Err(err).Str("queue", p.queueName).Msg("Failed to declare queue")
 		return fmt.Errorf("failed to declare queue: %w", err)
 	}
 
@@ -88,7 +88,7 @@ func (p *NotificationPublisher) PublishNotification(ctx context.Context, req con
 	// Marshal the message
 	data, err := proto.Marshal(pbMsg)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to marshal notification message")
+		logging.Error().Err(err).Msg("Failed to marshal notification message")
 		return fmt.Errorf("failed to marshal notification message: %w", err)
 	}
 
@@ -109,11 +109,11 @@ func (p *NotificationPublisher) PublishNotification(ctx context.Context, req con
 		})
 
 	if err != nil {
-		log.Error().Err(err).Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Msg("Failed to publish notification message")
+		logging.Error().Err(err).Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Msg("Failed to publish notification message")
 		return fmt.Errorf("failed to publish notification message: %w", err)
 	}
 
-	log.Info().Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Str("queue", p.queueName).Msg("Notification message published successfully")
+	logging.Info().Str("recipientEmail", validation.SanitizeEmailForLogging(req.To)).Str("queue", p.queueName).Msg("Notification message published successfully")
 	return nil
 }
 
@@ -125,6 +125,6 @@ func (p *NotificationPublisher) Close() error {
 	if p.connection != nil {
 		p.connection.Close()
 	}
-	log.Info().Msg("RabbitMQ notification publisher connection closed")
+	logging.Info().Msg("RabbitMQ notification publisher connection closed")
 	return nil
 }

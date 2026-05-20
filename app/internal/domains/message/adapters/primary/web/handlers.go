@@ -12,9 +12,9 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	htmltomarkdown "github.com/JohannesKaufmann/html-to-markdown/v2"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog/log"
 )
 
 // MessageHandler handles HTTP requests for message operations
@@ -46,19 +46,19 @@ func NewMessageHandler(messageService primary.MessageServicePort) *MessageHandle
 func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	log.Info().Msg("Processing message submission request")
+	logging.Info().Msg("Processing message submission request")
 
 	// Parse max view count
 	maxViewCount := 0
 	if maxViewCountStr := c.PostForm("max_view_count"); maxViewCountStr != "" {
 		parsed, err := strconv.Atoi(maxViewCountStr)
 		if err != nil {
-			log.Error().Err(err).Str("value", maxViewCountStr).Msg("Invalid max view count format")
+			logging.Error().Err(err).Str("value", maxViewCountStr).Msg("Invalid max view count format")
 			h.renderErrorWithField(c, "Invalid max view count: must be a number", "max_view_count")
 			return
 		}
 		if parsed < 1 || parsed > 100 {
-			log.Error().Int("value", parsed).Msg("Max view count out of range")
+			logging.Error().Int("value", parsed).Msg("Max view count out of range")
 			h.renderErrorWithField(c, "Max view count must be between 1 and 100", "max_view_count")
 			return
 		}
@@ -70,7 +70,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	if expirationValueStr := c.PostForm("expiration_value"); expirationValueStr != "" {
 		parsedValue, err := strconv.Atoi(expirationValueStr)
 		if err != nil {
-			log.Error().Err(err).Str("value", expirationValueStr).Msg("Invalid expiration value format")
+			logging.Error().Err(err).Str("value", expirationValueStr).Msg("Invalid expiration value format")
 			h.renderErrorWithField(c, "Invalid expiration value: must be a number", "expiration_value")
 			return
 		}
@@ -78,7 +78,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		switch unit {
 		case "days":
 			if parsedValue > domain.MaxExpirationHours/24 {
-				log.Error().Int("days", parsedValue).Msg("Expiration out of range for days unit")
+				logging.Error().Int("days", parsedValue).Msg("Expiration out of range for days unit")
 				h.renderErrorWithField(
 					c,
 					fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24),
@@ -90,12 +90,12 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		case "hours", "":
 			expirationHours = parsedValue
 		default:
-			log.Error().Str("unit", unit).Msg("Invalid expiration unit")
+			logging.Error().Str("unit", unit).Msg("Invalid expiration unit")
 			h.renderErrorWithField(c, "Invalid expiration unit: must be 'hours' or 'days'", "expiration_value")
 			return
 		}
 		if expirationHours < 1 || expirationHours > domain.MaxExpirationHours {
-			log.Error().Int("hours", expirationHours).Msg("Expiration out of range")
+			logging.Error().Int("hours", expirationHours).Msg("Expiration out of range")
 			h.renderErrorWithField(
 				c,
 				fmt.Sprintf("Expiration must be between 1 hour and %d days", domain.MaxExpirationHours/24),
@@ -124,7 +124,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	// Submit the message
 	response, err := h.messageService.SubmitMessage(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to submit message")
+		logging.Error().Err(err).Msg("Failed to submit message")
 		h.renderError(c, "Failed to submit message", err)
 		return
 	}
@@ -132,7 +132,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 	// Web request - redirect to confirmation page
 	c.Redirect(http.StatusSeeOther, "/confirmation?content="+response.DecryptURL)
 
-	log.Info().Str("messageId", response.MessageID).Msg("Message submitted successfully")
+	logging.Info().Str("messageId", response.MessageID).Msg("Message submitted successfully")
 }
 
 // DisplayDecrypted handles GET requests to display the decryption page
@@ -140,18 +140,18 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("uuid")
 
-	log.Debug().Str("messageId", messageID).Msg("Checking message access")
+	logging.Debug().Str("messageId", messageID).Msg("Checking message access")
 
 	// Check if message exists and requires passphrase
 	accessInfo, err := h.messageService.CheckMessageAccess(ctx, messageID)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", messageID).Msg("Failed to check message access")
+		logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to check message access")
 		h.render404(c)
 		return
 	}
 
 	if !accessInfo.Exists {
-		log.Warn().Str("messageId", messageID).Msg("Message not found")
+		logging.Warn().Str("messageId", messageID).Msg("Message not found")
 		h.render404(c)
 		return
 	}
@@ -172,7 +172,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	keyParam := c.Param("key")
 	passphrase := c.PostForm("passphrase")
 
-	log.Debug().Str("messageId", messageID).Msg("Processing message decryption")
+	logging.Debug().Str("messageId", messageID).Msg("Processing message decryption")
 
 	// Decode the encryption key
 	if strings.HasPrefix(keyParam, "/") {
@@ -181,7 +181,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 
 	decryptionKey, err := base64.URLEncoding.DecodeString(keyParam)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", messageID).Msg("Failed to decode encryption key")
+		logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to decode encryption key")
 		h.renderError(c, "Invalid decryption key", err)
 		return
 	}
@@ -196,7 +196,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	// Retrieve and decrypt the message
 	response, err := h.messageService.RetrieveMessage(ctx, req)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", messageID).Msg("Failed to retrieve message")
+		logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to retrieve message")
 
 		// Check if it's a passphrase error
 		if err == domain.ErrInvalidPassphrase {
@@ -222,7 +222,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	}
 
 	h.renderHTMLOrMarkdown(c, http.StatusOK, "decryption.html", data, decryptMessageMarkdown)
-	log.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
+	logging.Debug().Str("messageId", messageID).Msg("Message decrypted and displayed successfully")
 }
 
 // Static page handlers
@@ -257,7 +257,7 @@ func (h *MessageHandler) NotFound(c *gin.Context) {
 
 // Helper methods
 func (h *MessageHandler) renderError(c *gin.Context, message string, err error) {
-	log.Error().Err(err).Str("message", message).Msg("Rendering error page")
+	logging.Error().Err(err).Str("message", message).Msg("Rendering error page")
 
 	data := gin.H{
 		"Title":  "Error - Password Exchange",
@@ -268,7 +268,7 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 }
 
 func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, field string) {
-	log.Error().Str("message", message).Str("field", field).Msg("Rendering validation error page")
+	logging.Error().Str("message", message).Str("field", field).Msg("Rendering validation error page")
 
 	data := gin.H{
 		"Title":  "Password Exchange",
@@ -309,7 +309,7 @@ func (h *MessageHandler) renderHTMLOrMarkdown(
 	html, capturedStatus := renderTemplateToString(c, statusCode, templateName, data)
 	md, err := htmltomarkdown.ConvertString(html)
 	if err != nil {
-		log.Error().Err(err).Str("template", templateName).Msg("html→markdown conversion failed")
+		logging.Error().Err(err).Str("template", templateName).Msg("html→markdown conversion failed")
 		c.Data(http.StatusInternalServerError, markdownContentType, []byte("# Conversion error\n"))
 		return
 	}

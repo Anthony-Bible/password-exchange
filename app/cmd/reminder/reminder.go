@@ -13,17 +13,16 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -37,43 +36,6 @@ const (
 	MinReminderInterval = 1    // Minimum 1 hour between reminders
 	MaxReminderInterval = 720  // Maximum 30 days (30 * 24)
 )
-
-// Simple logger adapter
-type loggerAdapter struct {
-	logger zerolog.Logger
-}
-
-func (l *loggerAdapter) Debug() contracts.LogEvent { return &logEvent{l.logger.Debug()} }
-func (l *loggerAdapter) Info() contracts.LogEvent  { return &logEvent{l.logger.Info()} }
-func (l *loggerAdapter) Warn() contracts.LogEvent  { return &logEvent{l.logger.Warn()} }
-func (l *loggerAdapter) Error() contracts.LogEvent { return &logEvent{l.logger.Error()} }
-
-type logEvent struct {
-	event *zerolog.Event
-}
-
-func (e *logEvent) Err(err error) contracts.LogEvent { e.event = e.event.Err(err); return e }
-func (e *logEvent) Str(key, value string) contracts.LogEvent {
-	e.event = e.event.Str(key, value)
-	return e
-}
-func (e *logEvent) Int(key string, value int) contracts.LogEvent {
-	e.event = e.event.Int(key, value)
-	return e
-}
-func (e *logEvent) Bool(key string, value bool) contracts.LogEvent {
-	e.event = e.event.Bool(key, value)
-	return e
-}
-func (e *logEvent) Dur(key string, value time.Duration) contracts.LogEvent {
-	e.event = e.event.Dur(key, value)
-	return e
-}
-func (e *logEvent) Float64(key string, value float64) contracts.LogEvent {
-	e.event = e.event.Float64(key, value)
-	return e
-}
-func (e *logEvent) Msg(msg string) { e.event.Msg(msg) }
 
 // Config represents the reminder command configuration
 type Config struct {
@@ -134,7 +96,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Apply CLI flag overrides with validation
 		if err := applyFlagOverrides(&cfg); err != nil {
-			log.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
+			logging.Error().Err(err).Str("operation", "flag_validation").Msg("Failed to validate configuration flags")
 			return
 		}
 
@@ -161,7 +123,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 			defer mysqlAdapter.Close()
 
 			if err := mysqlAdapter.Connect(); err != nil {
-				log.Error().
+				logging.Error().
 					Err(err).
 					Str("operation", "database_connect").
 					Str("host", cfg.DbHost).
@@ -188,7 +150,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		notificationPublisher, err := rabbitmq.NewNotificationPublisher(rabbitConfig)
 		if err != nil {
-			log.Error().
+			logging.Error().
 				Err(err).
 				Str("operation", "rabbitmq_connect").
 				Str("host", cfg.RabHost).
@@ -200,7 +162,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Create port adapters
 		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
-		loggerPort := &loggerAdapter{logger: log.Logger}
+		loggerPort := logger.NewAdapter()
 		validationPort := validator.NewValidationAdapter()
 
 		// Create reminder service with storage adapter and notification publisher
@@ -210,14 +172,14 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		// Process reminders
 		ctx := context.Background()
 		if err := reminderService.ProcessReminders(ctx, reminderConfig); err != nil {
-			log.Error().
+			logging.Error().
 				Err(err).
 				Str("operation", "process_reminders").
 				Msg("Failed to process reminders")
 			return
 		}
 
-		log.Info().
+		logging.Info().
 			Str("operation", "processing_completed").
 			Msg("Reminder email processing completed")
 
@@ -260,7 +222,7 @@ func applyFlagOverrides(cfg *Config) error {
 		cfg.Reminder.ReminderInterval = intervalValue
 	}
 
-	log.Info().
+	logging.Info().
 		Bool("enabled", cfg.Reminder.Enabled).
 		Int("checkAfterHours", cfg.Reminder.CheckAfterHours).
 		Int("maxReminders", cfg.Reminder.MaxReminders).
@@ -306,24 +268,24 @@ func shutdown(fullURL, sidecarName string) bool {
 	client := &http.Client{Timeout: 5 * time.Second}
 	req, err := http.NewRequest("POST", fullURL, nil)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
+		logging.Debug().Err(err).Msgf("Failed to create shutdown request for %s sidecar", sidecarName)
 		return false
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to shutdown %s sidecar (may not be present)", sidecarName)
+		logging.Debug().Err(err).Msgf("Failed to shutdown %s sidecar (may not be present)", sidecarName)
 		return false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		log.Info().Msgf("Successfully signaled %s sidecar shutdown", sidecarName)
+		logging.Info().Msgf("Successfully signaled %s sidecar shutdown", sidecarName)
 		// Give the sidecar a moment to shut down gracefully
 		time.Sleep(2 * time.Second)
 		return true
 	}
 
-	log.Debug().Int("status", resp.StatusCode).Msgf("Unexpected response from %s sidecar shutdown endpoint", sidecarName)
+	logging.Debug().Int("status", resp.StatusCode).Msgf("Unexpected response from %s sidecar shutdown endpoint", sidecarName)
 	return false
 }

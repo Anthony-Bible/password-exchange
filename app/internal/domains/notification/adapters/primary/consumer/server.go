@@ -5,7 +5,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/primary"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 // NotificationConsumer implements the notification consumer service
@@ -30,7 +30,7 @@ func NewNotificationConsumer(
 
 // Start starts the notification consumer
 func (c *NotificationConsumer) Start(ctx context.Context) error {
-	log.Info().
+	logging.Info().
 		Str("queue", c.queueConnection.QueueName).
 		Str("host", c.queueConnection.Host).
 		Int("concurrency", c.concurrency).
@@ -41,6 +41,6 @@ func (c *NotificationConsumer) Start(ctx context.Context) error {
 
 // Stop stops the notification consumer
 func (c *NotificationConsumer) Stop() error {
-	log.Info().Msg("Stopping notification consumer")
+	logging.Info().Msg("Stopping notification consumer")
 	return c.notificationService.Close()
 }

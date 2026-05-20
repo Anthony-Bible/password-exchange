@@ -7,11 +7,11 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/message"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/golang/protobuf/proto"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/rs/zerolog/log"
 )
 
 // RabbitMQConsumer implements the QueuePort using RabbitMQ
@@ -28,16 +28,16 @@ func NewRabbitMQConsumer() *RabbitMQConsumer {
 // Connect establishes a connection to RabbitMQ
 func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn contracts.QueueConnection) error {
 	rabbitURL := fmt.Sprintf("amqp://%s:%s@%s:%d/", queueConn.User, queueConn.Password, queueConn.Host, queueConn.Port)
-	
+
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
-		log.Error().Err(err).Str("url", rabbitURL).Msg("Failed to connect to RabbitMQ")
+		logging.Error().Err(err).Str("url", rabbitURL).Msg("Failed to connect to RabbitMQ")
 		return fmt.Errorf("%w: %v", domain.ErrQueueConnectionFailed, err)
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to open RabbitMQ channel")
+		logging.Error().Err(err).Msg("Failed to open RabbitMQ channel")
 		conn.Close()
 		return fmt.Errorf("%w: %v", domain.ErrQueueConnectionFailed, err)
 	}
@@ -45,7 +45,7 @@ func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn contracts.Queu
 	r.connection = conn
 	r.channel = ch
 
-	log.Info().Str("host", queueConn.Host).Int("port", queueConn.Port).Msg("Connected to RabbitMQ")
+	logging.Info().Str("host", queueConn.Host).Int("port", queueConn.Port).Msg("Connected to RabbitMQ")
 	return nil
 }
 
@@ -67,7 +67,7 @@ func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn contrac
 		nil,                 // arguments
 	)
 	if err != nil {
-		log.Error().Err(err).Str("queue", queueConn.QueueName).Msg("Failed to declare queue")
+		logging.Error().Err(err).Str("queue", queueConn.QueueName).Msg("Failed to declare queue")
 		return fmt.Errorf("%w: %v", domain.ErrQueueConsumeFailed, err)
 	}
 
@@ -78,7 +78,7 @@ func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn contrac
 		false, // global
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to set QoS")
+		logging.Error().Err(err).Msg("Failed to set QoS")
 		return fmt.Errorf("%w: %v", domain.ErrQueueConsumeFailed, err)
 	}
 
@@ -93,11 +93,11 @@ func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn contrac
 		nil,    // args
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to register consumer")
+		logging.Error().Err(err).Msg("Failed to register consumer")
 		return fmt.Errorf("%w: %v", domain.ErrQueueConsumeFailed, err)
 	}
 
-	log.Info().Str("queue", queueConn.QueueName).Int("concurrency", concurrency).Msg("Starting RabbitMQ consumer")
+	logging.Info().Str("queue", queueConn.QueueName).Int("concurrency", concurrency).Msg("Starting RabbitMQ consumer")
 
 	// Start worker goroutines
 	for i := 0; i < concurrency; i++ {
@@ -106,22 +106,22 @@ func (r *RabbitMQConsumer) StartConsuming(ctx context.Context, queueConn contrac
 
 	// Wait for context cancellation
 	<-ctx.Done()
-	log.Info().Msg("RabbitMQ consumer shutting down")
+	logging.Info().Msg("RabbitMQ consumer shutting down")
 	return nil
 }
 
 // messageWorker processes messages from the queue
 func (r *RabbitMQConsumer) messageWorker(ctx context.Context, msgs <-chan amqp.Delivery, handler domain.MessageHandler, workerID int) {
-	log.Debug().Int("workerId", workerID).Msg("Starting RabbitMQ message worker")
+	logging.Debug().Int("workerId", workerID).Msg("Starting RabbitMQ message worker")
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debug().Int("workerId", workerID).Msg("Message worker shutting down")
+			logging.Debug().Int("workerId", workerID).Msg("Message worker shutting down")
 			return
 		case msg, ok := <-msgs:
 			if !ok {
-				log.Error().Int("workerId", workerID).Msg("RabbitMQ message channel closed")
+				logging.Error().Int("workerId", workerID).Msg("RabbitMQ message channel closed")
 				os.Exit(1) // Critical error - exit to restart
 				return
 			}
@@ -139,7 +139,7 @@ func (r *RabbitMQConsumer) messageWorker(ctx context.Context, msgs <-chan amqp.D
 // handleMessage processes a single message
 func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Delivery, handler domain.MessageHandler, workerID int) bool {
 	if delivery.Body == nil {
-		log.Error().Int("workerId", workerID).Msg("Received message with empty body")
+		logging.Error().Int("workerId", workerID).Msg("Received message with empty body")
 		return false
 	}
 
@@ -147,7 +147,7 @@ func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Deli
 	var pbMsg pb.Message
 	err := proto.Unmarshal(delivery.Body, &pbMsg)
 	if err != nil {
-		log.Error().Err(err).Int("workerId", workerID).Msg("Failed to unmarshal message")
+		logging.Error().Err(err).Int("workerId", workerID).Msg("Failed to unmarshal message")
 		return false
 	}
 
@@ -168,11 +168,11 @@ func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Deli
 	// Handle the message
 	err = handler.HandleMessage(ctx, queueMsg)
 	if err != nil {
-		log.Error().Err(err).Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Failed to handle message")
+		logging.Error().Err(err).Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Failed to handle message")
 		return false
 	}
 
-	log.Debug().Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Successfully handled message")
+	logging.Debug().Int("workerId", workerID).Str("to", validation.SanitizeEmailForLogging(queueMsg.OtherEmail)).Msg("Successfully handled message")
 	return true
 }
 
@@ -184,6 +184,6 @@ func (r *RabbitMQConsumer) Close() error {
 	if r.connection != nil {
 		r.connection.Close()
 	}
-	log.Info().Msg("RabbitMQ connection closed")
+	logging.Info().Msg("RabbitMQ connection closed")
 	return nil
 }

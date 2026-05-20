@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,12 +33,12 @@ func (h *PasswordHasher) Hash(ctx context.Context, password string) (string, err
 
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), h.cost)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to hash password")
+		logging.Error().Err(err).Msg("Failed to hash password")
 		return "", fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	hashedPassword := string(hashedBytes)
-	log.Debug().Msg("Password hashed successfully")
+	logging.Debug().Msg("Password hashed successfully")
 	return hashedPassword, nil
 }
 
@@ -46,20 +46,20 @@ func (h *PasswordHasher) Hash(ctx context.Context, password string) (string, err
 func (h *PasswordHasher) Verify(ctx context.Context, password, hash string) (bool, error) {
 	// If hash is empty, consider it as no password required
 	if strings.TrimSpace(hash) == "" {
-		log.Debug().Msg("No password hash provided, allowing access")
+		logging.Debug().Msg("No password hash provided, allowing access")
 		return true, nil
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
-			log.Debug().Msg("Password verification failed - mismatch")
+			logging.Debug().Msg("Password verification failed - mismatch")
 			return false, nil
 		}
-		log.Error().Err(err).Msg("Failed to verify password")
+		logging.Error().Err(err).Msg("Failed to verify password")
 		return false, fmt.Errorf("failed to verify password: %w", err)
 	}
 
-	log.Debug().Msg("Password verified successfully")
+	logging.Debug().Msg("Password verified successfully")
 	return true, nil
 }

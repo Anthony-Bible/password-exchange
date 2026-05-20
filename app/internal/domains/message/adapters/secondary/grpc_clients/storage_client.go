@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
@@ -21,7 +21,7 @@ type StorageClient struct {
 func NewStorageClient(endpoint string) (*StorageClient, error) {
 	conn, err := grpc.Dial(endpoint, grpc.WithInsecure())
 	if err != nil {
-		log.Error().Err(err).Str("endpoint", endpoint).Msg("Failed to connect to storage service")
+		logging.Error().Err(err).Str("endpoint", endpoint).Msg("Failed to connect to storage service")
 		return nil, fmt.Errorf("failed to connect to storage service: %w", err)
 	}
 
@@ -48,11 +48,11 @@ func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStor
 
 	_, err := c.client.Insert(ctx, grpcReq)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to store message")
+		logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to store message")
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
-	log.Debug().Str("messageId", req.MessageID).Int("maxViewCount", req.MaxViewCount).Msg("Stored message successfully")
+	logging.Debug().Str("messageId", req.MessageID).Int("maxViewCount", req.MaxViewCount).Msg("Stored message successfully")
 	return nil
 }
 
@@ -63,7 +63,7 @@ func parseExpiresAt(s string) *time.Time {
 	}
 	t, err := time.Parse(time.RFC3339, s)
 	if err != nil {
-		log.Warn().
+		logging.Warn().
 			Err(err).
 			Str("value", s).
 			Msg("Failed to parse expires_at timestamp from storage response; treating as no expiry")
@@ -83,7 +83,7 @@ func (c *StorageClient) RetrieveMessage(
 
 	resp, err := c.client.Select(ctx, grpcReq)
 	if err != nil {
-		log.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve message")
+		logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve message")
 		return nil, fmt.Errorf("failed to retrieve message: %w", err)
 	}
 
@@ -99,7 +99,7 @@ func (c *StorageClient) RetrieveMessage(
 		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
 	}
 
-	log.Debug().
+	logging.Debug().
 		Str("messageId", req.MessageID).
 		Bool("hasPassphrase", hasPassphrase).
 		Msg("Retrieved message successfully")
@@ -117,7 +117,7 @@ func (c *StorageClient) GetMessage(
 
 	resp, err := c.client.GetMessage(ctx, grpcReq)
 	if err != nil {
-		log.Error().
+		logging.Error().
 			Err(err).
 			Str("messageId", req.MessageID).
 			Msg("Failed to retrieve message without incrementing view count")
@@ -136,7 +136,7 @@ func (c *StorageClient) GetMessage(
 		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
 	}
 
-	log.Debug().
+	logging.Debug().
 		Str("messageId", req.MessageID).
 		Bool("hasPassphrase", hasPassphrase).
 		Msg("Retrieved message without incrementing view count successfully")

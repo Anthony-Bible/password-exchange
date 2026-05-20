@@ -5,7 +5,7 @@ import (
 	storageMySQL "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/rs/zerolog/log"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 )
 
 type Config struct {
@@ -38,8 +38,8 @@ func (conf Config) startHexagonalServer() {
 	grpcServer := storageGRPC.NewGRPCServer(storageService, address)
 
 	// Start the server
-	log.Info().Str("address", address).Msg("Starting storage service with hexagonal architecture")
+	logging.Info().Str("address", address).Msg("Starting storage service with hexagonal architecture")
 	if err := grpcServer.Start(); err != nil {
-		log.Fatal().Err(err).Msg("Failed to start hexagonal storage server")
+		logging.Fatal().Err(err).Msg("Failed to start hexagonal storage server")
 	}
 }

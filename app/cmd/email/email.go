@@ -1,17 +1,15 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package email
 
 import (
 	"fmt"
-
-	"github.com/Anthony-Bible/password-exchange/app/cmd"
-	"github.com/rs/zerolog/log"
-
 	"reflect"
 	"strings"
+
+	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -32,7 +30,7 @@ var emailCmd = &cobra.Command{
     PASSWORDEXCHANGE_EMAILPORT: Port for email host`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("email called")
-		log.Debug().Msgf("the value of loglevel is %s\n", viper.Get("loglevel"))
+		logging.Debug().Msgf("the value of loglevel is %s", viper.GetString("loglevel"))
 		var cfg Config
 		bindenvs(cfg)
 		viper.Unmarshal(&cfg.PassConfig)
@@ -65,6 +63,7 @@ func bindenvs(iface interface{}, parts ...string) {
 		}
 	}
 }
+
 func init() {
 	cmd.RootCmd.AddCommand(emailCmd)
 
