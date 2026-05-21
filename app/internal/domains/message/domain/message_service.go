@@ -7,29 +7,33 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
-	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 )
 
 // MessageService provides message sharing operations
 type MessageService struct {
-	encryptionService   EncryptionService
-	storageService      StorageService
-	notificationService NotificationService
-	passwordHasher      PasswordHasher
-	urlBuilder          URLBuilder
-	turnstileValidator  TurnstileValidator
+	encryptionService   secondary.EncryptionServicePort
+	storageService      secondary.StorageServicePort
+	notificationService secondary.NotificationServicePort
+	passwordHasher      secondary.PasswordHasherPort
+	urlBuilder          secondary.URLBuilderPort
+	turnstileValidator  secondary.TurnstileValidatorPort
+	logger              secondary.LoggerPort
+	config              secondary.ConfigPort
+	validation          secondary.ValidationPort
 }
 
 // NewMessageService creates a new message service
 func NewMessageService(
-	encryptionService EncryptionService,
-	storageService StorageService,
-	notificationService NotificationService,
-	passwordHasher PasswordHasher,
-	urlBuilder URLBuilder,
-	turnstileValidator TurnstileValidator,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+	notificationService secondary.NotificationServicePort,
+	passwordHasher secondary.PasswordHasherPort,
+	urlBuilder secondary.URLBuilderPort,
+	turnstileValidator secondary.TurnstileValidatorPort,
+	logger secondary.LoggerPort,
+	config secondary.ConfigPort,
+	validation secondary.ValidationPort,
 ) *MessageService {
 	return &MessageService{
 		encryptionService:   encryptionService,
@@ -38,6 +42,9 @@ func NewMessageService(
 		passwordHasher:      passwordHasher,
 		urlBuilder:          urlBuilder,
 		turnstileValidator:  turnstileValidator,
+		logger:              logger,
+		config:              config,
+		validation:          validation,
 	}
 }
 
@@ -46,20 +53,20 @@ func (s *MessageService) SubmitMessage(
 	ctx context.Context,
 	req MessageSubmissionRequest,
 ) (*MessageSubmissionResponse, error) {
-	logging.Info().
-		Str("senderEmail", validation.SanitizeEmailForLogging(req.SenderEmail)).
+	s.logger.Info().
+		Str("senderEmail", s.validation.SanitizeEmailForLogging(req.SenderEmail)).
 		Msg("Processing message submission")
 
 	// Validate the request
 	if err := s.validateSubmissionRequest(req); err != nil {
-		logging.Error().Err(err).Msg("Invalid message submission request")
+		s.logger.Error().Err(err).Msg("Invalid message submission request")
 		return nil, fmt.Errorf("%w: %v", ErrInvalidMessageRequest, err)
 	}
 
 	// Validate Turnstile token only if sending email notifications
 	if req.SendNotification {
 		if strings.TrimSpace(req.TurnstileToken) == "" {
-			logging.Error().Msg("Missing Turnstile token for email notification")
+			s.logger.Error().Msg("Missing Turnstile token for email notification")
 			return nil, fmt.Errorf("%w: missing Turnstile token", ErrInvalidMessageRequest)
 		}
 
@@ -73,35 +80,35 @@ func (s *MessageService) SubmitMessage(
 
 		valid, err := s.turnstileValidator.ValidateToken(ctx, req.TurnstileToken, remoteIP)
 		if err != nil {
-			logging.Error().Err(err).Msg("Failed to validate Turnstile token")
+			s.logger.Error().Err(err).Msg("Failed to validate Turnstile token")
 			return nil, fmt.Errorf("%w: turnstile validation error: %v", ErrInvalidMessageRequest, err)
 		}
 		if !valid {
-			logging.Warn().Msg("Turnstile token validation failed")
+			s.logger.Warn().Msg("Turnstile token validation failed")
 			return nil, fmt.Errorf("%w: turnstile validation failed", ErrInvalidMessageRequest)
 		}
-		logging.Debug().Msg("Turnstile token validated successfully")
+		s.logger.Debug().Msg("Turnstile token validated successfully")
 	} else {
-		logging.Debug().Msg("Skipping Turnstile validation - email notifications disabled")
+		s.logger.Debug().Msg("Skipping Turnstile validation - email notifications disabled")
 	}
 	// Generate encryption key
 	encryptionKey, err := s.encryptionService.GenerateKey(ctx, 32)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to generate encryption key")
+		s.logger.Error().Err(err).Msg("Failed to generate encryption key")
 		return nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, err)
 	}
 
 	// Encrypt the message content
 	encryptedContent, err := s.encryptionService.Encrypt(ctx, []string{req.Content}, encryptionKey)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to encrypt message content")
+		s.logger.Error().Err(err).Msg("Failed to encrypt message content")
 		return nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, err)
 	}
 
 	// Generate unique ID
 	messageID, err := s.encryptionService.GenerateID(ctx)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to generate message ID")
+		s.logger.Error().Err(err).Msg("Failed to generate message ID")
 		return nil, fmt.Errorf("%w: %v", ErrGenerateIDFailed, err)
 	}
 
@@ -110,7 +117,7 @@ func (s *MessageService) SubmitMessage(
 	if strings.TrimSpace(req.Passphrase) != "" {
 		hashedPassphrase, err = s.passwordHasher.Hash(ctx, req.Passphrase)
 		if err != nil {
-			logging.Error().Err(err).Msg("Failed to hash passphrase")
+			s.logger.Error().Err(err).Msg("Failed to hash passphrase")
 			return nil, fmt.Errorf("%w: %v", ErrPasswordHashFailed, err)
 		}
 	}
@@ -121,7 +128,7 @@ func (s *MessageService) SubmitMessage(
 	// Determine max view count (use request value or default from config)
 	maxViewCount := req.MaxViewCount
 	if maxViewCount <= 0 {
-		maxViewCount = config.AppConfig.DefaultMaxViewCount
+		maxViewCount = s.config.GetDefaultMaxViewCount()
 		if maxViewCount <= 0 {
 			maxViewCount = 5 // Fallback default
 		}
@@ -150,7 +157,7 @@ func (s *MessageService) SubmitMessage(
 
 	err = s.storageService.StoreMessage(ctx, storeReq)
 	if err != nil {
-		logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to store message")
+		s.logger.Error().Err(err).Str("messageId", messageID).Msg("Failed to store message")
 		return nil, fmt.Errorf("%w: %v", ErrStorageFailed, err)
 	}
 
@@ -167,7 +174,7 @@ func (s *MessageService) SubmitMessage(
 
 		err = s.notificationService.SendMessageNotification(ctx, notificationReq)
 		if err != nil {
-			logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to send notification")
+			s.logger.Error().Err(err).Str("messageId", messageID).Msg("Failed to send notification")
 			// Don't fail the entire operation for notification errors
 		}
 	}
@@ -180,7 +187,7 @@ func (s *MessageService) SubmitMessage(
 		Success:    true,
 	}
 
-	logging.Info().Str("messageId", messageID).Str("url", decryptURL).Msg("Message submitted successfully")
+	s.logger.Info().Str("messageId", messageID).Str("url", decryptURL).Msg("Message submitted successfully")
 	return response, nil
 }
 
@@ -189,7 +196,7 @@ func (s *MessageService) RetrieveMessage(
 	ctx context.Context,
 	req MessageRetrievalRequest,
 ) (*MessageRetrievalResponse, error) {
-	logging.Debug().Str("messageId", req.MessageID).Msg("Processing message retrieval")
+	s.logger.Debug().Str("messageId", req.MessageID).Msg("Processing message retrieval")
 
 	// First, get message metadata without incrementing view count to check passphrase
 	storageReq := MessageRetrievalStorageRequest{
@@ -198,7 +205,7 @@ func (s *MessageService) RetrieveMessage(
 
 	storedMessageMeta, err := s.storageService.GetMessage(ctx, storageReq)
 	if err != nil {
-		logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to get stored message metadata")
+		s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to get stored message metadata")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
@@ -206,11 +213,11 @@ func (s *MessageService) RetrieveMessage(
 	if storedMessageMeta.HasPassphrase {
 		valid, err := s.passwordHasher.Verify(ctx, req.Passphrase, storedMessageMeta.HashedPassphrase)
 		if err != nil {
-			logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to verify passphrase")
+			s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to verify passphrase")
 			return nil, fmt.Errorf("%w: %v", ErrPasswordVerificationFailed, err)
 		}
 		if !valid {
-			logging.Warn().Str("messageId", req.MessageID).Msg("Invalid passphrase provided")
+			s.logger.Warn().Str("messageId", req.MessageID).Msg("Invalid passphrase provided")
 			return nil, ErrInvalidPassphrase
 		}
 	}
@@ -218,7 +225,7 @@ func (s *MessageService) RetrieveMessage(
 	// Only after successful passphrase validation, retrieve full message and increment view count
 	storedMessage, err := s.storageService.RetrieveMessage(ctx, storageReq)
 	if err != nil {
-		logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve stored message")
+		s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to retrieve stored message")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
@@ -229,7 +236,7 @@ func (s *MessageService) RetrieveMessage(
 		req.DecryptionKey,
 	)
 	if err != nil {
-		logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decrypt message content")
+		s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decrypt message content")
 		return nil, fmt.Errorf("%w: %v", ErrDecryptionFailed, err)
 	}
 
@@ -238,7 +245,7 @@ func (s *MessageService) RetrieveMessage(
 	if len(decryptedContent) > 0 {
 		decodedBytes, err := base64.URLEncoding.DecodeString(decryptedContent[0])
 		if err != nil {
-			logging.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decode message content")
+			s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decode message content")
 			return nil, fmt.Errorf("%w: %v", ErrDecodingFailed, err)
 		}
 		finalContent = string(decodedBytes)
@@ -253,7 +260,7 @@ func (s *MessageService) RetrieveMessage(
 		Success:      true,
 	}
 
-	logging.Debug().
+	s.logger.Debug().
 		Str("messageId", req.MessageID).
 		Int("viewCount", storedMessage.ViewCount).
 		Msg("Message retrieved successfully")
@@ -262,7 +269,7 @@ func (s *MessageService) RetrieveMessage(
 
 // CheckMessageAccess checks if a message exists and whether it requires a passphrase
 func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID string) (*MessageAccessInfo, error) {
-	logging.Debug().Str("messageId", messageID).Msg("Checking message access")
+	s.logger.Debug().Str("messageId", messageID).Msg("Checking message access")
 
 	storageReq := MessageRetrievalStorageRequest{
 		MessageID: messageID,
@@ -270,7 +277,7 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 
 	storedMessage, err := s.storageService.GetMessage(ctx, storageReq)
 	if err != nil {
-		logging.Error().Err(err).Str("messageId", messageID).Msg("Failed to check message access")
+		s.logger.Error().Err(err).Str("messageId", messageID).Msg("Failed to check message access")
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
@@ -281,7 +288,7 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 		ExpiresAt:          storedMessage.ExpiresAt,
 	}
 
-	logging.Debug().
+	s.logger.Debug().
 		Str("messageId", messageID).
 		Bool("requiresPassphrase", accessInfo.RequiresPassphrase).
 		Msg("Message access checked")

@@ -5,10 +5,13 @@ import (
 
 	webAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/web"
 	bcryptAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/bcrypt"
+	messageConfigAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/config"
 	grpcClients "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/grpc_clients"
 	httpAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/http"
+	messageLoggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/logger"
 	rabbitMQAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/rabbitmq"
 	urlAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/url"
+	messageValidationAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/validation"
 	messageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
@@ -69,6 +72,11 @@ func (conf Config) startHexagonalServer() {
 	// Create Turnstile validator
 	turnstileValidator := httpAdapter.NewTurnstileValidator(conf.TurnstileSecret)
 
+	// Create cross-cutting adapters
+	messageLogger := messageLoggerAdapter.NewAdapter()
+	messageConfig := messageConfigAdapter.NewAdapter()
+	messageValidation := messageValidationAdapter.NewAdapter()
+
 	// Create message service (domain)
 	messageService := messageDomain.NewMessageService(
 		encryptionClient,
@@ -77,6 +85,9 @@ func (conf Config) startHexagonalServer() {
 		passwordHasher,
 		urlBuilder,
 		turnstileValidator,
+		messageLogger,
+		messageConfig,
+		messageValidation,
 	)
 
 	// Create web server (primary adapter)

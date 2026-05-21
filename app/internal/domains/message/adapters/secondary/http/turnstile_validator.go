@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 )
 
 const (
@@ -42,7 +42,7 @@ type TurnstileResponse struct {
 }
 
 // NewTurnstileValidator creates a new TurnstileValidator instance
-func NewTurnstileValidator(secret string) domain.TurnstileValidator {
+func NewTurnstileValidator(secret string) secondary.TurnstileValidatorPort {
 	return &TurnstileValidator{
 		secret: secret,
 		httpClient: &http.Client{
