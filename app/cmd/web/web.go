@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package web
 
@@ -53,6 +52,7 @@ func bindenvs(iface interface{}, parts ...string) {
 		}
 	}
 }
+
 func init() {
 	cmd.RootCmd.AddCommand(webCmd)
 

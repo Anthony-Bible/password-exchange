@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -90,18 +91,143 @@ func (m *mockTurnstileValidator) ValidateToken(ctx context.Context, token string
 	return args.Bool(0), args.Error(1)
 }
 
+type mockLogger struct{ mock.Mock }
+
+func (m *mockLogger) Debug() contracts.LogEvent {
+	args := m.Called()
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogger) Info() contracts.LogEvent {
+	args := m.Called()
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogger) Warn() contracts.LogEvent {
+	args := m.Called()
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogger) Error() contracts.LogEvent {
+	args := m.Called()
+	return args.Get(0).(contracts.LogEvent)
+}
+
+type mockLogEvent struct{ mock.Mock }
+
+func (m *mockLogEvent) Err(err error) contracts.LogEvent {
+	args := m.Called(err)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Str(key, val string) contracts.LogEvent {
+	args := m.Called(key, val)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Int(key string, val int) contracts.LogEvent {
+	args := m.Called(key, val)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Bool(key string, val bool) contracts.LogEvent {
+	args := m.Called(key, val)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Dur(key string, val time.Duration) contracts.LogEvent {
+	args := m.Called(key, val)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Float64(key string, val float64) contracts.LogEvent {
+	args := m.Called(key, val)
+	return args.Get(0).(contracts.LogEvent)
+}
+
+func (m *mockLogEvent) Msg(msg string) {
+	m.Called(msg)
+}
+
+type mockConfig struct{ mock.Mock }
+
+func (m *mockConfig) GetDefaultMaxViewCount() int {
+	args := m.Called()
+	return args.Int(0)
+}
+
+type mockValidation struct{ mock.Mock }
+
+func (m *mockValidation) SanitizeEmailForLogging(email string) string {
+	args := m.Called(email)
+	return args.String(0)
+}
+
+// setupLenientLoggerMock sets up lenient expectations for a logger mock that will match any log calls
+func setupLenientLoggerMock(l *mockLogger) *mockLogEvent {
+	ev := &mockLogEvent{}
+	l.On("Debug").Return(ev).Maybe()
+	l.On("Info").Return(ev).Maybe()
+	l.On("Warn").Return(ev).Maybe()
+	l.On("Error").Return(ev).Maybe()
+
+	ev.On("Err", mock.Anything).Return(ev).Maybe()
+	ev.On("Str", mock.Anything, mock.Anything).Return(ev).Maybe()
+	ev.On("Int", mock.Anything, mock.Anything).Return(ev).Maybe()
+	ev.On("Bool", mock.Anything, mock.Anything).Return(ev).Maybe()
+	ev.On("Dur", mock.Anything, mock.Anything).Return(ev).Maybe()
+	ev.On("Float64", mock.Anything, mock.Anything).Return(ev).Maybe()
+	ev.On("Msg", mock.Anything).Return().Maybe()
+
+	return ev
+}
+
+// setupTestMocks sets up standard expectations for all mocks
+func setupTestMocks(
+	enc *mockEncryptionService,
+	stor *mockStorageService,
+	notif *mockNotificationService,
+	hasher *mockPasswordHasher,
+	urlb *mockURLBuilder,
+	turnstile *mockTurnstileValidator,
+	logger *mockLogger,
+	config *mockConfig,
+	validation *mockValidation,
+) {
+	setupLenientLoggerMock(logger)
+	validation.On("SanitizeEmailForLogging", mock.Anything).Return("sanitized-email@example.com").Maybe()
+	config.On("GetDefaultMaxViewCount").Return(5).Maybe()
+}
+
+func createTestMocks() (
+	*mockEncryptionService,
+	*mockStorageService,
+	*mockNotificationService,
+	*mockPasswordHasher,
+	*mockURLBuilder,
+	*mockTurnstileValidator,
+	*mockLogger,
+	*mockConfig,
+	*mockValidation,
+) {
+	return new(mockEncryptionService),
+		new(mockStorageService),
+		new(mockNotificationService),
+		new(mockPasswordHasher),
+		new(mockURLBuilder),
+		new(mockTurnstileValidator),
+		new(mockLogger),
+		new(mockConfig),
+		new(mockValidation)
+}
+
 // --- Tests ---
 
 func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
-	// RetrieveMessage must carry ExpiresAt from storage through to the response.
-	enc := new(mockEncryptionService)
-	stor := new(mockStorageService)
-	notif := new(mockNotificationService)
-	hasher := new(mockPasswordHasher)
-	urlb := new(mockURLBuilder)
-	turnstile := new(mockTurnstileValidator)
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
 	fixedExpiry := time.Date(2030, 3, 7, 12, 0, 0, 0, time.UTC)
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
@@ -135,15 +261,10 @@ func TestRetrieveMessage_PropagatesExpiresAt(t *testing.T) {
 }
 
 func TestRetrieveMessage_NilExpiresAtPropagated(t *testing.T) {
-	// Legacy messages with nil ExpiresAt in storage must yield nil ExpiresAt in the response.
-	enc := new(mockEncryptionService)
-	stor := new(mockStorageService)
-	notif := new(mockNotificationService)
-	hasher := new(mockPasswordHasher)
-	urlb := new(mockURLBuilder)
-	turnstile := new(mockTurnstileValidator)
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
 	encodedContent := base64.URLEncoding.EncodeToString([]byte("secret"))
 	storageResp := &MessageStorageResponse{
@@ -175,15 +296,10 @@ func TestRetrieveMessage_NilExpiresAtPropagated(t *testing.T) {
 }
 
 func TestSubmitMessage_CustomExpirationHours(t *testing.T) {
-	// SubmitMessage must use the provided ExpirationHours when set.
-	enc := new(mockEncryptionService)
-	stor := new(mockStorageService)
-	notif := new(mockNotificationService)
-	hasher := new(mockPasswordHasher)
-	urlb := new(mockURLBuilder)
-	turnstile := new(mockTurnstileValidator)
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -221,15 +337,10 @@ func TestSubmitMessage_CustomExpirationHours(t *testing.T) {
 }
 
 func TestSubmitMessage_DefaultExpirationWhenZero(t *testing.T) {
-	// When ExpirationHours is zero, the default TTL (7 days) must be applied.
-	enc := new(mockEncryptionService)
-	stor := new(mockStorageService)
-	notif := new(mockNotificationService)
-	hasher := new(mockPasswordHasher)
-	urlb := new(mockURLBuilder)
-	turnstile := new(mockTurnstileValidator)
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
 	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
 	enc.On("Encrypt", mock.Anything, mock.Anything, mock.Anything).Return([]string{"ciphertext"}, nil)
@@ -266,15 +377,10 @@ func TestSubmitMessage_DefaultExpirationWhenZero(t *testing.T) {
 }
 
 func TestSubmitMessage_ExpirationHoursValidation(t *testing.T) {
-	// ExpirationHours outside the allowed range must be rejected.
-	enc := new(mockEncryptionService)
-	stor := new(mockStorageService)
-	notif := new(mockNotificationService)
-	hasher := new(mockPasswordHasher)
-	urlb := new(mockURLBuilder)
-	turnstile := new(mockTurnstileValidator)
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
-	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile)
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
 
 	tests := []struct {
 		name  string
