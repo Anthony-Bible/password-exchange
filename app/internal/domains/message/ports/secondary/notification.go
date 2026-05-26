@@ -2,12 +2,12 @@ package secondary
 
 import (
 	"context"
-	
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/contracts"
 )
 
 // NotificationServicePort defines the secondary port for notification operations
 type NotificationServicePort interface {
 	// SendMessageNotification sends a notification about a new message
-	SendMessageNotification(ctx context.Context, req domain.MessageNotificationRequest) error
+	SendMessageNotification(ctx context.Context, req contracts.MessageNotificationRequest) error
 }

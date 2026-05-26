@@ -57,9 +57,13 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 			h.renderErrorWithField(c, "Invalid max view count: must be a number", "max_view_count")
 			return
 		}
-		if parsed < 1 || parsed > 100 {
+		if parsed < 1 || parsed > domain.AbsoluteMaxViewCount {
 			logging.Error().Int("value", parsed).Msg("Max view count out of range")
-			h.renderErrorWithField(c, "Max view count must be between 1 and 100", "max_view_count")
+			h.renderErrorWithField(
+				c,
+				fmt.Sprintf("Max view count must be between 1 and %d", domain.AbsoluteMaxViewCount),
+				"max_view_count",
+			)
 			return
 		}
 		maxViewCount = parsed
@@ -94,7 +98,7 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 			h.renderErrorWithField(c, "Invalid expiration unit: must be 'hours' or 'days'", "expiration_value")
 			return
 		}
-		if expirationHours < 1 || expirationHours > domain.MaxExpirationHours {
+		if expirationHours < domain.MinExpirationHours || expirationHours > domain.MaxExpirationHours {
 			logging.Error().Int("hours", expirationHours).Msg("Expiration out of range")
 			h.renderErrorWithField(
 				c,

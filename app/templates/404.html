@@ -5,44 +5,24 @@
     <div class="container-main bg-white shadow-lg rounded p-5 my-5 mx-auto">
         <div class="error-container text-center">
             <div class="error-code mb-4">
-                <h1 class="display-1">404</h1>
+                <h1 class="display-1 gradient-text">404</h1>
             </div>
-
-            <div class="error-message mb-4">
-                <h2 class="h3 mb-3">This page self-destructed</h2>
-                <p class="text-muted lead mb-0">
-                    It either never existed, expired, or got viewed one too many times.
+            
+            <div class="error-message mb-5">
+                <h2 class="h3 mb-3">Page Not Found</h2>
+                <p class="text-muted lead">
+                    The page you're looking for doesn't exist or has been moved.
                 </p>
             </div>
-
-            <div class="section-group text-start">
-                <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-                    <i class="fas fa-fire me-3 fs-5" aria-hidden="true"></i>
-                    <div>
-                        <strong>Status:</strong> Permanently deleted<br>
-                        <small>Views remaining: 0 &middot; Expires: <span class="font-monospace">already gone</span></small>
-                    </div>
-                </div>
-
-                <label for="recovered-content" class="form-label small text-muted mb-1">Recovered contents</label>
-                <textarea id="recovered-content"
-                          class="form-control font-monospace message-textarea"
-                          rows="3" readonly
-                          aria-label="Recovered page contents">████████ ████ ███████ ██████ █████████ ███ ████████ ██ █████ ████ ████ ████ ██████ ████████ ████ █████ ███████ ████████.</textarea>
-                <div class="form-text mt-2">
-                    <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
-                    That's kind of the whole point.
-                </div>
-            </div>
-
-            <div class="error-actions mt-4">
-                <a href="/" class="btn btn-success btn-lg me-2">
-                    <i class="fas fa-plus me-2" aria-hidden="true"></i>
-                    Share a new secret
+            
+            <div class="error-actions">
+                <a href="/" class="btn btn-success btn-lg me-3">
+                    <i class="fas fa-home me-2"></i>
+                    Go to Homepage
                 </a>
-                <button onclick="history.back()" type="button" class="btn btn-outline-secondary btn-lg">
-                    <i class="fas fa-arrow-left me-2" aria-hidden="true"></i>
-                    Go back
+                <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Go Back
                 </button>
             </div>
         </div>
