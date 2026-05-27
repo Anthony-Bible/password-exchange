@@ -4,9 +4,9 @@ import (
 	"context"
 	"net"
 
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/primary"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/secondary"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -17,13 +17,15 @@ type GRPCServer struct {
 	pb.UnimplementedMessageServiceServer
 	encryptionService primary.EncryptionServicePort
 	address           string
+	logger            secondary.LoggerPort
 }
 
 // NewGRPCServer creates a new gRPC server for the encryption service
-func NewGRPCServer(encryptionService primary.EncryptionServicePort, address string) *GRPCServer {
+func NewGRPCServer(encryptionService primary.EncryptionServicePort, address string, logger secondary.LoggerPort) *GRPCServer {
 	return &GRPCServer{
 		encryptionService: encryptionService,
 		address:           address,
+		logger:            logger,
 	}
 }
 
@@ -31,7 +33,7 @@ func NewGRPCServer(encryptionService primary.EncryptionServicePort, address stri
 func (s *GRPCServer) Start() error {
 	lis, err := net.Listen("tcp", s.address)
 	if err != nil {
-		logging.Error().Err(err).Str("address", s.address).Msg("Failed to listen on address")
+		s.logger.Error().Err(err).Str("address", s.address).Msg("Failed to listen on address")
 		return err
 	}
 
@@ -39,9 +41,9 @@ func (s *GRPCServer) Start() error {
 	pb.RegisterMessageServiceServer(grpcServer, s)
 	reflection.Register(grpcServer)
 
-	logging.Info().Str("address", s.address).Msg("Starting encryption gRPC server")
+	s.logger.Info().Str("address", s.address).Msg("Starting encryption gRPC server")
 	if err := grpcServer.Serve(lis); err != nil {
-		logging.Error().Err(err).Msg("Failed to serve gRPC")
+		s.logger.Error().Err(err).Msg("Failed to serve gRPC")
 		return err
 	}
 
@@ -50,16 +52,16 @@ func (s *GRPCServer) Start() error {
 
 // EncryptMessage handles encryption requests
 func (s *GRPCServer) EncryptMessage(ctx context.Context, request *pb.EncryptedMessageRequest) (*pb.EncryptedMessageResponse, error) {
-	logging.Debug().Int("plaintextCount", len(request.GetPlainText())).Msg("Received encryption request")
+	s.logger.Debug().Int("plaintextCount", len(request.GetPlainText())).Msg("Received encryption request")
 
-	domainRequest := domain.EncryptionRequest{
+	domainRequest := contracts.EncryptionRequest{
 		Plaintext: request.GetPlainText(),
 		Key:       request.GetKey(),
 	}
 
 	response, err := s.encryptionService.Encrypt(ctx, domainRequest)
 	if err != nil {
-		logging.Error().Err(err).Msg("Encryption failed")
+		s.logger.Error().Err(err).Msg("Encryption failed")
 		return nil, err
 	}
 
@@ -67,22 +69,22 @@ func (s *GRPCServer) EncryptMessage(ctx context.Context, request *pb.EncryptedMe
 		Ciphertext: response.Ciphertext,
 	}
 
-	logging.Debug().Int("ciphertextCount", len(response.Ciphertext)).Msg("Successfully encrypted messages")
+	s.logger.Debug().Int("ciphertextCount", len(response.Ciphertext)).Msg("Successfully encrypted messages")
 	return pbResponse, nil
 }
 
 // DecryptMessage handles decryption requests
 func (s *GRPCServer) DecryptMessage(ctx context.Context, request *pb.DecryptedMessageRequest) (*pb.DecryptedMessageResponse, error) {
-	logging.Debug().Int("ciphertextCount", len(request.GetCiphertext())).Msg("Received decryption request")
+	s.logger.Debug().Int("ciphertextCount", len(request.GetCiphertext())).Msg("Received decryption request")
 
-	domainRequest := domain.DecryptionRequest{
+	domainRequest := contracts.DecryptionRequest{
 		Ciphertext: request.GetCiphertext(),
 		Key:        request.GetKey(),
 	}
 
 	response, err := s.encryptionService.Decrypt(ctx, domainRequest)
 	if err != nil {
-		logging.Error().Err(err).Msg("Decryption failed")
+		s.logger.Error().Err(err).Msg("Decryption failed")
 		return nil, err
 	}
 
@@ -90,21 +92,21 @@ func (s *GRPCServer) DecryptMessage(ctx context.Context, request *pb.DecryptedMe
 		Plaintext: response.Plaintext,
 	}
 
-	logging.Debug().Int("plaintextCount", len(response.Plaintext)).Msg("Successfully decrypted messages")
+	s.logger.Debug().Int("plaintextCount", len(response.Plaintext)).Msg("Successfully decrypted messages")
 	return pbResponse, nil
 }
 
 // GenerateRandomString handles random key generation requests
 func (s *GRPCServer) GenerateRandomString(ctx context.Context, request *pb.Randomrequest) (*pb.Randomresponse, error) {
-	logging.Debug().Int32("length", request.GetRandomLength()).Msg("Received random key generation request")
+	s.logger.Debug().Int32("length", request.GetRandomLength()).Msg("Received random key generation request")
 
-	domainRequest := domain.RandomRequest{
+	domainRequest := contracts.RandomRequest{
 		Length: request.GetRandomLength(),
 	}
 
 	response, err := s.encryptionService.GenerateRandomKey(ctx, domainRequest)
 	if err != nil {
-		logging.Error().Err(err).Msg("Random key generation failed")
+		s.logger.Error().Err(err).Msg("Random key generation failed")
 		return nil, err
 	}
 
@@ -113,6 +115,6 @@ func (s *GRPCServer) GenerateRandomString(ctx context.Context, request *pb.Rando
 		EncryptionString: response.KeyString,
 	}
 
-	logging.Debug().Msg("Successfully generated random key")
+	s.logger.Debug().Msg("Successfully generated random key")
 	return pbResponse, nil
 }
