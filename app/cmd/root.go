@@ -6,6 +6,7 @@ package cmd
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 
@@ -73,6 +74,7 @@ func initConfig() {
 		logging.Info().Msgf("Using config file: %s", cfgFile)
 	}
 	viper.SetEnvPrefix("passwordexchange")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 	logging.SetLevel(viper.GetString("loglevel"))
 }
