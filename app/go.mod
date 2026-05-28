@@ -2,7 +2,7 @@ module github.com/Anthony-Bible/password-exchange/app
 
 go 1.24.0
 
-toolchain go1.24.4
+toolchain go1.26.3
 
 require (
 	github.com/Anthony-Bible/Logging v0.0.0-20260525150021-f765f71559a8
