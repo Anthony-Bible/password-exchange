@@ -3,6 +3,9 @@ package domain
 import "errors"
 
 var (
+	// ErrNilMessage is returned when a nil message pointer is passed to StoreMessage
+	ErrNilMessage = errors.New("message cannot be nil")
+
 	// ErrEmptyContent is returned when trying to store a message with empty content
 	ErrEmptyContent = errors.New("message content cannot be empty")
 	
@@ -26,4 +29,8 @@ var (
 	
 	// ErrDatabaseOperation is returned when database operation fails
 	ErrDatabaseOperation = errors.New("database operation failed")
+
+	// ErrRepositoryClosed is returned when a MessageRepository operation is
+	// attempted after Close() has been called.
+	ErrRepositoryClosed = errors.New("storage repository is closed")
 )

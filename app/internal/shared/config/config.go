@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 )
 
 var AppConfig PassConfig
@@ -42,7 +42,7 @@ type EmailSender struct {
 // Config represents the complete application configuration
 type Config struct {
 	PassConfig `mapstructure:",squash"`
-	Database   domain.DatabaseConfig `mapstructure:"database"`
+	Database   contracts.DatabaseConfig `mapstructure:"database"`
 	Reminder   ReminderConfig        `mapstructure:"reminder"`
 	Email      EmailConfig           `mapstructure:"email"`
 }

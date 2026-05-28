@@ -3,11 +3,12 @@ package mysql
 import (
 	"database/sql"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
-	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/secondary"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -18,9 +19,9 @@ const defaultMessageTTL = 7 * 24 * time.Hour
 // selectMessageQuery is the standard SELECT statement used to retrieve a message row.
 const selectMessageQuery = "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
 
-// scanMessageRow scans a single message row into a domain.Message, handling the nullable expires_at field.
-func scanMessageRow(row *sql.Row) (*domain.Message, error) {
-	var message domain.Message
+// scanMessageRow scans a single message row into a contracts.Message, handling the nullable expires_at field.
+func scanMessageRow(row *sql.Row) (*contracts.Message, error) {
+	var message contracts.Message
 	var expiresAt sql.NullTime
 	err := row.Scan(
 		&message.Content,
@@ -40,17 +41,49 @@ func scanMessageRow(row *sql.Row) (*domain.Message, error) {
 	return &message, nil
 }
 
-// MySQLAdapter implements the MessageRepository interface for MySQL
+// MySQLAdapter implements the MessageRepository interface for MySQL.
+// It depends only on secondary ports (LoggerPort, ValidationPort) so it can
+// be exercised without touching the shared logging/validation globals.
 type MySQLAdapter struct {
-	db     *sql.DB
-	config domain.DatabaseConfig
+	db        *sql.DB
+	config    contracts.DatabaseConfig
+	logger    secondary.LoggerPort
+	validator secondary.ValidationPort
+	closed    atomic.Bool
 }
 
-// NewMySQLAdapter creates a new MySQL database adapter
-func NewMySQLAdapter(config domain.DatabaseConfig) domain.MessageRepository {
-	return &MySQLAdapter{
-		config: config,
+// NewMySQLAdapter creates a new MySQL database adapter. The logger and
+// validator are required; passing nil for either panics so wiring mistakes
+// surface at boot instead of as a nil deref deep inside a query.
+func NewMySQLAdapter(
+	config contracts.DatabaseConfig,
+	logger secondary.LoggerPort,
+	validator secondary.ValidationPort,
+) secondary.MessageRepository {
+	if logger == nil {
+		panic("storage/mysql: NewMySQLAdapter requires a non-nil LoggerPort")
 	}
+	if validator == nil {
+		panic("storage/mysql: NewMySQLAdapter requires a non-nil ValidationPort")
+	}
+	return &MySQLAdapter{
+		config:    config,
+		logger:    logger,
+		validator: validator,
+	}
+}
+
+// requireOpen enforces the MessageRepository.Close contract: once Close has
+// been called, no further operations are permitted. Otherwise it lazily
+// connects on first use.
+func (m *MySQLAdapter) requireOpen() error {
+	if m.closed.Load() {
+		return domain.ErrRepositoryClosed
+	}
+	if m.db == nil {
+		return m.Connect()
+	}
+	return nil
 }
 
 // Connect establishes a connection to the MySQL database
@@ -60,14 +93,14 @@ func (m *MySQLAdapter) Connect() error {
 
 	db, err := sql.Open("mysql", connectionString)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to open MySQL connection")
+		m.logger.Error().Err(err).Msg("Failed to open MySQL connection")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
 
 	// Test the connection
 	if err := db.Ping(); err != nil {
 		db.Close() // Close connection if ping fails to prevent leak
-		logging.Error().Err(err).Msg("Failed to ping MySQL database")
+		m.logger.Error().Err(err).Msg("Failed to ping MySQL database")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
 
@@ -76,11 +109,9 @@ func (m *MySQLAdapter) Connect() error {
 }
 
 // InsertMessage stores a new encrypted message in the database
-func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return err
-		}
+func (m *MySQLAdapter) InsertMessage(message *contracts.Message) error {
+	if err := m.requireOpen(); err != nil {
+		return err
 	}
 
 	// FIXED: Store recipient email in other_email field and passphrase in other_lastname field
@@ -101,75 +132,69 @@ func (m *MySQLAdapter) InsertMessage(message *domain.Message) error {
 		expiresAt,
 	)
 	if err != nil {
-		logging.Error().Err(err).Str("uniqueID", message.UniqueID).Msg("Failed to insert message")
+		m.logger.Error().Err(err).Str("uniqueID", message.UniqueID).Msg("Failed to insert message")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().
+	m.logger.Info().
 		Str("uniqueID", message.UniqueID).
 		Int("maxViewCount", message.MaxViewCount).
-		Str("recipientEmail", validation.SanitizeEmailForLogging(message.RecipientEmail)).
+		Str("recipientEmail", m.validator.SanitizeEmailForLogging(message.RecipientEmail)).
 		Msg("Message stored successfully")
 	return nil
 }
 
 // SelectMessageByUniqueID retrieves a message by its unique identifier
-func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*domain.Message, error) {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return nil, err
-		}
+func (m *MySQLAdapter) SelectMessageByUniqueID(uniqueID string) (*contracts.Message, error) {
+	if err := m.requireOpen(); err != nil {
+		return nil, err
 	}
 
 	message, err := scanMessageRow(m.db.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			logging.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
+			m.logger.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
 			return nil, domain.ErrMessageNotFound
 		}
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
+	m.logger.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
 	return message, nil
 }
 
 // GetMessage retrieves a message by its unique identifier without incrementing the view count
-func (m *MySQLAdapter) GetMessage(uniqueID string) (*domain.Message, error) {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return nil, err
-		}
+func (m *MySQLAdapter) GetMessage(uniqueID string) (*contracts.Message, error) {
+	if err := m.requireOpen(); err != nil {
+		return nil, err
 	}
 
 	message, err := scanMessageRow(m.db.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			logging.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
+			m.logger.Debug().Str("uniqueID", uniqueID).Msg("Message not found")
 			return nil, domain.ErrMessageNotFound
 		}
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
+	m.logger.Info().Str("uniqueID", uniqueID).Msg("Message retrieved successfully")
 	return message, nil
 }
 
 // IncrementViewCountAndGet atomically increments the view count and returns the message
-// If the view count reaches 5, the message is deleted
-func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Message, error) {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return nil, err
-		}
+// If the view count reaches the message's MaxViewCount, the message is deleted
+func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*contracts.Message, error) {
+	if err := m.requireOpen(); err != nil {
+		return nil, err
 	}
 
 	// Start a transaction to ensure atomicity
 	tx, err := m.db.Begin()
 	if err != nil {
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to begin transaction")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to begin transaction")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 	defer tx.Rollback() // Will be ignored if transaction is committed
@@ -178,18 +203,18 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	updateQuery := "UPDATE messages SET view_count = view_count + 1 WHERE uniqueid = ?"
 	result, err := tx.Exec(updateQuery, uniqueID)
 	if err != nil {
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to increment view count")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
 	// Check if the message exists
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to get rows affected")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to get rows affected")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 	if rowsAffected == 0 {
-		logging.Debug().Str("uniqueID", uniqueID).Msg("Message not found for view count increment")
+		m.logger.Debug().Str("uniqueID", uniqueID).Msg("Message not found for view count increment")
 		return nil, domain.ErrMessageNotFound
 	}
 
@@ -197,10 +222,10 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 	message, err := scanMessageRow(tx.QueryRow(selectMessageQuery, uniqueID))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			logging.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
+			m.logger.Debug().Str("uniqueID", uniqueID).Msg("Message not found after increment")
 			return nil, domain.ErrMessageNotFound
 		}
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message after increment")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to select message after increment")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
@@ -209,10 +234,10 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 		deleteQuery := "DELETE FROM messages WHERE uniqueid = ?"
 		_, err = tx.Exec(deleteQuery, uniqueID)
 		if err != nil {
-			logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to delete message after reaching view limit")
+			m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to delete message after reaching view limit")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
-		logging.Info().
+		m.logger.Info().
 			Str("uniqueID", uniqueID).
 			Int("viewCount", message.ViewCount).
 			Int("maxViewCount", message.MaxViewCount).
@@ -221,42 +246,38 @@ func (m *MySQLAdapter) IncrementViewCountAndGet(uniqueID string) (*domain.Messag
 
 	// Commit the transaction
 	if err = tx.Commit(); err != nil {
-		logging.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to commit transaction")
+		m.logger.Error().Err(err).Str("uniqueID", uniqueID).Msg("Failed to commit transaction")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("View count incremented successfully")
+	m.logger.Info().Str("uniqueID", uniqueID).Int("viewCount", message.ViewCount).Msg("View count incremented successfully")
 	return message, nil
 }
 
 // DeleteExpiredMessages removes messages that have exceeded their TTL
 func (m *MySQLAdapter) DeleteExpiredMessages() error {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return err
-		}
+	if err := m.requireOpen(); err != nil {
+		return err
 	}
 
 	query := "DELETE FROM messages WHERE expires_at < NOW()"
 	result, err := m.db.Exec(query)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to delete expired messages")
+		m.logger.Error().Err(err).Msg("Failed to delete expired messages")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
 	rowsAffected, _ := result.RowsAffected()
-	logging.Info().Int64("rowsDeleted", rowsAffected).Msg("Expired messages cleaned up")
+	m.logger.Info().Int64("rowsDeleted", rowsAffected).Msg("Expired messages cleaned up")
 	return nil
 }
 
 // GetUnviewedMessagesForReminders retrieves messages that are unviewed and eligible for reminder emails
 func (m *MySQLAdapter) GetUnviewedMessagesForReminders(
 	olderThanHours, maxReminders, reminderIntervalHours int,
-) ([]*domain.UnviewedMessage, error) {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return nil, err
-		}
+) ([]*contracts.UnviewedMessage, error) {
+	if err := m.requireOpen(); err != nil {
+		return nil, err
 	}
 
 	query := `SELECT m.messageid, m.uniqueid, m.other_email, m.created,
@@ -272,17 +293,17 @@ func (m *MySQLAdapter) GetUnviewedMessagesForReminders(
 
 	rows, err := m.db.Query(query, olderThanHours, maxReminders, reminderIntervalHours)
 	if err != nil {
-		logging.Error().Err(err).Msg("Failed to query unviewed messages for reminders")
+		m.logger.Error().Err(err).Msg("Failed to query unviewed messages for reminders")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 	defer rows.Close()
 
-	var messages []*domain.UnviewedMessage
+	var messages []*contracts.UnviewedMessage
 	for rows.Next() {
-		var msg domain.UnviewedMessage
+		var msg contracts.UnviewedMessage
 		err := rows.Scan(&msg.MessageID, &msg.UniqueID, &msg.RecipientEmail, &msg.Created, &msg.DaysOld)
 		if err != nil {
-			logging.Error().Err(err).Msg("Failed to scan unviewed message")
+			m.logger.Error().Err(err).Msg("Failed to scan unviewed message")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
 
@@ -290,20 +311,18 @@ func (m *MySQLAdapter) GetUnviewedMessagesForReminders(
 	}
 
 	if err = rows.Err(); err != nil {
-		logging.Error().Err(err).Msg("Error iterating over unviewed messages")
+		m.logger.Error().Err(err).Msg("Error iterating over unviewed messages")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().Int("count", len(messages)).Msg("Retrieved unviewed messages for reminders")
+	m.logger.Info().Int("count", len(messages)).Msg("Retrieved unviewed messages for reminders")
 	return messages, nil
 }
 
 // LogReminderSent records that a reminder email was sent for a message
 func (m *MySQLAdapter) LogReminderSent(messageID int, emailAddress string) error {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return err
-		}
+	if err := m.requireOpen(); err != nil {
+		return err
 	}
 
 	query := `INSERT INTO email_reminders (message_id, email_address, reminder_count, last_reminder_sent)
@@ -314,27 +333,25 @@ func (m *MySQLAdapter) LogReminderSent(messageID int, emailAddress string) error
 
 	_, err := m.db.Exec(query, messageID, emailAddress)
 	if err != nil {
-		logging.Error().
+		m.logger.Error().
 			Err(err).
 			Int("messageID", messageID).
-			Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).
+			Str("emailAddress", m.validator.SanitizeEmailForLogging(emailAddress)).
 			Msg("Failed to log reminder sent")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().
+	m.logger.Info().
 		Int("messageID", messageID).
-		Str("emailAddress", validation.SanitizeEmailForLogging(emailAddress)).
+		Str("emailAddress", m.validator.SanitizeEmailForLogging(emailAddress)).
 		Msg("Reminder sent logged successfully")
 	return nil
 }
 
 // GetReminderHistory retrieves the reminder history for a specific message
-func (m *MySQLAdapter) GetReminderHistory(messageID int) ([]*domain.ReminderLogEntry, error) {
-	if m.db == nil {
-		if err := m.Connect(); err != nil {
-			return nil, err
-		}
+func (m *MySQLAdapter) GetReminderHistory(messageID int) ([]*contracts.ReminderLogEntry, error) {
+	if err := m.requireOpen(); err != nil {
+		return nil, err
 	}
 
 	query := `SELECT message_id, email_address, reminder_count, last_reminder_sent 
@@ -342,39 +359,45 @@ func (m *MySQLAdapter) GetReminderHistory(messageID int) ([]*domain.ReminderLogE
 
 	rows, err := m.db.Query(query, messageID)
 	if err != nil {
-		logging.Error().Err(err).Int("messageID", messageID).Msg("Failed to query reminder history")
+		m.logger.Error().Err(err).Int("messageID", messageID).Msg("Failed to query reminder history")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 	defer rows.Close()
 
-	var history []*domain.ReminderLogEntry
+	var history []*contracts.ReminderLogEntry
 	for rows.Next() {
-		var entry domain.ReminderLogEntry
+		var entry contracts.ReminderLogEntry
 		err := rows.Scan(&entry.MessageID, &entry.EmailAddress, &entry.ReminderCount, &entry.LastReminderSent)
 		if err != nil {
-			logging.Error().Err(err).Msg("Failed to scan reminder history entry")
+			m.logger.Error().Err(err).Msg("Failed to scan reminder history entry")
 			return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 		}
 		history = append(history, &entry)
 	}
 
 	if err = rows.Err(); err != nil {
-		logging.Error().Err(err).Msg("Error iterating over reminder history")
+		m.logger.Error().Err(err).Msg("Error iterating over reminder history")
 		return nil, fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	logging.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
+	m.logger.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
 	return history, nil
 }
 
-// Close closes the database connection
+// Close closes the database connection and marks the adapter as closed so
+// no further operations can resurrect the pool. Calling Close more than once
+// is a no-op.
 func (m *MySQLAdapter) Close() error {
-	if m.db != nil {
-		if err := m.db.Close(); err != nil {
-			logging.Error().Err(err).Msg("Failed to close database connection")
-			return err
-		}
-		m.db = nil
+	if !m.closed.CompareAndSwap(false, true) {
+		return nil
 	}
+	if m.db == nil {
+		return nil
+	}
+	if err := m.db.Close(); err != nil {
+		m.logger.Error().Err(err).Msg("Failed to close database connection")
+		return err
+	}
+	m.db = nil
 	return nil
 }
