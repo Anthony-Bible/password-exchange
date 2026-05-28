@@ -319,6 +319,47 @@ func TestProtobufMarshalUnmarshal_RoundTrip(t *testing.T) {
 	assert.Equal(t, originalMsg.Captcha, unmarshaledMsg.Captcha)
 }
 
+// stubConn is a test double for the connStatus seam so we can exercise both
+// the "closed" and "alive" branches of isConnAlive without dialing a real
+// AMQP broker (unit tests must not require RabbitMQ).
+type stubConn struct {
+	closed bool
+}
+
+func (s stubConn) IsClosed() bool { return s.closed }
+
+func TestIsConnectionAlive(t *testing.T) {
+	t.Run("nil connection returns false", func(t *testing.T) {
+		// The public method must short-circuit on a nil *amqp.Connection so
+		// /healthz reports unhealthy before Connect has been called.
+		consumer := &RabbitMQConsumer{connection: nil}
+		assert.False(t, consumer.IsConnectionAlive())
+	})
+
+	testCases := []struct {
+		name string
+		conn connStatus
+		want bool
+	}{
+		{
+			name: "closed connection returns false",
+			conn: stubConn{closed: true},
+			want: false,
+		},
+		{
+			name: "open connection returns true",
+			conn: stubConn{closed: false},
+			want: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isConnAlive(tc.conn))
+		})
+	}
+}
+
 func TestProtobufMessage_FieldValidation(t *testing.T) {
 	// Test protobuf message field validation and edge cases
 	testCases := []struct {

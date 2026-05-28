@@ -9,6 +9,8 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/secondary"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -39,6 +41,7 @@ func (s *GRPCServer) Start() error {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterMessageServiceServer(grpcServer, s)
+	s.registerHealthServer(grpcServer)
 	reflection.Register(grpcServer)
 
 	s.logger.Info().Str("address", s.address).Msg("Starting encryption gRPC server")
@@ -48,6 +51,14 @@ func (s *GRPCServer) Start() error {
 	}
 
 	return nil
+}
+
+// registerHealthServer wires the standard gRPC health service so Kubernetes
+// grpc probes can verify the encryption server is serving.
+func (s *GRPCServer) registerHealthServer(grpcServer *grpc.Server) {
+	healthSrv := health.NewServer()
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthSrv)
 }
 
 // EncryptMessage handles encryption requests

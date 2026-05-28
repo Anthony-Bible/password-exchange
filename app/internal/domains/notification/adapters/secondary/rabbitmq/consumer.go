@@ -187,3 +187,28 @@ func (r *RabbitMQConsumer) Close() error {
 	logging.Info().Msg("RabbitMQ connection closed")
 	return nil
 }
+
+// connStatus is the minimal surface of *amqp.Connection needed for liveness
+// checks. Extracted so tests can exercise the closed/open branches without
+// requiring a real broker.
+type connStatus interface {
+	IsClosed() bool
+}
+
+// isConnAlive returns true when the connection is non-nil and reports itself
+// as not closed. Split from IsConnectionAlive so the not-nil branch is
+// testable via a fake connStatus.
+func isConnAlive(c connStatus) bool {
+	return c != nil && !c.IsClosed()
+}
+
+// IsConnectionAlive reports whether the underlying AMQP connection is non-nil
+// and has not been closed. Used by the email worker's /healthz endpoint so a
+// wedged consumer (e.g. channel closed, connection dropped) gets restarted by
+// Kubernetes instead of silently accepting deliveries it can't process.
+func (r *RabbitMQConsumer) IsConnectionAlive() bool {
+	if r.connection == nil {
+		return false
+	}
+	return isConnAlive(r.connection)
+}

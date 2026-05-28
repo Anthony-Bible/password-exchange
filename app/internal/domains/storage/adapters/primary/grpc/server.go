@@ -14,6 +14,8 @@ import (
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -294,6 +296,16 @@ func (s *GRPCServer) runExpiredMessageCleanup(ctx context.Context) {
 	}
 }
 
+// registerHealthServer wires the standard gRPC health service into the given
+// server with the overall service ("") marked SERVING. k8s grpc: probes need a
+// SERVING response on this contract to mark the pod Ready; deeper per-component
+// health (e.g. DB connectivity) is intentionally out of scope here.
+func (s *GRPCServer) registerHealthServer(grpcServer *grpc.Server) {
+	healthSrv := health.NewServer()
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthSrv)
+}
+
 // Start starts the gRPC server. Fatal lifecycle decisions (process exit) are
 // left to the caller so the adapter remains a pure transport layer.
 func (s *GRPCServer) Start() error {
@@ -305,6 +317,7 @@ func (s *GRPCServer) Start() error {
 
 	grpcServer := grpc.NewServer()
 	database.RegisterDbServiceServer(grpcServer, s)
+	s.registerHealthServer(grpcServer)
 	reflection.Register(grpcServer)
 
 	// Run expired message cleanup in the background; cancel it when Start returns.

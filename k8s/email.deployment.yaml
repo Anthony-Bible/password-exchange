@@ -42,8 +42,14 @@ spec:
         name: email
         ports:
         - containerPort: 8080
-
-
-
-
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
 
