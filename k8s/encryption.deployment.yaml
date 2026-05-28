@@ -31,6 +31,24 @@ spec:
         - name: "PASSWORDEXCHANGE_RUNNING_ENVIRONMENT"
           value: "%{PHASE}"
         name: encryption
+        ports:
+        - containerPort: 50051
+          name: grpc
+          protocol: TCP
+        livenessProbe:
+          grpc:
+            port: 50051
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          grpc:
+            port: 50051
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
 
 ---
 

@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 
+	healthhttp "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http"
 	notificationConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/consumer"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	rabbitMQConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
@@ -35,7 +36,8 @@ func (conf Config) StartProcessing() {
 }
 
 func (conf Config) startHexagonalProcessing() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Create email connection configuration
 	emailConn := notificationDomain.EmailConnection{
@@ -69,6 +71,16 @@ func (conf Config) startHexagonalProcessing() {
 
 	// Create primary adapter (consumer)
 	consumer := notificationConsumer.NewNotificationConsumer(notificationService, queueConn, 100)
+
+	// Start health endpoint alongside the consumer so Kubernetes can liveness-probe
+	// the email worker (the consumer goroutine doesn't otherwise surface a wedged
+	// AMQP connection).
+	healthAdapter := healthhttp.NewHealthServer(":8080", queueConsumer)
+	go func() {
+		if err := healthAdapter.Start(ctx); err != nil {
+			logging.Error().Err(err).Msg("Health endpoint exited with error")
+		}
+	}()
 
 	// Start processing
 	logging.Info().Msg("Starting notification service with hexagonal architecture")
