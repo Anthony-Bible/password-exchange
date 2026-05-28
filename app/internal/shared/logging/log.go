@@ -7,27 +7,47 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	extlogging "github.com/Anthony-Bible/Logging"
 )
 
-var Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+// exitFunc is overridable for tests.
+var exitFunc = os.Exit
+
+var (
+	slogLogger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	// extlogging.New installs SIGUSR1/SIGUSR2 handlers itself when
+	// DisableSignalHandling is false, so no extra wiring is needed here.
+	logger = extlogging.New(extlogging.Config{
+		Backend:        extlogging.NewSlogBackend(slogLogger),
+		Level:          extlogging.LevelInfo,
+		ErrorThreshold: 5,
+		ErrorWindow:    time.Minute,
+		DebugDuration:  5 * time.Minute,
+	})
+)
+
+// Logger preserves the previously exported *slog.Logger handle for backwards
+// compatibility with any code that imported it directly.
+var Logger = slogLogger
 
 type Event struct {
-	logger *slog.Logger
-	level  slog.Level
-	attrs  []any
-	fatal  bool
+	level extlogging.Level
+	attrs []slog.Attr
+	fatal bool
 }
 
-func newEvent(level slog.Level, fatal bool) *Event {
-	return &Event{logger: Logger, level: level, fatal: fatal}
+func newEvent(level extlogging.Level, fatal bool) *Event {
+	return &Event{level: level, fatal: fatal}
 }
 
-func Debug() *Event { return newEvent(slog.LevelDebug, false) }
-func Info() *Event  { return newEvent(slog.LevelInfo, false) }
-func Warn() *Event  { return newEvent(slog.LevelWarn, false) }
-func Error() *Event { return newEvent(slog.LevelError, false) }
+func Debug() *Event { return newEvent(extlogging.LevelDebug, false) }
+func Info() *Event  { return newEvent(extlogging.LevelInfo, false) }
+func Warn() *Event  { return newEvent(extlogging.LevelWarn, false) }
+func Error() *Event { return newEvent(extlogging.LevelError, false) }
 func Fatal() *Event {
-	e := newEvent(slog.LevelError, true)
+	e := newEvent(extlogging.LevelError, true)
 	e.attrs = append(e.attrs, slog.Bool("fatal", true))
 	return e
 }
@@ -80,9 +100,21 @@ func (e *Event) Interface(key string, value any) *Event {
 }
 
 func (e *Event) Msg(msg string) {
-	e.logger.Log(context.Background(), e.level, msg, e.attrs...)
+	ctx := context.Background()
+	switch e.level {
+	case extlogging.LevelDebug:
+		logger.Debug(ctx, msg, e.attrs...)
+	case extlogging.LevelInfo:
+		logger.Info(ctx, msg, e.attrs...)
+	case extlogging.LevelWarn:
+		logger.Warn(ctx, msg, e.attrs...)
+	case extlogging.LevelError:
+		logger.Error(ctx, msg, e.attrs...)
+	default:
+		logger.Log(ctx, e.level, msg, e.attrs...)
+	}
 	if e.fatal {
-		os.Exit(1)
+		exitFunc(1)
 	}
 }
 
@@ -91,19 +123,18 @@ func (e *Event) Msgf(format string, args ...any) {
 }
 
 func SetLevel(level string) {
-	var l slog.Level
+	var l extlogging.Level
 	switch strings.ToLower(strings.TrimSpace(level)) {
 	case "debug":
-		l = slog.LevelDebug
+		l = extlogging.LevelDebug
 	case "info", "":
-		l = slog.LevelInfo
+		l = extlogging.LevelInfo
 	case "warn", "warning":
-		l = slog.LevelWarn
+		l = extlogging.LevelWarn
 	case "error":
-		l = slog.LevelError
+		l = extlogging.LevelError
 	default:
-		l = slog.LevelInfo
+		l = extlogging.LevelInfo
 	}
-
-	Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: l}))
+	logger.SetLevel(l)
 }
