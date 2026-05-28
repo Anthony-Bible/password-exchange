@@ -19,8 +19,11 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	storageLoggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
+	storageValidatorAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/validator"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
@@ -111,18 +114,26 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Initialize storage adapter with database connection
 		// Uses MySQL adapter as the concrete implementation of the storage port
-		dbConfig := storageDomain.DatabaseConfig{
+		dbConfig := storageContracts.DatabaseConfig{
 			Host:     cfg.DbHost,
 			User:     cfg.DbUser,
 			Password: cfg.DbPass,
 			Name:     cfg.DbName,
 		}
-		storageAdapter := mysql.NewMySQLAdapter(dbConfig)
-		if mysqlAdapter, ok := storageAdapter.(*mysql.MySQLAdapter); ok {
-			// Set up defer before attempting connection
-			defer mysqlAdapter.Close()
 
-			if err := mysqlAdapter.Connect(); err != nil {
+		// Wire the storage domain's port adapters so the MySQL adapter can
+		// receive them and we never reach for the shared logging/validation
+		// globals from inside the domain.
+		storageLogger := storageLoggerAdapter.NewAdapter()
+		storageValidator := storageValidatorAdapter.NewValidationAdapter()
+
+		storageAdapter := mysql.NewMySQLAdapter(dbConfig, storageLogger, storageValidator)
+
+		// Fail fast on misconfigured/unreachable databases so the cronjob exits
+		// with a clear diagnostic instead of silently proceeding and erroring
+		// from deep inside ProcessReminders.
+		if connector, ok := storageAdapter.(interface{ Connect() error }); ok {
+			if err := connector.Connect(); err != nil {
 				logging.Error().
 					Err(err).
 					Str("operation", "database_connect").
@@ -132,9 +143,14 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 				return
 			}
 		}
+		defer func() {
+			if err := storageAdapter.Close(); err != nil {
+				logging.Error().Err(err).Msg("Failed to close storage adapter")
+			}
+		}()
 
 		// Initialize storage service
-		storageService := storageDomain.NewStorageService(storageAdapter)
+		storageService := storageDomain.NewStorageService(storageAdapter, storageLogger, storageValidator)
 
 		// Create notification storage adapter
 		notificationStorageAdapter := storage.NewGRPCStorageAdapter(storageService)

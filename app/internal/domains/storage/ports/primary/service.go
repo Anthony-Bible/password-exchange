@@ -3,32 +3,32 @@ package primary
 import (
 	"context"
 
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 )
 
 // StorageServicePort defines the primary interface for storage operations
 // This will be implemented by the storage service and used by external adapters
 type StorageServicePort interface {
 	// StoreMessage stores a new encrypted message
-	StoreMessage(ctx context.Context, message *domain.Message) error
+	StoreMessage(ctx context.Context, message *contracts.Message) error
 
 	// RetrieveMessage retrieves a message by its unique ID
-	RetrieveMessage(ctx context.Context, uniqueID string) (*domain.Message, error)
+	RetrieveMessage(ctx context.Context, uniqueID string) (*contracts.Message, error)
 
 	// GetMessage retrieves a message by its unique ID without incrementing view count
-	GetMessage(ctx context.Context, uniqueID string) (*domain.Message, error)
+	GetMessage(ctx context.Context, uniqueID string) (*contracts.Message, error)
 
 	// CleanupExpiredMessages removes expired messages from storage
 	CleanupExpiredMessages(ctx context.Context) error
 
 	// GetUnviewedMessagesForReminders retrieves messages eligible for reminder emails
-	GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*domain.UnviewedMessage, error)
+	GetUnviewedMessagesForReminders(ctx context.Context, olderThanHours, maxReminders, reminderIntervalHours int) ([]*contracts.UnviewedMessage, error)
 
 	// LogReminderSent records that a reminder email was sent for a message
 	LogReminderSent(ctx context.Context, messageID int, emailAddress string) error
 
 	// GetReminderHistory retrieves the reminder history for a specific message
-	GetReminderHistory(ctx context.Context, messageID int) ([]*domain.ReminderLogEntry, error)
+	GetReminderHistory(ctx context.Context, messageID int) ([]*contracts.ReminderLogEntry, error)
 
 	// HealthCheck verifies the storage service is healthy
 	HealthCheck(ctx context.Context) error

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
+	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -16,19 +16,25 @@ type MockStorageService struct {
 	mock.Mock
 }
 
-func (m *MockStorageService) StoreMessage(ctx context.Context, msg *storageDomain.Message) error {
+func (m *MockStorageService) StoreMessage(ctx context.Context, msg *storageContracts.Message) error {
 	args := m.Called(ctx, msg)
 	return args.Error(0)
 }
 
-func (m *MockStorageService) RetrieveMessage(ctx context.Context, uniqueID string) (*storageDomain.Message, error) {
+func (m *MockStorageService) RetrieveMessage(ctx context.Context, uniqueID string) (*storageContracts.Message, error) {
 	args := m.Called(ctx, uniqueID)
-	return args.Get(0).(*storageDomain.Message), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*storageContracts.Message), args.Error(1)
 }
 
-func (m *MockStorageService) GetMessage(ctx context.Context, uniqueID string) (*storageDomain.Message, error) {
+func (m *MockStorageService) GetMessage(ctx context.Context, uniqueID string) (*storageContracts.Message, error) {
 	args := m.Called(ctx, uniqueID)
-	return args.Get(0).(*storageDomain.Message), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*storageContracts.Message), args.Error(1)
 }
 
 func (m *MockStorageService) CleanupExpiredMessages(ctx context.Context) error {
@@ -41,9 +47,12 @@ func (m *MockStorageService) HealthCheck(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (m *MockStorageService) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*storageDomain.UnviewedMessage, error) {
+func (m *MockStorageService) GetUnviewedMessagesForReminders(ctx context.Context, checkAfterHours, maxReminders, reminderIntervalHours int) ([]*storageContracts.UnviewedMessage, error) {
 	args := m.Called(ctx, checkAfterHours, maxReminders, reminderIntervalHours)
-	return args.Get(0).([]*storageDomain.UnviewedMessage), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*storageContracts.UnviewedMessage), args.Error(1)
 }
 
 func (m *MockStorageService) LogReminderSent(ctx context.Context, messageID int, recipientEmail string) error {
@@ -51,9 +60,12 @@ func (m *MockStorageService) LogReminderSent(ctx context.Context, messageID int,
 	return args.Error(0)
 }
 
-func (m *MockStorageService) GetReminderHistory(ctx context.Context, messageID int) ([]*storageDomain.ReminderLogEntry, error) {
+func (m *MockStorageService) GetReminderHistory(ctx context.Context, messageID int) ([]*storageContracts.ReminderLogEntry, error) {
 	args := m.Called(ctx, messageID)
-	return args.Get(0).([]*storageDomain.ReminderLogEntry), args.Error(1)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*storageContracts.ReminderLogEntry), args.Error(1)
 }
 
 func TestGetUnviewedMessagesForReminders_Success(t *testing.T) {
@@ -67,7 +79,7 @@ func TestGetUnviewedMessagesForReminders_Success(t *testing.T) {
 
 	// Create storage entities (simulating data that comes from gRPC/protobuf)
 	now := time.Now()
-	storageMessages := []*storageDomain.UnviewedMessage{
+	storageMessages := []*storageContracts.UnviewedMessage{
 		{
 			MessageID:      1,
 			UniqueID:       "msg-001",
@@ -120,7 +132,7 @@ func TestGetUnviewedMessagesForReminders_EmptyResult(t *testing.T) {
 	maxReminders := 5
 
 	// Mock empty result (no messages need reminders)
-	storageMessages := []*storageDomain.UnviewedMessage{}
+	storageMessages := []*storageContracts.UnviewedMessage{}
 	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders, 24).
 		Return(storageMessages, nil)
 
@@ -144,7 +156,7 @@ func TestGetUnviewedMessagesForReminders_StorageError(t *testing.T) {
 
 	// Mock storage service error (simulating gRPC/protobuf communication error)
 	mockStorage.On("GetUnviewedMessagesForReminders", ctx, checkAfterHours, maxReminders, 24).
-		Return(([]*storageDomain.UnviewedMessage)(nil), assert.AnError)
+		Return(([]*storageContracts.UnviewedMessage)(nil), assert.AnError)
 
 	// Act
 	result, err := adapter.GetUnviewedMessagesForReminders(ctx, checkAfterHours, maxReminders, 24)
@@ -166,7 +178,7 @@ func TestGetReminderHistory_Success(t *testing.T) {
 
 	// Create storage entities (simulating data from gRPC/protobuf)
 	now := time.Now()
-	storageHistory := []*storageDomain.ReminderLogEntry{
+	storageHistory := []*storageContracts.ReminderLogEntry{
 		{
 			MessageID:        123,
 			EmailAddress:     "user@example.com",
@@ -214,7 +226,7 @@ func TestGetReminderHistory_EmptyHistory(t *testing.T) {
 	messageID := 456
 
 	// Mock empty history
-	storageHistory := []*storageDomain.ReminderLogEntry{}
+	storageHistory := []*storageContracts.ReminderLogEntry{}
 	mockStorage.On("GetReminderHistory", ctx, messageID).
 		Return(storageHistory, nil)
 
@@ -237,7 +249,7 @@ func TestGetReminderHistory_StorageError(t *testing.T) {
 
 	// Mock storage service error
 	mockStorage.On("GetReminderHistory", ctx, messageID).
-		Return(([]*storageDomain.ReminderLogEntry)(nil), assert.AnError)
+		Return(([]*storageContracts.ReminderLogEntry)(nil), assert.AnError)
 
 	// Act
 	result, err := adapter.GetReminderHistory(ctx, messageID)
@@ -296,7 +308,7 @@ func TestEntityConversion_UnviewedMessage(t *testing.T) {
 	// This simulates the protobuf → storage entity → notification entity conversion chain
 
 	now := time.Now()
-	storageMessage := &storageDomain.UnviewedMessage{
+	storageMessage := &storageContracts.UnviewedMessage{
 		MessageID:      999,
 		UniqueID:       "conversion-test",
 		RecipientEmail: "convert@example.com",
@@ -326,7 +338,7 @@ func TestEntityConversion_ReminderLogEntry(t *testing.T) {
 	// This simulates the protobuf → storage entity → notification entity conversion chain
 
 	now := time.Now()
-	storageEntry := &storageDomain.ReminderLogEntry{
+	storageEntry := &storageContracts.ReminderLogEntry{
 		MessageID:        888,
 		EmailAddress:     "log@example.com",
 		ReminderCount:    3,
@@ -373,7 +385,7 @@ func TestGRPCStorageAdapter_ParameterValidation(t *testing.T) {
 
 			// Mock storage service expects exact parameters
 			mockStorage.On("GetUnviewedMessagesForReminders", ctx, tc.checkAfterHours, tc.maxReminders, 24).
-				Return([]*storageDomain.UnviewedMessage{}, nil)
+				Return([]*storageContracts.UnviewedMessage{}, nil)
 
 			// Act
 			_, err := adapter.GetUnviewedMessagesForReminders(ctx, tc.checkAfterHours, tc.maxReminders, 24)
