@@ -17,19 +17,17 @@ import (
 	"sync"
 	"testing"
 
-	notificationLogger "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	notificationStorage "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
-	notificationValidator "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	notificationContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
-	storageLogger "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
-	storageValidator "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/validator"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/integration/dbtest"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,8 +59,8 @@ func (p *capturingPublisher) recipients() map[string]bool {
 // newPipeline wires the reminder pipeline exactly like cmd/reminder.go, using
 // the real adapters but a capturing publisher in place of RabbitMQ.
 func newPipeline(dbCfg storageContracts.DatabaseConfig) (*notificationDomain.ReminderService, *capturingPublisher) {
-	storageRepo := mysql.NewMySQLAdapter(dbCfg, storageLogger.NewAdapter(), storageValidator.NewValidationAdapter())
-	storageService := storageDomain.NewStorageService(storageRepo, storageLogger.NewAdapter(), storageValidator.NewValidationAdapter())
+	storageRepo := mysql.NewMySQLAdapter(dbCfg, logging.NewLogger(), validation.NewAdapter())
+	storageService := storageDomain.NewStorageService(storageRepo, logging.NewLogger(), validation.NewAdapter())
 	notifStorageAdapter := notificationStorage.NewGRPCStorageAdapter(storageService)
 	publisher := &capturingPublisher{}
 	configPort := sharedConfig.NewSharedConfigAdapter(config.PassConfig{EmailFrom: "server@password.exchange"})
@@ -70,9 +68,9 @@ func newPipeline(dbCfg storageContracts.DatabaseConfig) (*notificationDomain.Rem
 	svc := notificationDomain.NewReminderService(
 		notifStorageAdapter,
 		publisher,
-		notificationLogger.NewAdapter(),
+		logging.NewLogger(),
 		configPort,
-		notificationValidator.NewValidationAdapter(),
+		validation.NewAdapter(),
 	)
 	return svc, publisher
 }

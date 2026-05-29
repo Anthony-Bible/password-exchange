@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/integration/dbtest"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,7 +23,7 @@ import (
 // newReminderAdapter wires a MySQLAdapter onto an already-connected container DB,
 // mirroring how adapter_test.go constructs the adapter for sqlmock.
 func newReminderAdapter(db *sql.DB) *MySQLAdapter {
-	return &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	return &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 }
 
 // seedMessage inserts a row into messages with an explicit age (hours in the

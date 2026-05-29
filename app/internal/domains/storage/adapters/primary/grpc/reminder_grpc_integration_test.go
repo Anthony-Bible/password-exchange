@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ import (
 func newReminderTestClient(t *testing.T, svc *stubStorageService) database.DbServiceClient {
 	t.Helper()
 
-	adapter := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+	adapter := NewGRPCServer(svc, "", logtest.NewRecorder(), &stubValidator{})
 
 	lis := bufconn.Listen(1024 * 1024)
 	grpcServer := grpc.NewServer()

@@ -213,7 +213,7 @@ func TestRetrievalAndReminderRPCs_MapDomainErrorsToStatus(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			server := NewGRPCServer(tc.newStub(), "127.0.0.1:0", &recordingLogger{}, &stubValidator{})
+			server := NewGRPCServer(tc.newStub(), "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
 
 			err := tc.callRPC(server)
 			if err == nil {
