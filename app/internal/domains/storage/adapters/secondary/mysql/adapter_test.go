@@ -8,30 +8,9 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	"github.com/DATA-DOG/go-sqlmock"
 )
-
-// noopLogger / noopEvent satisfy LoggerPort and LogEvent without recording
-// anything — tests that don't care about logging can construct the adapter
-// with these stubs.
-type noopLogger struct{}
-
-func (noopLogger) Debug() contracts.LogEvent { return noopEvent{} }
-func (noopLogger) Info() contracts.LogEvent  { return noopEvent{} }
-func (noopLogger) Warn() contracts.LogEvent  { return noopEvent{} }
-func (noopLogger) Error() contracts.LogEvent { return noopEvent{} }
-
-type noopEvent struct{}
-
-func (noopEvent) Err(error) contracts.LogEvent                { return noopEvent{} }
-func (noopEvent) Str(string, string) contracts.LogEvent       { return noopEvent{} }
-func (noopEvent) Int(string, int) contracts.LogEvent          { return noopEvent{} }
-func (noopEvent) Int32(string, int32) contracts.LogEvent      { return noopEvent{} }
-func (noopEvent) Int64(string, int64) contracts.LogEvent      { return noopEvent{} }
-func (noopEvent) Bool(string, bool) contracts.LogEvent        { return noopEvent{} }
-func (noopEvent) Dur(string, time.Duration) contracts.LogEvent { return noopEvent{} }
-func (noopEvent) Float64(string, float64) contracts.LogEvent  { return noopEvent{} }
-func (noopEvent) Msg(string)                                  {}
 
 type noopValidator struct{}
 
@@ -51,7 +30,7 @@ func TestMySQLAdapter_RejectsOperationsAfterClose(t *testing.T) {
 		t.Fatalf("Error creating mock database: %v", err)
 	}
 	mock.ExpectClose()
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	if err := adapter.Close(); err != nil {
 		t.Fatalf("Close() returned unexpected error: %v", err)
@@ -61,7 +40,9 @@ func TestMySQLAdapter_RejectsOperationsAfterClose(t *testing.T) {
 		name string
 		call func() error
 	}{
-		{"InsertMessage", func() error { return adapter.InsertMessage(&contracts.Message{UniqueID: "x", Content: "y", MaxViewCount: 1}) }},
+		{"InsertMessage", func() error {
+			return adapter.InsertMessage(&contracts.Message{UniqueID: "x", Content: "y", MaxViewCount: 1})
+		}},
 		{"SelectMessageByUniqueID", func() error { _, e := adapter.SelectMessageByUniqueID("x"); return e }},
 		{"GetMessage", func() error { _, e := adapter.GetMessage("x"); return e }},
 		{"IncrementViewCountAndGet", func() error { _, e := adapter.IncrementViewCountAndGet("x"); return e }},
@@ -91,7 +72,7 @@ func TestMySQLAdapter_CloseIsIdempotent(t *testing.T) {
 		t.Fatalf("Error creating mock database: %v", err)
 	}
 	mock.ExpectClose()
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	if err := adapter.Close(); err != nil {
 		t.Fatalf("first Close() returned %v", err)
@@ -109,7 +90,7 @@ func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	// Test data
 	message := &contracts.Message{
@@ -145,7 +126,7 @@ func TestMySQLAdapter_InsertMessage_WithCustomExpiresAt(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	customExpiry := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	message := &contracts.Message{
@@ -181,7 +162,7 @@ func TestMySQLAdapter_SelectMessageByUniqueID_WithExpiresAt(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
 
@@ -218,7 +199,7 @@ func TestMySQLAdapter_GetMessage_WithExpiresAt(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
 
@@ -255,7 +236,7 @@ func TestMySQLAdapter_DeleteExpiredMessages_UsesExpiresAt(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	mock.ExpectExec(`DELETE FROM messages WHERE expires_at < NOW\(\)`).
 		WillReturnResult(sqlmock.NewResult(0, 2))
@@ -280,7 +261,7 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders_WithInterval(t *testing.T)
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	// Test parameters
 	olderThanHours := 24
@@ -333,7 +314,7 @@ func TestMySQLAdapter_GetUnviewedMessagesForReminders(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	// Test data
 	olderThanHours := 24
@@ -404,7 +385,7 @@ func TestMySQLAdapter_LogReminderSent(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	messageID := 1
 	emailAddress := "user@example.com"
@@ -439,7 +420,7 @@ func TestMySQLAdapter_Ping_SuccessReturnsNil(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 	mock.ExpectPing()
 
 	if err := adapter.Ping(context.Background()); err != nil {
@@ -460,7 +441,7 @@ func TestMySQLAdapter_Ping_SurfacesDriverError(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 	boom := errors.New("connection refused")
 	mock.ExpectPing().WillReturnError(boom)
 
@@ -482,7 +463,7 @@ func TestMySQLAdapter_Ping_RejectedAfterClose(t *testing.T) {
 	}
 	mock.ExpectClose()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 	if err := adapter.Close(); err != nil {
 		t.Fatalf("Close() error = %v", err)
 	}
@@ -501,7 +482,7 @@ func TestMySQLAdapter_GetReminderHistory(t *testing.T) {
 	}
 	defer db.Close()
 
-	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	adapter := &MySQLAdapter{db: db, logger: logtest.NewNoop(), validator: noopValidator{}}
 
 	messageID := 1
 

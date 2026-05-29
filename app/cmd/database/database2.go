@@ -2,13 +2,12 @@ package database
 
 import (
 	storageGRPC "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/primary/grpc"
-	storageLoggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/logger"
 	storageMySQL "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
-	storageValidatorAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/validator"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 )
 
 type Config struct {
@@ -33,8 +32,8 @@ func (conf Config) startHexagonalServer() {
 
 	// Wire up the secondary port adapters first so they can be passed into
 	// every adapter that depends on them (mysql, grpc).
-	storageLogger := storageLoggerAdapter.NewAdapter()
-	storageValidator := storageValidatorAdapter.NewValidationAdapter()
+	storageLogger := logging.NewLogger()
+	storageValidator := validation.NewAdapter()
 
 	// Create MySQL adapter (secondary adapter)
 	mysqlAdapter := storageMySQL.NewMySQLAdapter(dbConfig, storageLogger, storageValidator)

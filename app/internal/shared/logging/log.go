@@ -9,6 +9,8 @@ import (
 	"time"
 
 	extlogging "github.com/Anthony-Bible/Logging"
+
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/port"
 )
 
 // exitFunc is overridable for tests.
@@ -52,49 +54,49 @@ func Fatal() *Event {
 	return e
 }
 
-func (e *Event) Err(err error) *Event {
+func (e *Event) Err(err error) port.LogEvent {
 	if err != nil {
 		e.attrs = append(e.attrs, slog.Any("error", err))
 	}
 	return e
 }
 
-func (e *Event) Str(key, value string) *Event {
+func (e *Event) Str(key, value string) port.LogEvent {
 	e.attrs = append(e.attrs, slog.String(key, value))
 	return e
 }
 
-func (e *Event) Int(key string, value int) *Event {
+func (e *Event) Int(key string, value int) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Int(key, value))
 	return e
 }
 
-func (e *Event) Int64(key string, value int64) *Event {
+func (e *Event) Int64(key string, value int64) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Int64(key, value))
 	return e
 }
 
-func (e *Event) Int32(key string, value int32) *Event {
+func (e *Event) Int32(key string, value int32) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Int64(key, int64(value)))
 	return e
 }
 
-func (e *Event) Bool(key string, value bool) *Event {
+func (e *Event) Bool(key string, value bool) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Bool(key, value))
 	return e
 }
 
-func (e *Event) Dur(key string, value time.Duration) *Event {
+func (e *Event) Dur(key string, value time.Duration) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Duration(key, value))
 	return e
 }
 
-func (e *Event) Float64(key string, value float64) *Event {
+func (e *Event) Float64(key string, value float64) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Float64(key, value))
 	return e
 }
 
-func (e *Event) Interface(key string, value any) *Event {
+func (e *Event) Interface(key string, value any) port.LogEvent {
 	e.attrs = append(e.attrs, slog.Any(key, value))
 	return e
 }
@@ -121,6 +123,28 @@ func (e *Event) Msg(msg string) {
 func (e *Event) Msgf(format string, args ...any) {
 	e.Msg(fmt.Sprintf(format, args...))
 }
+
+// compile-time guarantee that *Event satisfies the shared LogEvent port, so it
+// can be returned directly without a per-domain wrapper.
+var _ port.LogEvent = (*Event)(nil)
+
+// PortLogger adapts the package-level logging functions to port.Logger. It
+// carries no state; constructing one is free and the returned events allocate
+// only the underlying *Event (no extra wrapper layer).
+type PortLogger struct{}
+
+// NewLogger returns a logger that satisfies port.Logger as well as the
+// encryption domain's Fatal-extended LoggerPort. It is the single composition
+// root for structured logging across every service.
+func NewLogger() PortLogger { return PortLogger{} }
+
+func (PortLogger) Debug() port.LogEvent { return Debug() }
+func (PortLogger) Info() port.LogEvent  { return Info() }
+func (PortLogger) Warn() port.LogEvent  { return Warn() }
+func (PortLogger) Error() port.LogEvent { return Error() }
+func (PortLogger) Fatal() port.LogEvent { return Fatal() }
+
+var _ port.Logger = PortLogger{}
 
 func SetLevel(level string) {
 	var l extlogging.Level

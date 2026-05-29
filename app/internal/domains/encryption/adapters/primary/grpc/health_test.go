@@ -6,12 +6,13 @@ import (
 	"net"
 	"testing"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
+	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -19,7 +20,7 @@ func startHealthTestServer(t *testing.T) (grpc_health_v1.HealthClient, func()) {
 	t.Helper()
 	lis := bufconn.Listen(1024 * 1024)
 	srv := grpc.NewServer()
-	adapter := NewGRPCServer(&stubService{}, "", stubLogger{})
+	adapter := NewGRPCServer(&stubService{}, "", logtest.NewNoop())
 	pb.RegisterMessageServiceServer(srv, adapter)
 	adapter.registerHealthServer(srv)
 

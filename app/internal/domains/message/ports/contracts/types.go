@@ -5,18 +5,14 @@ package contracts
 
 import (
 	"time"
+
+	logport "github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/port"
 )
 
-// LogEvent represents a structured logging event that can be enriched with contextual data.
-type LogEvent interface {
-	Err(error) LogEvent
-	Str(string, string) LogEvent
-	Int(string, int) LogEvent
-	Bool(string, bool) LogEvent
-	Dur(string, time.Duration) LogEvent
-	Float64(string, float64) LogEvent
-	Msg(string)
-}
+// LogEvent is the shared structured-logging event contract. It is an alias to
+// the single definition in internal/shared/logging/port so adding a field
+// happens in exactly one place across every domain.
+type LogEvent = logport.LogEvent
 
 // MessageSubmissionRequest represents a request to share a new encrypted message
 type MessageSubmissionRequest struct {

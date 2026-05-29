@@ -6,6 +6,8 @@ package contracts
 
 import (
 	"time"
+
+	logport "github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/port"
 )
 
 // Message represents a stored encrypted message with metadata.
@@ -52,100 +54,8 @@ type DatabaseConfig struct {
 	Name     string
 }
 
-// LogEvent represents a structured logging event that can be enriched with contextual data.
-// This interface follows a fluent API pattern, allowing method chaining to add various
-// types of contextual information before finalizing the log entry. This abstraction
-// allows the storage domain to remain independent of specific logging implementations.
-type LogEvent interface {
-	// Err adds an error to the log event.
-	// The error will be formatted and included in the log output.
-	//
-	// Parameters:
-	//   - err: The error to log (can be nil)
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Err(error) LogEvent
-
-	// Str adds a string key-value pair to the log event.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The string value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Str(string, string) LogEvent
-
-	// Int adds an integer key-value pair to the log event.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The integer value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Int(string, int) LogEvent
-
-	// Int32 adds an int32 key-value pair to the log event.
-	// Useful for fields that arrive as int32 (e.g. protobuf scalars) without
-	// requiring callers to widen them at the call site.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The int32 value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Int32(string, int32) LogEvent
-
-	// Int64 adds an int64 key-value pair to the log event.
-	// Useful for fields that naturally exceed 32-bit range such as row
-	// counts returned by sql.Result.RowsAffected.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The int64 value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Int64(string, int64) LogEvent
-
-	// Bool adds a boolean key-value pair to the log event.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The boolean value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Bool(string, bool) LogEvent
-
-	// Dur adds a duration key-value pair to the log event.
-	// The duration is typically formatted in a human-readable way.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The duration value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Dur(string, time.Duration) LogEvent
-
-	// Float64 adds a float64 key-value pair to the log event.
-	//
-	// Parameters:
-	//   - key: The field name
-	//   - value: The float64 value
-	//
-	// Returns:
-	//   - The LogEvent for method chaining
-	Float64(string, float64) LogEvent
-
-	// Msg finalizes the log event with a message and writes it to the log.
-	// This method should be called last in the chain.
-	//
-	// Parameters:
-	//   - message: The log message describing the event
-	Msg(string)
-}
+// LogEvent is the shared structured-logging event contract. It is an alias to
+// the single definition in internal/shared/logging/port, so the storage domain
+// stays independent of any concrete logging implementation while a new field
+// is added in exactly one place across every domain.
+type LogEvent = logport.LogEvent

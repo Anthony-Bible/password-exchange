@@ -8,7 +8,6 @@ import (
 	messageConfigAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/config"
 	grpcClients "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/grpc_clients"
 	httpAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/http"
-	messageLoggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/logger"
 	rabbitMQAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/rabbitmq"
 	urlAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/url"
 	messageValidationAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/secondary/validation"
@@ -73,7 +72,7 @@ func (conf Config) startHexagonalServer() {
 	turnstileValidator := httpAdapter.NewTurnstileValidator(conf.TurnstileSecret)
 
 	// Create cross-cutting adapters
-	messageLogger := messageLoggerAdapter.NewAdapter()
+	messageLogger := logging.NewLogger()
 	messageConfig := messageConfigAdapter.NewAdapter()
 	messageValidation := messageValidationAdapter.NewAdapter()
 
