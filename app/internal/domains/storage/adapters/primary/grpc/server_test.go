@@ -50,10 +50,25 @@ func (v *stubValidator) SanitizeEmailForLogging(email string) string {
 }
 
 // stubStorageService is a minimal storage service used to drive the gRPC adapter
-// down the success path so we can observe logger/validator routing.
+// down the success path so we can observe logger/validator routing. The reminder
+// fields let integration tests feed canned results/errors and capture the
+// arguments the gRPC server forwards after protobuf decoding.
 type stubStorageService struct {
 	storeErr  error
 	healthErr error
+
+	// Reminder canned responses / errors.
+	unviewedMessages []*contracts.UnviewedMessage
+	unviewedErr      error
+	logReminderErr   error
+	reminderHistory  []*contracts.ReminderLogEntry
+	reminderHistErr  error
+
+	// Captured arguments from the most recent reminder calls.
+	gotOlderThanHours, gotMaxReminders, gotIntervalHours int
+	gotLogMessageID                                      int
+	gotLogEmail                                          string
+	gotHistoryMessageID                                  int
 }
 
 func (s *stubStorageService) StoreMessage(context.Context, *contracts.Message) error {
@@ -65,12 +80,17 @@ func (s *stubStorageService) RetrieveMessage(context.Context, string) (*contract
 func (s *stubStorageService) GetMessage(context.Context, string) (*contracts.Message, error) {
 	return &contracts.Message{}, nil
 }
-func (s *stubStorageService) GetUnviewedMessagesForReminders(context.Context, int, int, int) ([]*contracts.UnviewedMessage, error) {
-	return nil, nil
+func (s *stubStorageService) GetUnviewedMessagesForReminders(_ context.Context, olderThanHours, maxReminders, intervalHours int) ([]*contracts.UnviewedMessage, error) {
+	s.gotOlderThanHours, s.gotMaxReminders, s.gotIntervalHours = olderThanHours, maxReminders, intervalHours
+	return s.unviewedMessages, s.unviewedErr
 }
-func (s *stubStorageService) LogReminderSent(context.Context, int, string) error { return nil }
-func (s *stubStorageService) GetReminderHistory(context.Context, int) ([]*contracts.ReminderLogEntry, error) {
-	return nil, nil
+func (s *stubStorageService) LogReminderSent(_ context.Context, messageID int, email string) error {
+	s.gotLogMessageID, s.gotLogEmail = messageID, email
+	return s.logReminderErr
+}
+func (s *stubStorageService) GetReminderHistory(_ context.Context, messageID int) ([]*contracts.ReminderLogEntry, error) {
+	s.gotHistoryMessageID = messageID
+	return s.reminderHistory, s.reminderHistErr
 }
 func (s *stubStorageService) CleanupExpiredMessages(context.Context) error { return nil }
 func (s *stubStorageService) HealthCheck(context.Context) error            { return s.healthErr }
