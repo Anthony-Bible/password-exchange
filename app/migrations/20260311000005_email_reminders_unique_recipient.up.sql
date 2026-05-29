@@ -1,5 +1,10 @@
 -- Migration: enforce one email_reminders row per (message_id, email_address)
 --
+-- WARNING: THIS MIGRATION IS ONE-WAY (DESTRUCTIVE). Take a backup of the
+-- email_reminders table before applying it if you may need to roll back.
+-- The down migration only drops the unique index; it cannot restore the
+-- duplicate rows that are deleted here.
+--
 -- LogReminderSent relies on INSERT ... ON DUPLICATE KEY UPDATE to increment
 -- reminder_count, but the original email_reminders table had no unique key for
 -- that upsert to collide on. As a result every reminder inserted a fresh row

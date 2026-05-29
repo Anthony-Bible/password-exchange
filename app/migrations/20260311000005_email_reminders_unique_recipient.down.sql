@@ -1,3 +1,11 @@
--- Remove the unique key on (message_id, email_address). The collapsed duplicate
--- rows are not restored; only the constraint is dropped.
+-- WARNING: THIS MIGRATION IS ONE-WAY (DESTRUCTIVE).
+--
+-- The up migration collapsed duplicate email_reminders rows into a single row
+-- per (message_id, email_address). Those deleted rows CANNOT be recovered by
+-- this down migration; only the unique index is dropped. If you need to roll
+-- back on a database that had duplicates before the up migration ran, you must
+-- restore from a backup taken before the up migration was applied.
+--
+-- OPERATORS: Take a full backup of the email_reminders table before applying
+-- the up migration if you may need to roll back.
 ALTER TABLE `email_reminders` DROP INDEX `uq_email_reminders_message_email`;
