@@ -96,6 +96,19 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	publishCtx, cancel := context.WithTimeout(ctx, notificationPublishTimeout)
 	defer cancel()
 
+	_, err = p.channel.QueueDeclare(
+		p.queueName, // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	if err != nil {
+		logging.Error().Err(err).Str("queue", p.queueName).Msg("Failed to declare queue")
+		return fmt.Errorf("failed to declare queue: %w", err)
+	}
+
 	// Publish the message
 	err = p.channel.PublishWithContext(publishCtx,
 		"",          // exchange
