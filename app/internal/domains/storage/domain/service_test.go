@@ -81,6 +81,11 @@ func (m *MockMessageRepository) Close() error {
 	return args.Error(0)
 }
 
+func (m *MockMessageRepository) Ping(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 // MockLoggerPort is a hand-written mock implementing secondary.LoggerPort.
 type MockLoggerPort struct {
 	mock.Mock
@@ -514,10 +519,25 @@ func TestGetReminderHistory_HappyPath(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
-func TestHealthCheck_ReturnsNil(t *testing.T) {
-	svc, _, _, _ := newServiceWithMocks(t)
+func TestHealthCheck_HappyPathReturnsNil(t *testing.T) {
+	svc, repo, _, _ := newServiceWithMocks(t)
+	repo.On("Ping", mock.Anything).Return(nil).Once()
 
 	err := svc.HealthCheck(context.Background())
 
 	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestHealthCheck_SurfacesRepositoryPingError(t *testing.T) {
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	boom := errors.New("ping failed")
+	repo.On("Ping", mock.Anything).Return(boom).Once()
+
+	err := svc.HealthCheck(context.Background())
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, boom)
+	repo.AssertExpectations(t)
 }

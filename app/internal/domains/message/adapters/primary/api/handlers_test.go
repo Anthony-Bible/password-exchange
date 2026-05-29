@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,10 +13,12 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/contracts"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 // MockMessageService is a mock implementation of MessageServicePort
@@ -47,14 +50,81 @@ func (m *MockMessageService) RetrieveMessage(
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
 }
 
+// healthCheckFn is a tiny test-only function-typed implementation of the
+// HealthCheck contract for both secondary ports. Tests inject a closure that
+// returns the desired error/timing behaviour without standing up a full mock.
+type healthCheckFn func(ctx context.Context) error
+
+// stubEncryptionPort satisfies secondary.EncryptionServicePort. Only
+// HealthCheck is exercised by Readyz tests; the other methods panic if
+// called so misuse fails loudly.
+type stubEncryptionPort struct {
+	healthCheck healthCheckFn
+}
+
+func (s *stubEncryptionPort) GenerateKey(context.Context, int32) ([]byte, error) {
+	panic("stubEncryptionPort.GenerateKey not implemented")
+}
+func (s *stubEncryptionPort) Encrypt(context.Context, []string, []byte) ([]string, error) {
+	panic("stubEncryptionPort.Encrypt not implemented")
+}
+func (s *stubEncryptionPort) Decrypt(context.Context, []string, []byte) ([]string, error) {
+	panic("stubEncryptionPort.Decrypt not implemented")
+}
+func (s *stubEncryptionPort) GenerateID(context.Context) (string, error) {
+	panic("stubEncryptionPort.GenerateID not implemented")
+}
+func (s *stubEncryptionPort) HealthCheck(ctx context.Context) error {
+	if s.healthCheck == nil {
+		return nil
+	}
+	return s.healthCheck(ctx)
+}
+
+// stubStoragePort satisfies secondary.StorageServicePort with the same
+// "only HealthCheck is real" pattern.
+type stubStoragePort struct {
+	healthCheck healthCheckFn
+}
+
+func (s *stubStoragePort) StoreMessage(context.Context, contracts.MessageStorageRequest) error {
+	panic("stubStoragePort.StoreMessage not implemented")
+}
+func (s *stubStoragePort) RetrieveMessage(
+	context.Context,
+	contracts.MessageRetrievalStorageRequest,
+) (*contracts.MessageStorageResponse, error) {
+	panic("stubStoragePort.RetrieveMessage not implemented")
+}
+func (s *stubStoragePort) GetMessage(
+	context.Context,
+	contracts.MessageRetrievalStorageRequest,
+) (*contracts.MessageStorageResponse, error) {
+	panic("stubStoragePort.GetMessage not implemented")
+}
+func (s *stubStoragePort) HealthCheck(ctx context.Context) error {
+	if s.healthCheck == nil {
+		return nil
+	}
+	return s.healthCheck(ctx)
+}
+
 func setupTestRouter(mockService *MockMessageService) *gin.Engine {
+	return setupTestRouterWithProbes(mockService, &stubEncryptionPort{}, &stubStoragePort{})
+}
+
+func setupTestRouterWithProbes(
+	mockService *MockMessageService,
+	enc *stubEncryptionPort,
+	stor *stubStoragePort,
+) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
 	// Create minimal metrics setup for testing
 	registry := prometheus.NewRegistry()
 	metrics := middleware.NewPrometheusMetrics(registry)
 
-	return setupRouter(NewMessageAPIHandler(mockService), metrics, registry)
+	return setupRouter(NewMessageAPIHandler(mockService, enc, stor), metrics, registry)
 }
 
 func TestSubmitMessage_Success(t *testing.T) {
@@ -595,6 +665,138 @@ func TestDecryptMessage_IncludesExpiresAt(t *testing.T) {
 	assert.Equal(t, fixedExpiry.Unix(), response.ExpiresAt.Unix())
 
 	mockService.AssertExpectations(t)
+}
+
+func TestLivez_AlwaysReturns200WithoutTouchingDependencies(t *testing.T) {
+	mockService := new(MockMessageService)
+	// Deps panic if their HealthCheck is called — proves /livez is dependency-free.
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error {
+		t.Fatalf("/livez must not call encryption HealthCheck")
+		return nil
+	}}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error {
+		t.Fatalf("/livez must not call storage HealthCheck")
+		return nil
+	}}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/livez", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var body map[string]string
+	require := require.New(t)
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	require.Equal("ok", body["status"])
+}
+
+func TestReadyz_ReturnsOKWhenBothDependenciesHealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error { return nil }}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/readyz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestReadyz_Returns503WhenEncryptionUnhealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error {
+		return errors.New("encryption down")
+	}}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/readyz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	var body map[string]interface{}
+	require := require.New(t)
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	require.Contains(body, "failed")
+	failed, _ := body["failed"].([]interface{})
+	require.Contains(failed, "encryption")
+}
+
+func TestReadyz_Returns503WhenStorageUnhealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error { return nil }}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error {
+		return errors.New("storage down")
+	}}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/readyz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	var body map[string]interface{}
+	require := require.New(t)
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	failed, _ := body["failed"].([]interface{})
+	require.Contains(failed, "storage")
+}
+
+func TestReadyz_Returns503WhenBothUnhealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error {
+		return errors.New("encryption down")
+	}}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error {
+		return errors.New("storage down")
+	}}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/readyz", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	var body map[string]interface{}
+	require := require.New(t)
+	require.NoError(json.Unmarshal(w.Body.Bytes(), &body))
+	failed, _ := body["failed"].([]interface{})
+	require.Contains(failed, "encryption")
+	require.Contains(failed, "storage")
+}
+
+func TestReadyz_AbortsViaContextTimeout(t *testing.T) {
+	// A stuck dependency must not hang readiness. The handler attaches a 2s
+	// deadline to the dispatched context; the stub blocks until that fires
+	// and then returns ctx.Err(), so /readyz must respond 503 rather than
+	// blocking indefinitely.
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(ctx context.Context) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/readyz", nil)
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		router.ServeHTTP(w, req)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("/readyz blocked past the in-handler deadline")
+	}
+
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 }
 
 func TestDecryptMessage_NilExpiresAtIsNullInResponse(t *testing.T) {

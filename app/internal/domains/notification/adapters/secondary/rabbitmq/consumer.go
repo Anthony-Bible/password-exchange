@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
@@ -14,8 +15,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-// RabbitMQConsumer implements the QueuePort using RabbitMQ
+// RabbitMQConsumer implements the QueuePort using RabbitMQ.
+//
+// connection is written by Connect (consumer goroutine) and read by
+// IsConnectionAlive (HTTP /healthz goroutine), so all access goes through mu.
 type RabbitMQConsumer struct {
+	mu         sync.RWMutex
 	connection *amqp.Connection
 	channel    *amqp.Channel
 }
@@ -42,8 +47,10 @@ func (r *RabbitMQConsumer) Connect(ctx context.Context, queueConn contracts.Queu
 		return fmt.Errorf("%w: %v", domain.ErrQueueConnectionFailed, err)
 	}
 
+	r.mu.Lock()
 	r.connection = conn
 	r.channel = ch
+	r.mu.Unlock()
 
 	logging.Info().Str("host", queueConn.Host).Int("port", queueConn.Port).Msg("Connected to RabbitMQ")
 	return nil
@@ -178,11 +185,15 @@ func (r *RabbitMQConsumer) handleMessage(ctx context.Context, delivery amqp.Deli
 
 // Close closes the RabbitMQ connection
 func (r *RabbitMQConsumer) Close() error {
-	if r.channel != nil {
-		r.channel.Close()
+	r.mu.Lock()
+	ch := r.channel
+	conn := r.connection
+	r.mu.Unlock()
+	if ch != nil {
+		ch.Close()
 	}
-	if r.connection != nil {
-		r.connection.Close()
+	if conn != nil {
+		conn.Close()
 	}
 	logging.Info().Msg("RabbitMQ connection closed")
 	return nil
@@ -207,8 +218,11 @@ func isConnAlive(c connStatus) bool {
 // wedged consumer (e.g. channel closed, connection dropped) gets restarted by
 // Kubernetes instead of silently accepting deliveries it can't process.
 func (r *RabbitMQConsumer) IsConnectionAlive() bool {
-	if r.connection == nil {
+	r.mu.RLock()
+	conn := r.connection
+	r.mu.RUnlock()
+	if conn == nil {
 		return false
 	}
-	return isConnAlive(r.connection)
+	return isConnAlive(conn)
 }

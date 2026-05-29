@@ -209,7 +209,7 @@ func TestEmailNotificationFlow(t *testing.T) {
 			}
 
 			// Create handler
-			handler := NewMessageAPIHandler(mockService)
+			handler := NewMessageAPIHandler(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 
 			// Create request
 			reqBody, err := json.Marshal(tt.request)
@@ -339,7 +339,7 @@ func TestEmailValidationFlow(t *testing.T) {
 			}
 
 			// Create handler
-			handler := NewMessageAPIHandler(mockService)
+			handler := NewMessageAPIHandler(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 
 			// Create request
 			reqBody, err := json.Marshal(request)
@@ -495,7 +495,7 @@ func TestConditionalValidationFlow(t *testing.T) {
 			}
 
 			// Create handler
-			handler := NewMessageAPIHandler(mockService)
+			handler := NewMessageAPIHandler(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 
 			// Create request
 			reqBody, err := json.Marshal(request)

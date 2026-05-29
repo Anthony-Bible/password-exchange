@@ -6,6 +6,7 @@ import (
 	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	swaggerFiles "github.com/swaggo/files"
@@ -20,9 +21,15 @@ type Server struct {
 	prometheusMetrics *middleware.PrometheusMetrics
 }
 
-// NewServer creates a new API server with the given message service
-func NewServer(messageService primary.MessageServicePort) *Server {
-	handler := NewMessageAPIHandler(messageService)
+// NewServer creates a new API server with the given message service plus the
+// encryption and storage ports the /readyz probe needs to check downstream
+// dependency health.
+func NewServer(
+	messageService primary.MessageServicePort,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+) *Server {
+	handler := NewMessageAPIHandler(messageService, encryptionService, storageService)
 
 	// Initialize Prometheus metrics
 	metricsRegistry := prometheus.NewRegistry()
@@ -76,6 +83,13 @@ func setupRouter(
 
 		c.Next()
 	})
+
+	// Process-alive (/livez) and dependency-aware (/readyz) probes live on the
+	// root, not under /api/v1, so k8s probes don't get versioned along with
+	// the public REST surface. Same lenient rate limit as /health to avoid
+	// throttling the kubelet.
+	router.GET("/livez", middleware.HealthCheckRateLimit(), handler.Livez)
+	router.GET("/readyz", middleware.HealthCheckRateLimit(), handler.Readyz)
 
 	// API routes with rate limiting
 	v1 := router.Group("/api/v1")

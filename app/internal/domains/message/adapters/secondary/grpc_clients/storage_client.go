@@ -9,12 +9,14 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	db "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // StorageClient implements the StorageServicePort using gRPC
 type StorageClient struct {
-	client db.DbServiceClient
-	conn   *grpc.ClientConn
+	client       db.DbServiceClient
+	healthClient grpc_health_v1.HealthClient
+	conn         *grpc.ClientConn
 }
 
 // NewStorageClient creates a new storage gRPC client
@@ -25,11 +27,10 @@ func NewStorageClient(endpoint string) (*StorageClient, error) {
 		return nil, fmt.Errorf("failed to connect to storage service: %w", err)
 	}
 
-	client := db.NewDbServiceClient(conn)
-
 	return &StorageClient{
-		client: client,
-		conn:   conn,
+		client:       db.NewDbServiceClient(conn),
+		healthClient: grpc_health_v1.NewHealthClient(conn),
+		conn:         conn,
 	}, nil
 }
 
@@ -141,6 +142,14 @@ func (c *StorageClient) GetMessage(
 		Bool("hasPassphrase", hasPassphrase).
 		Msg("Retrieved message without incrementing view count successfully")
 	return response, nil
+}
+
+// HealthCheck queries the storage service's standard gRPC health endpoint
+// and returns nil only when the overall service reports SERVING. The storage
+// server flips its status based on real MySQL connectivity, so a NOT_SERVING
+// response here means /readyz should fail the pod off the load balancer.
+func (c *StorageClient) HealthCheck(ctx context.Context) error {
+	return checkServing(ctx, c.healthClient, "storage")
 }
 
 // Close closes the gRPC connection

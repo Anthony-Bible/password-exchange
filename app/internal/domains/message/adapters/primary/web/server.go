@@ -7,6 +7,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -15,16 +16,21 @@ import (
 
 // WebServer handles HTTP requests for the message service
 type WebServer struct {
-	messageHandler *MessageHandler
-	messageService primary.MessageServicePort
-	apiServer      *api.Server
-	router         *gin.Engine
+	messageHandler    *MessageHandler
+	messageService    primary.MessageServicePort
+	encryptionService secondary.EncryptionServicePort
+	storageService    secondary.StorageServicePort
+	router            *gin.Engine
 }
 
-// NewWebServer creates a new web server
-func NewWebServer(messageService primary.MessageServicePort) *WebServer {
+// NewWebServer creates a new web server. The encryption and storage ports are
+// required so the root-level /readyz probe can verify downstream gRPC services.
+func NewWebServer(
+	messageService primary.MessageServicePort,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+) *WebServer {
 	messageHandler := NewMessageHandler(messageService)
-	apiServer := api.NewServer(messageService)
 
 	router := gin.Default()
 
@@ -41,10 +47,11 @@ func NewWebServer(messageService primary.MessageServicePort) *WebServer {
 	router.Static("/assets", "/templates/assets")
 
 	return &WebServer{
-		messageHandler: messageHandler,
-		messageService: messageService,
-		apiServer:      apiServer,
-		router:         router,
+		messageHandler:    messageHandler,
+		messageService:    messageService,
+		encryptionService: encryptionService,
+		storageService:    storageService,
+		router:            router,
 	}
 }
 
@@ -76,8 +83,16 @@ func (s *WebServer) SetupRoutes() {
 
 // setupAPIRoutes adds API routes to the main router
 func (s *WebServer) setupAPIRoutes() {
-	// Create API handler directly with the message service
-	apiHandler := api.NewMessageAPIHandler(s.messageService)
+	// Create API handler directly with the message service plus the two
+	// secondary ports that /readyz needs to probe.
+	apiHandler := api.NewMessageAPIHandler(s.messageService, s.encryptionService, s.storageService)
+
+	// Process-alive and dependency-aware probes live on the root, not under
+	// /api/v1 — k8s probe paths shouldn't be versioned alongside the public
+	// REST surface. They're attached to s.router (not the apiGroup) so they
+	// stay reachable at the documented /livez and /readyz paths.
+	s.router.GET("/livez", middleware.HealthCheckRateLimit(), apiHandler.Livez)
+	s.router.GET("/readyz", middleware.HealthCheckRateLimit(), apiHandler.Readyz)
 
 	// Add API middleware
 	apiGroup := s.router.Group("/api")

@@ -90,8 +90,10 @@ func (conf Config) startHexagonalServer() {
 		messageValidation,
 	)
 
-	// Create web server (primary adapter)
-	webServer := webAdapter.NewWebServer(messageService)
+	// Create web server (primary adapter). The encryption + storage clients
+	// are also handed in directly so the /readyz probe can call HealthCheck
+	// on them without re-routing through the message service.
+	webServer := webAdapter.NewWebServer(messageService, encryptionClient, storageClient)
 
 	// Start the server
 	logging.Info().Msg("Starting message service with hexagonal architecture")

@@ -54,7 +54,10 @@ func (s *GRPCServer) Start() error {
 }
 
 // registerHealthServer wires the standard gRPC health service so Kubernetes
-// grpc probes can verify the encryption server is serving.
+// grpc probes can verify the encryption server is serving. Status stays
+// hardcoded SERVING because encryption is purely in-process (key generation
+// has no external dependencies) — if this process is alive enough to answer
+// the health RPC, it can serve real requests too.
 func (s *GRPCServer) registerHealthServer(grpcServer *grpc.Server) {
 	healthSrv := health.NewServer()
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)

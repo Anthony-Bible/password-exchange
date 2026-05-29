@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -426,6 +427,69 @@ func TestMySQLAdapter_LogReminderSent(t *testing.T) {
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
+func TestMySQLAdapter_Ping_SuccessReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	mock.ExpectPing()
+
+	if err := adapter.Ping(context.Background()); err != nil {
+		t.Errorf("Ping() error = %v, want nil", err)
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("SQL expectations were not met: %v", err)
+	}
+}
+
+func TestMySQLAdapter_Ping_SurfacesDriverError(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	defer db.Close()
+
+	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	boom := errors.New("connection refused")
+	mock.ExpectPing().WillReturnError(boom)
+
+	err = adapter.Ping(context.Background())
+	if err == nil {
+		t.Fatalf("Ping() error = nil, want non-nil")
+	}
+	if !errors.Is(err, domain.ErrDatabaseConnection) {
+		t.Errorf("expected ErrDatabaseConnection, got %v", err)
+	}
+}
+
+func TestMySQLAdapter_Ping_RejectedAfterClose(t *testing.T) {
+	t.Parallel()
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("Error creating mock database: %v", err)
+	}
+	mock.ExpectClose()
+
+	adapter := &MySQLAdapter{db: db, logger: noopLogger{}, validator: noopValidator{}}
+	if err := adapter.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	err = adapter.Ping(context.Background())
+	if !errors.Is(err, domain.ErrRepositoryClosed) {
+		t.Errorf("expected ErrRepositoryClosed, got %v", err)
 	}
 }
 

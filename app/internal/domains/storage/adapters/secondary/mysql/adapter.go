@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync/atomic"
@@ -382,6 +383,19 @@ func (m *MySQLAdapter) GetReminderHistory(messageID int) ([]*contracts.ReminderL
 
 	m.logger.Info().Int("messageID", messageID).Int("count", len(history)).Msg("Retrieved reminder history")
 	return history, nil
+}
+
+// Ping verifies the underlying *sql.DB pool can reach MySQL. The supplied
+// context bounds the call so callers (notably the gRPC health-status loop)
+// don't wedge waiting on a hung database.
+func (m *MySQLAdapter) Ping(ctx context.Context) error {
+	if err := m.requireOpen(); err != nil {
+		return err
+	}
+	if err := m.db.PingContext(ctx); err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
+	}
+	return nil
 }
 
 // Close closes the database connection and marks the adapter as closed so

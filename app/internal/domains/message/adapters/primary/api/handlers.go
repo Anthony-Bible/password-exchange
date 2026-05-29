@@ -4,25 +4,42 @@ import (
 	"context"
 	"encoding/base64"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
 )
 
+// readyzTimeout bounds how long Readyz waits on its downstream HealthCheck
+// calls before failing. Must stay tight so k8s readiness probes don't queue
+// up behind a wedged dependency.
+const readyzTimeout = 2 * time.Second
+
 // MessageAPIHandler handles REST API requests for message operations
 type MessageAPIHandler struct {
-	messageService primary.MessageServicePort
+	messageService    primary.MessageServicePort
+	encryptionService secondary.EncryptionServicePort
+	storageService    secondary.StorageServicePort
 }
 
-// NewMessageAPIHandler creates a new API message handler
-func NewMessageAPIHandler(messageService primary.MessageServicePort) *MessageAPIHandler {
+// NewMessageAPIHandler creates a new API message handler. The two secondary
+// ports are required for the dependency-aware /readyz probe; SubmitMessage
+// and friends route through messageService as before.
+func NewMessageAPIHandler(
+	messageService primary.MessageServicePort,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+) *MessageAPIHandler {
 	return &MessageAPIHandler{
-		messageService: messageService,
+		messageService:    messageService,
+		encryptionService: encryptionService,
+		storageService:    storageService,
 	}
 }
 
@@ -336,6 +353,59 @@ func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// Livez handles GET /livez. It returns 200 unconditionally without touching
+// any downstream dependency so kubelet only restarts the process when it is
+// genuinely wedged (not when a database hiccup degrades readiness).
+func (h *MessageAPIHandler) Livez(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
+// Readyz handles GET /readyz. It probes both downstream gRPC services in
+// parallel under a short deadline; if either fails the pod is taken off the
+// service load balancer with a 503 and a small JSON body naming the failed
+// dep(s). On success it returns 200 with {"status":"ok"}.
+func (h *MessageAPIHandler) Readyz(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), readyzTimeout)
+	defer cancel()
+
+	var (
+		wg     sync.WaitGroup
+		mu     sync.Mutex
+		failed []string
+	)
+
+	checks := []struct {
+		name string
+		fn   func(context.Context) error
+	}{
+		{"encryption", h.encryptionService.HealthCheck},
+		{"storage", h.storageService.HealthCheck},
+	}
+
+	for _, check := range checks {
+		wg.Add(1)
+		go func(name string, fn func(context.Context) error) {
+			defer wg.Done()
+			if err := fn(ctx); err != nil {
+				mu.Lock()
+				failed = append(failed, name)
+				mu.Unlock()
+				logging.Warn().Err(err).Str("dep", name).Msg("Readyz dependency check failed")
+			}
+		}(check.name, check.fn)
+	}
+	wg.Wait()
+
+	if len(failed) > 0 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "unavailable",
+			"failed": failed,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
 // APIInfo handles GET /api/v1/info

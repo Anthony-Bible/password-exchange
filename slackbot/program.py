@@ -181,6 +181,13 @@ def update_home_tab(client, event, logger):
         )
     except Exception as e:
         logger.error(f"Error publishing home tab: {e}")
+@app.route("/healthz", methods=["GET"])
+def healthz():
+    # Dependency-free process-alive probe for k8s. Intentionally does NOT
+    # poke Slack or the OAuth DB — those would cascade into restart loops
+    # during transient upstream blips.
+    return {"status": "ok"}, 200
+
 @app.route("/slack/events", methods=["POST"])
 def slack_events():
     """ Declaring the route where slack will post a request """
