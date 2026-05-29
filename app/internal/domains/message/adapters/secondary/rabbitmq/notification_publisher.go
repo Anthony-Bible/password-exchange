@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const notificationPublishTimeout = 2 * time.Second
+
 // NotificationPublisher implements the NotificationServicePort using RabbitMQ
 type NotificationPublisher struct {
 	connection *amqp.Connection
@@ -91,7 +93,7 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	}
 
 	// Create context with timeout
-	publishCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	publishCtx, cancel := context.WithTimeout(ctx, notificationPublishTimeout)
 	defer cancel()
 
 	// Publish the message

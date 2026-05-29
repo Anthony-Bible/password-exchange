@@ -10,6 +10,8 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
 )
 
+const notificationSendTimeout = 2 * time.Second
+
 // MessageService provides message sharing operations
 type MessageService struct {
 	encryptionService   secondary.EncryptionServicePort
@@ -173,7 +175,16 @@ func (s *MessageService) SubmitMessage(
 		}
 
 		go func(messageID string, notificationReq MessageNotificationRequest) {
-			notificationCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					s.logger.Error().
+						Interface("panic", recovered).
+						Str("messageId", messageID).
+						Msg("Notification send panicked")
+				}
+			}()
+
+			notificationCtx, cancel := context.WithTimeout(context.Background(), notificationSendTimeout)
 			defer cancel()
 
 			err := s.notificationService.SendMessageNotification(notificationCtx, notificationReq)

@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const notificationAsyncReturnThreshold = 1 * time.Second
+
 // --- Mocks ---
 
 type mockEncryptionService struct{ mock.Mock }
@@ -75,6 +77,7 @@ func (m *mockNotificationService) SendMessageNotification(ctx context.Context, r
 	return args.Error(0)
 }
 
+// blockingNotificationService simulates a notification sender that blocks until released.
 type blockingNotificationService struct {
 	mock.Mock
 	release chan struct{}
@@ -483,20 +486,16 @@ func TestSubmitMessage_DoesNotWaitForNotificationPublish(t *testing.T) {
 		close(done)
 	}()
 
-	quickReturnThreshold := 200 * time.Millisecond
 	select {
 	case <-done:
-	case <-time.After(quickReturnThreshold):
-		t.Fatalf("SubmitMessage should return within %v even when notification publish is blocked", quickReturnThreshold)
+	case <-time.After(notificationAsyncReturnThreshold):
+		t.Fatalf(
+			"SubmitMessage should return within %v even when notification publish is blocked",
+			notificationAsyncReturnThreshold,
+		)
 	}
 
 	close(notif.release)
-
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("SubmitMessage did not complete after releasing notification publish")
-	}
 
 	select {
 	case <-notif.called:
