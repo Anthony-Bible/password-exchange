@@ -1,9 +1,5 @@
 package config
 
-import (
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
-)
-
 var AppConfig PassConfig
 
 // EmailConfig holds all email-related settings.
@@ -39,12 +35,18 @@ type EmailSender struct {
 	Name  string `mapstructure:"name"`
 }
 
-// Config represents the complete application configuration
+// Config represents the complete application configuration.
+//
+// Database connection settings live on the flat PassConfig.Db* fields
+// (consumed by cmd/database and cmd/reminder). There is intentionally no
+// structured `database:` block: a previous Config.Database field was loaded by
+// viper but never read, so any `database:` YAML or PASSWORDEXCHANGE_DATABASE_*
+// env var was silently dropped. It was removed rather than wired up to avoid
+// that invisible-misconfiguration trap.
 type Config struct {
 	PassConfig `mapstructure:",squash"`
-	Database   contracts.DatabaseConfig `mapstructure:"database"`
-	Reminder   ReminderConfig        `mapstructure:"reminder"`
-	Email      EmailConfig           `mapstructure:"email"`
+	Reminder   ReminderConfig `mapstructure:"reminder"`
+	Email      EmailConfig    `mapstructure:"email"`
 }
 
 // ReminderConfig contains configuration for the reminder email system
