@@ -284,7 +284,6 @@ paths:
                     services:
                       database: "healthy"
                       encryption: "healthy"
-                      email: "healthy"
 
   /info:
     get:
