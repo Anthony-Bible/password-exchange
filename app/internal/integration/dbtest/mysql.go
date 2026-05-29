@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -24,13 +25,34 @@ import (
 )
 
 const (
-	testDBName   = "passwordexchange"
-	testDBUser   = "testuser"
-	testDBPass   = "testpass"
-	testDBImage  = "mysql:8.0"
-	pingTimeout  = 30 * time.Second
-	pingInterval = 250 * time.Millisecond
+	testDBName = "passwordexchange"
+	testDBUser = "testuser"
+	testDBPass = "testpass"
+	// defaultDBImage points at the Google-hosted Docker Hub mirror rather than
+	// docker.io to avoid anonymous pull-rate limits on shared CI/sandbox hosts.
+	// MySQL is used (not MariaDB) because the testcontainers mysql module's
+	// readiness probe keys off a MySQL-specific startup log line. Override with
+	// PASSWORDEXCHANGE_TEST_MYSQL_IMAGE when a different registry or version is
+	// needed.
+	defaultDBImage = "mirror.gcr.io/library/mysql:8.0"
+	imageEnvVar    = "PASSWORDEXCHANGE_TEST_MYSQL_IMAGE"
+	pingTimeout    = 30 * time.Second
+	pingInterval   = 250 * time.Millisecond
+
+	// relaxedSQLMode drops STRICT_TRANS_TABLES / NO_ZERO_DATE from MySQL 8.0's
+	// default sql_mode so the expires_at migration's zero-date backfill
+	// (`WHERE expires_at = '0000-00-00 00:00:00'`) runs the same way it does on
+	// the production MariaDB instance instead of erroring out.
+	relaxedSQLMode = "[mysqld]\nsql_mode=NO_ENGINE_SUBSTITUTION\n"
 )
+
+// testDBImage returns the MySQL image to run, honoring the env override.
+func testDBImage() string {
+	if img := os.Getenv(imageEnvVar); img != "" {
+		return img
+	}
+	return defaultDBImage
+}
 
 // StartMySQL launches a throwaway MySQL container, applies the production
 // migrations from app/migrations, and returns both an open *sql.DB (for seeding
@@ -42,11 +64,23 @@ const (
 func StartMySQL(t *testing.T) (*sql.DB, contracts.DatabaseConfig) {
 	t.Helper()
 
+	// Disable the Ryuk reaper so testcontainers doesn't pull an extra image
+	// from docker.io (which would hit the same rate limit). Container teardown
+	// is handled explicitly via t.Cleanup below. Skip if the caller has already
+	// configured Ryuk behavior.
+	if _, ok := os.LookupEnv("TESTCONTAINERS_RYUK_DISABLED"); !ok {
+		t.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+	}
+
+	cnfPath := filepath.Join(t.TempDir(), "relaxed-sqlmode.cnf")
+	require.NoError(t, os.WriteFile(cnfPath, []byte(relaxedSQLMode), 0o644))
+
 	ctx := context.Background()
-	container, err := tcmysql.Run(ctx, testDBImage,
+	container, err := tcmysql.Run(ctx, testDBImage(),
 		tcmysql.WithDatabase(testDBName),
 		tcmysql.WithUsername(testDBUser),
 		tcmysql.WithPassword(testDBPass),
+		tcmysql.WithConfigFile(cnfPath),
 	)
 	require.NoError(t, err, "start mysql container")
 	t.Cleanup(func() {
@@ -65,13 +99,21 @@ func StartMySQL(t *testing.T) (*sql.DB, contracts.DatabaseConfig) {
 	// more than one statement (e.g. CREATE TABLE + CREATE INDEX).
 	dsn := fmt.Sprintf("%s:%s@(%s)/%s?parseTime=true&multiStatements=true",
 		testDBUser, testDBPass, hostPort, testDBName)
+
+	// Run migrations on a dedicated connection: golang-migrate closes the
+	// *sql.DB handed to it (via WithInstance) when it finishes, so this handle
+	// must not be the one the test later uses for seeding/assertions.
+	migrationDB, err := sql.Open("mysql", dsn)
+	require.NoError(t, err)
+	waitForPing(t, migrationDB)
+	require.NoError(t, migrations.Up(migrationDB, migrationsDir(t)), "apply migrations")
+	_ = migrationDB.Close()
+
+	// Fresh connection returned to the caller for the lifetime of the test.
 	db, err := sql.Open("mysql", dsn)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-
 	waitForPing(t, db)
-
-	require.NoError(t, migrations.Up(db, migrationsDir(t)), "apply migrations")
 
 	cfg := contracts.DatabaseConfig{
 		Host:     hostPort,
