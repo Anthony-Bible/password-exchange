@@ -55,7 +55,11 @@ func (s *StorageService) StoreMessage(ctx context.Context, message *contracts.Me
 		s.logger.Warn().Msg("Attempted to store message with empty unique ID")
 		return ErrEmptyUniqueID
 	}
-	if message.MaxViewCount < 1 || message.MaxViewCount > 100 {
+	// Storage only guards the structurally invalid case (< 1). The upper bound
+	// is a product policy owned by the message domain (message.AbsoluteMaxViewCount),
+	// so callers are responsible for enforcing it; duplicating the cap here would
+	// silently reject otherwise-valid counts if that policy ever changes.
+	if message.MaxViewCount < 1 {
 		s.logger.Warn().Int("maxViewCount", message.MaxViewCount).Msg("Attempted to store message with invalid max view count")
 		return ErrInvalidMaxViewCount
 	}
