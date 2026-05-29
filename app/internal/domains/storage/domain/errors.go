@@ -18,8 +18,10 @@ var (
 	// ErrInvalidParameter is returned when a parameter is invalid
 	ErrInvalidParameter = errors.New("invalid parameter")
 	
-	// ErrInvalidMaxViewCount is returned when max view count is invalid
-	ErrInvalidMaxViewCount = errors.New("max view count must be between 1 and 100")
+	// ErrInvalidMaxViewCount is returned when max view count is below the
+	// structural minimum of 1. The upper bound is a product policy enforced by
+	// the message domain (message.AbsoluteMaxViewCount), not by storage.
+	ErrInvalidMaxViewCount = errors.New("max view count must be at least 1")
 	
 	// ErrMessageNotFound is returned when a message is not found in storage
 	ErrMessageNotFound = errors.New("message not found")

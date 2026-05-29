@@ -277,7 +277,7 @@ func TestStoreMessage_RejectsInvalidMaxViewCount(t *testing.T) {
 		maxViewCount int
 	}{
 		{name: "below minimum", maxViewCount: 0},
-		{name: "above maximum", maxViewCount: 101},
+		{name: "negative", maxViewCount: -1},
 	}
 
 	for _, tc := range tests {
@@ -295,6 +295,25 @@ func TestStoreMessage_RejectsInvalidMaxViewCount(t *testing.T) {
 			repo.AssertNotCalled(t, "InsertMessage", mock.Anything)
 		})
 	}
+}
+
+// The upper bound on view count is a policy owned by the message domain
+// (message.AbsoluteMaxViewCount). Storage only guards against the structurally
+// invalid case of a count below 1, so a high count delegates to the repository.
+func TestStoreMessage_AcceptsHighMaxViewCount(t *testing.T) {
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	msg := &contracts.Message{
+		Content:      "ciphertext",
+		UniqueID:     "abc",
+		MaxViewCount: 101,
+	}
+	repo.On("InsertMessage", msg).Return(nil).Once()
+
+	err := svc.StoreMessage(context.Background(), msg)
+
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
 }
 
 func TestStoreMessage_ValidInputDelegatesToRepository(t *testing.T) {
