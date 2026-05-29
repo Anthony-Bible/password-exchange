@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,27 +15,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
-
-// --- Stub LoggerPort ---
-
-type stubLogEvent struct{}
-
-func (stubLogEvent) Err(error) contracts.LogEvent             { return stubLogEvent{} }
-func (stubLogEvent) Str(string, string) contracts.LogEvent    { return stubLogEvent{} }
-func (stubLogEvent) Int(string, int) contracts.LogEvent       { return stubLogEvent{} }
-func (stubLogEvent) Int32(string, int32) contracts.LogEvent   { return stubLogEvent{} }
-func (stubLogEvent) Bool(string, bool) contracts.LogEvent     { return stubLogEvent{} }
-func (stubLogEvent) Dur(string, time.Duration) contracts.LogEvent { return stubLogEvent{} }
-func (stubLogEvent) Float64(string, float64) contracts.LogEvent   { return stubLogEvent{} }
-func (stubLogEvent) Msg(string)                                {}
-
-type stubLogger struct{}
-
-func (stubLogger) Debug() contracts.LogEvent { return stubLogEvent{} }
-func (stubLogger) Info() contracts.LogEvent  { return stubLogEvent{} }
-func (stubLogger) Warn() contracts.LogEvent  { return stubLogEvent{} }
-func (stubLogger) Error() contracts.LogEvent { return stubLogEvent{} }
-func (stubLogger) Fatal() contracts.LogEvent { return stubLogEvent{} }
 
 // --- Stub EncryptionServicePort ---
 
@@ -75,7 +54,7 @@ func startTestServer(t *testing.T, svc *stubService) (pb.MessageServiceClient, f
 	t.Helper()
 	lis := bufconn.Listen(1024 * 1024)
 	srv := grpc.NewServer()
-	adapter := NewGRPCServer(svc, "", stubLogger{})
+	adapter := NewGRPCServer(svc, "", logtest.NewNoop())
 	pb.RegisterMessageServiceServer(srv, adapter)
 
 	serveErrCh := make(chan error, 1)

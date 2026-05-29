@@ -12,6 +12,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/secondary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 )
 
 // MockMessageRepository is a hand-written mock implementing secondary.MessageRepository.
@@ -86,80 +87,6 @@ func (m *MockMessageRepository) Ping(ctx context.Context) error {
 	return args.Error(0)
 }
 
-// MockLoggerPort is a hand-written mock implementing secondary.LoggerPort.
-type MockLoggerPort struct {
-	mock.Mock
-}
-
-func (m *MockLoggerPort) Debug() contracts.LogEvent {
-	args := m.Called()
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLoggerPort) Info() contracts.LogEvent {
-	args := m.Called()
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLoggerPort) Warn() contracts.LogEvent {
-	args := m.Called()
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLoggerPort) Error() contracts.LogEvent {
-	args := m.Called()
-	return args.Get(0).(contracts.LogEvent)
-}
-
-// MockLogEvent is a hand-written mock implementing contracts.LogEvent.
-type MockLogEvent struct {
-	mock.Mock
-}
-
-func (m *MockLogEvent) Err(err error) contracts.LogEvent {
-	args := m.Called(err)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Str(key, value string) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Int(key string, value int) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Int32(key string, value int32) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Int64(key string, value int64) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Bool(key string, value bool) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Dur(key string, value time.Duration) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Float64(key string, value float64) contracts.LogEvent {
-	args := m.Called(key, value)
-	return args.Get(0).(contracts.LogEvent)
-}
-
-func (m *MockLogEvent) Msg(msg string) {
-	m.Called(msg)
-}
-
 // MockValidationPort is a hand-written mock implementing secondary.ValidationPort.
 type MockValidationPort struct {
 	mock.Mock
@@ -175,43 +102,20 @@ func (m *MockValidationPort) SanitizeEmailForLogging(email string) string {
 	return args.String(0)
 }
 
-// setupLenientLoggerMock wires up lenient (.Maybe()) expectations for every level
-// and every chained method on the LogEvent. Individual tests therefore do not
-// need to set up logging expectations.
-func setupLenientLoggerMock(mockLogger *MockLoggerPort) *MockLogEvent {
-	mockLogEvent := &MockLogEvent{}
-	mockLogger.On("Debug").Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogger.On("Info").Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogger.On("Warn").Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogger.On("Error").Return(contracts.LogEvent(mockLogEvent)).Maybe()
-
-	mockLogEvent.On("Err", mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Str", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Int", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Int32", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Int64", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Bool", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Dur", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Float64", mock.Anything, mock.Anything).Return(contracts.LogEvent(mockLogEvent)).Maybe()
-	mockLogEvent.On("Msg", mock.Anything).Return().Maybe()
-
-	return mockLogEvent
-}
-
 // newServiceWithMocks creates the trio of mocks plus a wired StorageService.
 // It is a convenience for tests that don't need to manipulate the mocks before
-// constructing the service.
+// constructing the service. The logger is a logtest.Recorder, so tests that
+// care can inspect which severity was emitted.
 func newServiceWithMocks(t *testing.T) (
 	*StorageService,
 	*MockMessageRepository,
-	*MockLoggerPort,
+	*logtest.Recorder,
 	*MockValidationPort,
 ) {
 	t.Helper()
 	repo := &MockMessageRepository{}
-	logger := &MockLoggerPort{}
+	logger := logtest.NewRecorder()
 	validation := &MockValidationPort{}
-	setupLenientLoggerMock(logger)
 	svc := NewStorageService(repo, logger, validation)
 	require.NotNil(t, svc)
 	return svc, repo, logger, validation
@@ -219,7 +123,7 @@ func newServiceWithMocks(t *testing.T) (
 
 func TestNewStorageService_InjectsAllPorts(t *testing.T) {
 	repo := &MockMessageRepository{}
-	logger := &MockLoggerPort{}
+	logger := logtest.NewRecorder()
 	validation := &MockValidationPort{}
 
 	svc := NewStorageService(repo, logger, validation)
@@ -241,6 +145,27 @@ func TestStoreMessage_RejectsNilMessage(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNilMessage)
 	repo.AssertNotCalled(t, "InsertMessage", mock.Anything)
+}
+
+// TestStoreMessage_NilMessage_LogsAtWarnNotInfo locks in the value of the
+// logtest.Recorder migration. The previous setupLenientLoggerMock handed back a
+// single shared event for every severity, so a bug downgrading this Warn to
+// Info (or promoting it to Error) would have passed unnoticed. The recorder
+// captures the level, so the test can assert it precisely.
+func TestStoreMessage_NilMessage_LogsAtWarnNotInfo(t *testing.T) {
+	svc, _, logger, _ := newServiceWithMocks(t)
+
+	_ = svc.StoreMessage(context.Background(), nil)
+
+	if got := logger.Count("warn"); got != 1 {
+		t.Errorf("expected exactly 1 warn-level log, got %d: %+v", got, logger.Entries())
+	}
+	if got := logger.Count("info"); got != 0 {
+		t.Errorf("expected no info-level logs, got %d: %v", got, logger.Messages("info"))
+	}
+	if msgs := logger.Messages("warn"); len(msgs) != 1 || msgs[0] != "Attempted to store nil message" {
+		t.Errorf("unexpected warn messages: %v", msgs)
+	}
 }
 
 func TestStoreMessage_RejectsEmptyContent(t *testing.T) {

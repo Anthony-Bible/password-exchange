@@ -3,31 +3,19 @@ package email
 import (
 	"context"
 
-	healthhttp "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http"
 	notificationConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/consumer"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
+	healthhttp "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http"
 	rabbitMQConsumer "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	smtpSender "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/smtp"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
-	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 )
 
 type Config struct {
 	config.PassConfig `mapstructure:",squash"`
-}
-
-// Simple validation adapter using existing validation package
-type validationAdapter struct{}
-
-func (v *validationAdapter) ValidateEmail(email string) error {
-	return validation.ValidateEmail(email)
-}
-
-func (v *validationAdapter) SanitizeEmailForLogging(email string) string {
-	return validation.SanitizeEmailForLogging(email)
 }
 
 func (conf Config) StartProcessing() {
@@ -59,8 +47,8 @@ func (conf Config) startHexagonalProcessing() {
 
 	// Create port adapters using existing functionality
 	configPort := sharedConfig.NewSharedConfigAdapter(conf.PassConfig)
-	loggerPort := logger.NewAdapter()
-	validationPort := &validationAdapter{}
+	loggerPort := logging.NewLogger()
+	validationPort := validation.NewAdapter()
 
 	// Create secondary adapters
 	emailSender := smtpSender.NewSMTPSender(emailConn, configPort, loggerPort, validationPort)

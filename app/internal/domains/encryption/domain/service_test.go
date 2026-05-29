@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 )
 
 func TestEncrypt_Success(t *testing.T) {
@@ -132,7 +133,7 @@ func TestGenerateRandomKey_Success(t *testing.T) {
 			return wantKey, nil
 		},
 	}
-	svc := NewEncryptionService(kg, &mockLogger{})
+	svc := NewEncryptionService(kg, logtest.NewNoop())
 	resp, err := svc.GenerateRandomKey(context.Background(), contracts.RandomRequest{Length: 32})
 	if err != nil {
 		t.Fatalf("GenerateRandomKey: %v", err)
@@ -160,7 +161,7 @@ func TestGenerateRandomKey_KeygenError(t *testing.T) {
 			return contracts.EncryptionKey{}, sentinel
 		},
 	}
-	svc := NewEncryptionService(kg, &mockLogger{})
+	svc := NewEncryptionService(kg, logtest.NewNoop())
 	_, err := svc.GenerateRandomKey(context.Background(), contracts.RandomRequest{Length: 32})
 	if !errors.Is(err, sentinel) {
 		t.Errorf("expected sentinel error got %v", err)
@@ -171,7 +172,7 @@ func TestGenerateID_Delegates(t *testing.T) {
 	kg := &mockKeyGen{
 		GenerateIDFunc: func(ctx context.Context) string { return "delegated-id" },
 	}
-	svc := NewEncryptionService(kg, &mockLogger{})
+	svc := NewEncryptionService(kg, logtest.NewNoop())
 	if got := svc.GenerateID(context.Background()); got != "delegated-id" {
 		t.Errorf("got %q want %q", got, "delegated-id")
 	}

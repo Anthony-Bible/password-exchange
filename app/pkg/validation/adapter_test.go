@@ -1,42 +1,31 @@
-package validator
+package validation
 
 import (
 	"strings"
 	"testing"
 )
 
-func TestNewValidationAdapter_ReturnsNonNil(t *testing.T) {
-	adapter := NewValidationAdapter()
-	if adapter == nil {
-		t.Fatal("NewValidationAdapter() returned nil, want non-nil")
-	}
-}
-
-func TestValidateEmail_AcceptsValidEmail(t *testing.T) {
-	adapter := NewValidationAdapter()
-	if err := adapter.ValidateEmail("user@example.com"); err != nil {
+func TestAdapter_ValidateEmail_AcceptsValidEmail(t *testing.T) {
+	if err := NewAdapter().ValidateEmail("user@example.com"); err != nil {
 		t.Errorf("ValidateEmail(%q) returned error %v, want nil", "user@example.com", err)
 	}
 }
 
-func TestValidateEmail_RejectsInvalidEmail(t *testing.T) {
-	adapter := NewValidationAdapter()
-	if err := adapter.ValidateEmail("not-an-email"); err == nil {
+func TestAdapter_ValidateEmail_RejectsInvalidEmail(t *testing.T) {
+	if err := NewAdapter().ValidateEmail("not-an-email"); err == nil {
 		t.Errorf("ValidateEmail(%q) returned nil, want non-nil error", "not-an-email")
 	}
 }
 
-func TestValidateEmail_RejectsEmptyEmail(t *testing.T) {
-	adapter := NewValidationAdapter()
-	if err := adapter.ValidateEmail(""); err == nil {
+func TestAdapter_ValidateEmail_RejectsEmptyEmail(t *testing.T) {
+	if err := NewAdapter().ValidateEmail(""); err == nil {
 		t.Errorf("ValidateEmail(%q) returned nil, want non-nil error", "")
 	}
 }
 
-func TestSanitizeEmailForLogging_MasksEmail(t *testing.T) {
-	adapter := NewValidationAdapter()
+func TestAdapter_SanitizeEmailForLogging_MasksEmail(t *testing.T) {
 	const input = "user@example.com"
-	got := adapter.SanitizeEmailForLogging(input)
+	got := NewAdapter().SanitizeEmailForLogging(input)
 
 	t.Run("non-empty", func(t *testing.T) {
 		if got == "" {
@@ -57,9 +46,8 @@ func TestSanitizeEmailForLogging_MasksEmail(t *testing.T) {
 	})
 }
 
-func TestSanitizeEmailForLogging_HandlesEmpty(t *testing.T) {
-	adapter := NewValidationAdapter()
-	got := adapter.SanitizeEmailForLogging("")
+func TestAdapter_SanitizeEmailForLogging_HandlesEmpty(t *testing.T) {
+	got := NewAdapter().SanitizeEmailForLogging("")
 	const want = "[EMPTY_EMAIL]"
 	if got != want {
 		t.Errorf("SanitizeEmailForLogging(%q) = %q, want %q", "", got, want)

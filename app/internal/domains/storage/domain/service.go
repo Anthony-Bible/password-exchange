@@ -16,23 +16,13 @@ type StorageService struct {
 }
 
 // NewStorageService creates a new storage service with the given dependencies.
-// All three secondary ports are required; callers are expected to wire concrete
-// adapters at application startup. Passing nil for any port panics so wiring
-// mistakes surface at boot rather than as a nil deref deep inside a handler.
+// All three secondary ports are required and wired with concrete adapters at
+// the composition root.
 func NewStorageService(
 	repository secondary.MessageRepository,
 	logger secondary.LoggerPort,
 	validation secondary.ValidationPort,
 ) *StorageService {
-	if repository == nil {
-		panic("storage: NewStorageService requires a non-nil MessageRepository")
-	}
-	if logger == nil {
-		panic("storage: NewStorageService requires a non-nil LoggerPort")
-	}
-	if validation == nil {
-		panic("storage: NewStorageService requires a non-nil ValidationPort")
-	}
 	return &StorageService{
 		repository: repository,
 		logger:     logger,

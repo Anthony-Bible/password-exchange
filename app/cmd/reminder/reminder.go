@@ -13,19 +13,16 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/rabbitmq"
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/validator"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	storageLoggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/logger"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
-	storageValidatorAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/validator"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
+	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -124,8 +121,8 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		// Wire the storage domain's port adapters so the MySQL adapter can
 		// receive them and we never reach for the shared logging/validation
 		// globals from inside the domain.
-		storageLogger := storageLoggerAdapter.NewAdapter()
-		storageValidator := storageValidatorAdapter.NewValidationAdapter()
+		storageLogger := logging.NewLogger()
+		storageValidator := validation.NewAdapter()
 
 		storageAdapter := mysql.NewMySQLAdapter(dbConfig, storageLogger, storageValidator)
 
@@ -178,8 +175,8 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Create port adapters
 		configPort := sharedConfig.NewSharedConfigAdapter(cfg.PassConfig)
-		loggerPort := logger.NewAdapter()
-		validationPort := validator.NewValidationAdapter()
+		loggerPort := logging.NewLogger()
+		validationPort := validation.NewAdapter()
 
 		// Create reminder service with storage adapter and notification publisher
 		// Uses RabbitMQ to publish reminder notifications instead of sending emails directly

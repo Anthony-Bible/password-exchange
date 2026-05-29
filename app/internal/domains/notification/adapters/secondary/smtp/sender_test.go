@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -588,7 +588,6 @@ type mockConfigPortSecure struct{}
 // Verify interface compliance
 var (
 	_ secondary.ConfigPort     = &mockConfigPortSecure{}
-	_ secondary.LoggerPort     = &mockLoggerPortSecure{}
 	_ secondary.ValidationPort = &mockValidationPortSecure{}
 )
 
@@ -610,24 +609,6 @@ func (m *mockConfigPortSecure) ValidatePasswordExchangeURL() error { return nil 
 func (m *mockConfigPortSecure) ValidateServerEmail() error         { return nil }
 func (m *mockConfigPortSecure) ValidateTemplateFormats() error     { return nil }
 
-// mockLoggerPortSecure for email header testing
-type mockLoggerPortSecure struct{}
-
-func (m *mockLoggerPortSecure) Debug() contracts.LogEvent { return &mockLogEventSecure{} }
-func (m *mockLoggerPortSecure) Info() contracts.LogEvent  { return &mockLogEventSecure{} }
-func (m *mockLoggerPortSecure) Warn() contracts.LogEvent  { return &mockLogEventSecure{} }
-func (m *mockLoggerPortSecure) Error() contracts.LogEvent { return &mockLogEventSecure{} }
-
-type mockLogEventSecure struct{}
-
-func (m *mockLogEventSecure) Str(key, val string) contracts.LogEvent               { return m }
-func (m *mockLogEventSecure) Err(err error) contracts.LogEvent                     { return m }
-func (m *mockLogEventSecure) Int(key string, val int) contracts.LogEvent           { return m }
-func (m *mockLogEventSecure) Bool(key string, val bool) contracts.LogEvent         { return m }
-func (m *mockLogEventSecure) Dur(key string, val time.Duration) contracts.LogEvent { return m }
-func (m *mockLogEventSecure) Float64(key string, val float64) contracts.LogEvent   { return m }
-func (m *mockLogEventSecure) Msg(msg string)                                       {}
-
 // mockValidationPortSecure for email header testing
 type mockValidationPortSecure struct{}
 
@@ -642,7 +623,7 @@ func (m *mockValidationPortSecure) SanitizeEmailForLogging(email string) string 
 func TestSMTPSender_buildSafeEmailHeaders(t *testing.T) {
 	sender := &SMTPSender{
 		config:     &mockConfigPortSecure{},
-		logger:     &mockLoggerPortSecure{},
+		logger:     logtest.NewNoop(),
 		validation: &mockValidationPortSecure{},
 	}
 

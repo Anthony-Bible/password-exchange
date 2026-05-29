@@ -159,6 +159,13 @@ func (m *mockLogEvent) Msg(msg string) {
 	m.Called(msg)
 }
 
+// Int32, Int64, Interface and Msgf round out the shared LogEvent interface.
+// The message domain never calls them, so they are simple pass-throughs.
+func (m *mockLogEvent) Int32(string, int32) contracts.LogEvent   { return m }
+func (m *mockLogEvent) Int64(string, int64) contracts.LogEvent   { return m }
+func (m *mockLogEvent) Interface(string, any) contracts.LogEvent { return m }
+func (m *mockLogEvent) Msgf(string, ...any)                      {}
+
 type mockConfig struct{ mock.Mock }
 
 func (m *mockConfig) GetDefaultMaxViewCount() int {

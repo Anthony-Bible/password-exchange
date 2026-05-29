@@ -256,6 +256,14 @@ func (m *MockLogEvent) Msg(msg string) {
 	m.Called(msg)
 }
 
+// Int32, Int64, Interface and Msgf round out the shared LogEvent interface.
+// The notification domain never calls them, so they are simple pass-throughs
+// rather than recorded testify expectations.
+func (m *MockLogEvent) Int32(string, int32) LogEvent   { return m }
+func (m *MockLogEvent) Int64(string, int64) LogEvent   { return m }
+func (m *MockLogEvent) Interface(string, any) LogEvent { return m }
+func (m *MockLogEvent) Msgf(string, ...any)            {}
+
 // MockValidationPort mocks the ValidationPort interface
 type MockValidationPort struct {
 	mock.Mock

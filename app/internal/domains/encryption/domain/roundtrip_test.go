@@ -10,10 +10,11 @@ import (
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 )
 
 func newTestService() *EncryptionService {
-	return NewEncryptionService(&mockKeyGen{}, &mockLogger{})
+	return NewEncryptionService(&mockKeyGen{}, logtest.NewNoop())
 }
 
 func randKey(t *testing.T) []byte {

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestRegisterHealthServer_OverallServiceReportsServing(t *testing.T) {
 	t.Parallel()
 
 	svc := &stubStorageService{}
-	logger := &recordingLogger{}
+	logger := logtest.NewRecorder()
 	validator := &stubValidator{}
 	adapter := NewGRPCServer(svc, "", logger, validator)
 
@@ -69,7 +70,7 @@ func TestUpdateHealthStatus_FlipsToNotServingWhenDomainCheckFails(t *testing.T) 
 	t.Parallel()
 
 	svc := &stubStorageService{healthErr: errors.New("db down")}
-	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+	server := NewGRPCServer(svc, "", logtest.NewRecorder(), &stubValidator{})
 
 	healthSrv := health.NewServer()
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -88,7 +89,7 @@ func TestUpdateHealthStatus_FlipsBackToServingWhenDomainCheckRecovers(t *testing
 	t.Parallel()
 
 	svc := &stubStorageService{healthErr: errors.New("db down")}
-	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+	server := NewGRPCServer(svc, "", logtest.NewRecorder(), &stubValidator{})
 
 	healthSrv := health.NewServer()
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -112,7 +113,7 @@ func TestRunHealthStatusLoop_ExitsOnContextCancel(t *testing.T) {
 	t.Parallel()
 
 	svc := &stubStorageService{}
-	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+	server := NewGRPCServer(svc, "", logtest.NewRecorder(), &stubValidator{})
 	healthSrv := health.NewServer()
 
 	ctx, cancel := context.WithCancel(context.Background())

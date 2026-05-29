@@ -75,15 +75,6 @@ func NewGRPCServer(
 	logger secondary.LoggerPort,
 	validator secondary.ValidationPort,
 ) *GRPCServer {
-	if storageService == nil {
-		panic("storage/grpc: NewGRPCServer requires a non-nil StorageServicePort")
-	}
-	if logger == nil {
-		panic("storage/grpc: NewGRPCServer requires a non-nil LoggerPort")
-	}
-	if validator == nil {
-		panic("storage/grpc: NewGRPCServer requires a non-nil ValidationPort")
-	}
 	return &GRPCServer{
 		storageService: storageService,
 		logger:         logger,

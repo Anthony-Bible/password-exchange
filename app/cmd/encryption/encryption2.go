@@ -2,11 +2,11 @@ package encryption
 
 import (
 	encryptionGRPC "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/primary/grpc"
-	loggerAdapter "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/secondary/logger"
 	memoryKeygen "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/secondary/memory"
 	viperConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/adapters/secondary/viper"
 	encryptionDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/go-kit/kit/transport/amqp"
 )
 
@@ -22,7 +22,7 @@ func (conf Config) startServer() {
 
 func (conf Config) startHexagonalServer() {
 	// Wire secondary adapters
-	logger := loggerAdapter.NewAdapter()
+	logger := logging.NewLogger()
 	cfg := viperConfig.NewViperConfigAdapter()
 
 	if err := cfg.ValidateListenAddress(); err != nil {
