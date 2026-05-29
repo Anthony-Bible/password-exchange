@@ -177,10 +177,14 @@ func (s *StorageService) GetReminderHistory(ctx context.Context, messageID int) 
 	return history, nil
 }
 
-// HealthCheck verifies the storage service is healthy
+// HealthCheck verifies the storage service is healthy by probing the
+// underlying repository. The error is returned to the caller (the gRPC
+// health probe loop) so it can flip the standard health-service status.
 func (s *StorageService) HealthCheck(ctx context.Context) error {
-	// For now, just log that health check was called
-	// In a real implementation, this might check repository connectivity
-	s.logger.Debug().Msg("Storage service health check requested")
+	if err := s.repository.Ping(ctx); err != nil {
+		s.logger.Warn().Err(err).Msg("Storage health check failed")
+		return err
+	}
+	s.logger.Debug().Msg("Storage health check succeeded")
 	return nil
 }

@@ -16,4 +16,9 @@ type StorageServicePort interface {
 
 	// GetMessage retrieves message metadata without incrementing view count
 	GetMessage(ctx context.Context, req contracts.MessageRetrievalStorageRequest) (*contracts.MessageStorageResponse, error)
+
+	// HealthCheck verifies the underlying storage service is reachable and
+	// serving. Implementations SHOULD honour ctx for cancellation/timeout so
+	// the web service's /readyz probe cannot wedge on a hung backend.
+	HealthCheck(ctx context.Context) error
 }

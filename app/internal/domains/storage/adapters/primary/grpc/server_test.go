@@ -95,7 +95,8 @@ func (v *stubValidator) SanitizeEmailForLogging(email string) string {
 // stubStorageService is a minimal storage service used to drive the gRPC adapter
 // down the success path so we can observe logger/validator routing.
 type stubStorageService struct {
-	storeErr error
+	storeErr  error
+	healthErr error
 }
 
 func (s *stubStorageService) StoreMessage(context.Context, *contracts.Message) error {
@@ -115,7 +116,7 @@ func (s *stubStorageService) GetReminderHistory(context.Context, int) ([]*contra
 	return nil, nil
 }
 func (s *stubStorageService) CleanupExpiredMessages(context.Context) error { return nil }
-func (s *stubStorageService) HealthCheck(context.Context) error            { return nil }
+func (s *stubStorageService) HealthCheck(context.Context) error            { return s.healthErr }
 
 // TestInsert_MapsDomainValidationErrorsToInvalidArgument verifies that domain
 // validation sentinels returned from StoreMessage surface to gRPC clients as

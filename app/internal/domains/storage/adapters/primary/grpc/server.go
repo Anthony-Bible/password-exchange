@@ -24,6 +24,14 @@ import (
 // maxExpirationDuration is the maximum allowed expiration time (90 days).
 const maxExpirationDuration = 2160 * time.Hour
 
+// healthCheckInterval is how often the storage adapter probes the underlying
+// repository to refresh the standard gRPC health-service status.
+const healthCheckInterval = 10 * time.Second
+
+// healthCheckTimeout bounds a single HealthCheck call so a hung backend
+// cannot wedge the status-refresh loop.
+const healthCheckTimeout = 3 * time.Second
+
 // domainErrorToStatus maps storage-domain sentinel errors to typed gRPC
 // status codes. Without this, validation failures bubble up as codes.Unknown
 // and clients that retry on Unknown (a common default) loop forever on
@@ -297,13 +305,57 @@ func (s *GRPCServer) runExpiredMessageCleanup(ctx context.Context) {
 }
 
 // registerHealthServer wires the standard gRPC health service into the given
-// server with the overall service ("") marked SERVING. k8s grpc: probes need a
-// SERVING response on this contract to mark the pod Ready; deeper per-component
-// health (e.g. DB connectivity) is intentionally out of scope here.
-func (s *GRPCServer) registerHealthServer(grpcServer *grpc.Server) {
+// server. The initial status is SERVING so a probe arriving before the first
+// HealthCheck tick doesn't fail spuriously; the polling loop driven from
+// Start subsequently flips status based on real repository connectivity.
+func (s *GRPCServer) registerHealthServer(grpcServer *grpc.Server) *health.Server {
 	healthSrv := health.NewServer()
 	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthSrv)
+	return healthSrv
+}
+
+// updateHealthStatus runs a single bounded HealthCheck against the storage
+// service and forwards the result as serving status. A failure flips the
+// overall service to NOT_SERVING; a success restores SERVING. The timeout
+// applies to this individual check so a hung backend cannot block the loop.
+func (s *GRPCServer) updateHealthStatus(
+	ctx context.Context,
+	healthSrv *health.Server,
+	timeout time.Duration,
+) {
+	checkCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err := s.storageService.HealthCheck(checkCtx); err != nil {
+		s.logger.Warn().Err(err).Msg("Storage health check failed; reporting NOT_SERVING")
+		healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+		return
+	}
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+}
+
+// runHealthStatusLoop refreshes the standard health server's serving status
+// on a fixed cadence by invoking updateHealthStatus. It runs an initial check
+// immediately so the first probe after startup reflects reality, then ticks
+// until ctx is cancelled.
+func (s *GRPCServer) runHealthStatusLoop(
+	ctx context.Context,
+	healthSrv *health.Server,
+	interval, timeout time.Duration,
+) {
+	s.updateHealthStatus(ctx, healthSrv, timeout)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.updateHealthStatus(ctx, healthSrv, timeout)
+		}
+	}
 }
 
 // Start starts the gRPC server. Fatal lifecycle decisions (process exit) are
@@ -317,13 +369,15 @@ func (s *GRPCServer) Start() error {
 
 	grpcServer := grpc.NewServer()
 	database.RegisterDbServiceServer(grpcServer, s)
-	s.registerHealthServer(grpcServer)
+	healthSrv := s.registerHealthServer(grpcServer)
 	reflection.Register(grpcServer)
 
-	// Run expired message cleanup in the background; cancel it when Start returns.
+	// Run expired message cleanup and the health-status refresh loop in the
+	// background; cancel them when Start returns.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go s.runExpiredMessageCleanup(ctx)
+	go s.runHealthStatusLoop(ctx, healthSrv, healthCheckInterval, healthCheckTimeout)
 
 	s.logger.Info().Str("address", s.address).Msg("Starting gRPC storage server")
 

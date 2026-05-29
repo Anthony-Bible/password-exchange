@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net"
 	"testing"
+	"time"
 
 	database "github.com/Anthony-Bible/password-exchange/app/pkg/pb/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -56,4 +58,74 @@ func TestRegisterHealthServer_OverallServiceReportsServing(t *testing.T) {
 	resp, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: ""})
 	require.NoError(t, err)
 	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, resp.GetStatus())
+}
+
+// TestUpdateHealthStatus_FlipsToNotServingWhenDomainCheckFails verifies that
+// when StorageService.HealthCheck returns an error, the standard health
+// service reports NOT_SERVING. This is what makes the web service's /readyz
+// (which calls Check via grpc_health_v1) catch real DB outages instead of
+// just network/process failures.
+func TestUpdateHealthStatus_FlipsToNotServingWhenDomainCheckFails(t *testing.T) {
+	t.Parallel()
+
+	svc := &stubStorageService{healthErr: errors.New("db down")}
+	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+
+	healthSrv := health.NewServer()
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	server.updateHealthStatus(context.Background(), healthSrv, time.Second)
+
+	resp, err := healthSrv.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: ""})
+	require.NoError(t, err)
+	assert.Equal(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING, resp.GetStatus())
+}
+
+// TestUpdateHealthStatus_FlipsBackToServingWhenDomainCheckRecovers verifies
+// that after a transient failure the next successful check restores SERVING
+// status, so a recovered DB un-trips readiness instead of staying degraded.
+func TestUpdateHealthStatus_FlipsBackToServingWhenDomainCheckRecovers(t *testing.T) {
+	t.Parallel()
+
+	svc := &stubStorageService{healthErr: errors.New("db down")}
+	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+
+	healthSrv := health.NewServer()
+	healthSrv.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	server.updateHealthStatus(context.Background(), healthSrv, time.Second)
+	resp, err := healthSrv.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: ""})
+	require.NoError(t, err)
+	require.Equal(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING, resp.GetStatus())
+
+	svc.healthErr = nil
+	server.updateHealthStatus(context.Background(), healthSrv, time.Second)
+	resp, err = healthSrv.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: ""})
+	require.NoError(t, err)
+	assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, resp.GetStatus())
+}
+
+// TestRunHealthStatusLoop_ExitsOnContextCancel verifies the polling loop
+// terminates when the caller cancels the context, preventing a goroutine
+// leak at server shutdown.
+func TestRunHealthStatusLoop_ExitsOnContextCancel(t *testing.T) {
+	t.Parallel()
+
+	svc := &stubStorageService{}
+	server := NewGRPCServer(svc, "", &recordingLogger{}, &stubValidator{})
+	healthSrv := health.NewServer()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		server.runHealthStatusLoop(ctx, healthSrv, 10*time.Millisecond, time.Second)
+		close(done)
+	}()
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("runHealthStatusLoop did not return after context cancel")
+	}
 }

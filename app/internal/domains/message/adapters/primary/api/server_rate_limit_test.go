@@ -19,7 +19,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("message submission rate limiting", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Mock successful message submission
@@ -78,7 +78,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("message access rate limiting", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Mock successful message access
@@ -116,7 +116,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("message decrypt rate limiting", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Mock successful message decryption
@@ -164,7 +164,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("health check rate limiting", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Test that 300 requests succeed (within rate limit)
@@ -188,7 +188,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("different IPs have separate rate limits", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Mock message submission responses
@@ -243,7 +243,7 @@ func TestServerRateLimiting(t *testing.T) {
 
 	t.Run("rate limit error response format", func(t *testing.T) {
 		mockService := &MockMessageService{}
-		server := NewServer(mockService)
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
 		router := server.GetRouter()
 
 		// Mock message submission to reach rate limit

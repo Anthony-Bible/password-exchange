@@ -77,8 +77,12 @@ func (conf Config) startHexagonalProcessing() {
 	// AMQP connection).
 	healthAdapter := healthhttp.NewHealthServer(":8080", queueConsumer)
 	go func() {
+		// Start returns nil on the normal ctx-cancel shutdown path, so a non-nil
+		// error here means the endpoint never came up (e.g. :8080 bind failure).
+		// Kubernetes liveness/readiness depend on this endpoint, so fail fast and
+		// let the pod restart rather than running in a partially-observable state.
 		if err := healthAdapter.Start(ctx); err != nil {
-			logging.Error().Err(err).Msg("Health endpoint exited with error")
+			logging.Fatal().Err(err).Msg("Health endpoint failed to start; exiting so Kubernetes restarts the pod")
 		}
 	}()
 

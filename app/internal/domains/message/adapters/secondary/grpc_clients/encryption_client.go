@@ -7,12 +7,15 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
+
 
 // EncryptionClient implements the EncryptionServicePort using gRPC
 type EncryptionClient struct {
-	client pb.MessageServiceClient
-	conn   *grpc.ClientConn
+	client       pb.MessageServiceClient
+	healthClient grpc_health_v1.HealthClient
+	conn         *grpc.ClientConn
 }
 
 // NewEncryptionClient creates a new encryption gRPC client
@@ -23,11 +26,10 @@ func NewEncryptionClient(endpoint string) (*EncryptionClient, error) {
 		return nil, fmt.Errorf("failed to connect to encryption service: %w", err)
 	}
 
-	client := pb.NewMessageServiceClient(conn)
-
 	return &EncryptionClient{
-		client: client,
-		conn:   conn,
+		client:       pb.NewMessageServiceClient(conn),
+		healthClient: grpc_health_v1.NewHealthClient(conn),
+		conn:         conn,
 	}, nil
 }
 
@@ -105,6 +107,14 @@ func (c *EncryptionClient) GenerateID(ctx context.Context) (string, error) {
 	id := resp.GetEncryptionString()
 	logging.Debug().Str("id", id).Msg("Generated unique ID successfully")
 	return id, nil
+}
+
+// HealthCheck queries the encryption service's standard gRPC health endpoint
+// and returns nil only when the overall service reports SERVING. Any other
+// status (including transport errors) surfaces as an error so /readyz can
+// fail the pod off the load balancer.
+func (c *EncryptionClient) HealthCheck(ctx context.Context) error {
+	return checkServing(ctx, c.healthClient, "encryption")
 }
 
 // Close closes the gRPC connection

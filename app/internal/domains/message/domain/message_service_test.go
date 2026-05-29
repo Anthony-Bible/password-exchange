@@ -35,6 +35,11 @@ func (m *mockEncryptionService) GenerateID(ctx context.Context) (string, error) 
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockEncryptionService) HealthCheck(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 type mockStorageService struct{ mock.Mock }
 
 func (m *mockStorageService) StoreMessage(ctx context.Context, req MessageStorageRequest) error {
@@ -56,6 +61,11 @@ func (m *mockStorageService) GetMessage(
 ) (*MessageStorageResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(*MessageStorageResponse), args.Error(1)
+}
+
+func (m *mockStorageService) HealthCheck(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
 }
 
 type mockNotificationService struct{ mock.Mock }

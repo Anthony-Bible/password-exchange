@@ -17,4 +17,9 @@ type EncryptionServicePort interface {
 
 	// GenerateID generates a unique identifier
 	GenerateID(ctx context.Context) (string, error)
+
+	// HealthCheck verifies the underlying encryption service is reachable and
+	// serving. Implementations SHOULD honour ctx for cancellation/timeout so
+	// the web service's /readyz probe cannot wedge on a hung backend.
+	HealthCheck(ctx context.Context) error
 }

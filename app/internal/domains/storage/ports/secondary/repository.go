@@ -5,6 +5,8 @@
 package secondary
 
 import (
+	"context"
+
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 )
 
@@ -124,4 +126,14 @@ type MessageRepository interface {
 	//   - nil if the resources were released successfully
 	//   - An error if the underlying close call fails
 	Close() error
+
+	// Ping verifies that the underlying datastore is reachable. Implementations
+	// SHOULD honour ctx for cancellation and timeout so callers (notably the
+	// gRPC health probe loop) cannot wedge waiting on a hung backend.
+	//
+	// Returns:
+	//   - nil if the datastore responded successfully
+	//   - domain.ErrRepositoryClosed if Close has already been called
+	//   - An error wrapping domain.ErrDatabaseConnection if the ping fails
+	Ping(ctx context.Context) error
 }
