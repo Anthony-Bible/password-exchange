@@ -50,27 +50,55 @@ func (v *stubValidator) SanitizeEmailForLogging(email string) string {
 }
 
 // stubStorageService is a minimal storage service used to drive the gRPC adapter
-// down the success path so we can observe logger/validator routing.
+// down the success path so we can observe logger/validator routing. The reminder
+// fields let integration tests feed canned results/errors and capture the
+// arguments the gRPC server forwards after protobuf decoding.
 type stubStorageService struct {
-	storeErr  error
-	healthErr error
+	storeErr    error
+	retrieveErr error
+	getErr      error
+	healthErr   error
+
+	// Reminder canned responses / errors.
+	unviewedMessages []*contracts.UnviewedMessage
+	unviewedErr      error
+	logReminderErr   error
+	reminderHistory  []*contracts.ReminderLogEntry
+	reminderHistErr  error
+
+	// Captured arguments from the most recent reminder calls.
+	gotOlderThanHours, gotMaxReminders, gotIntervalHours int
+	gotLogMessageID                                      int
+	gotLogEmail                                          string
+	gotHistoryMessageID                                  int
 }
 
 func (s *stubStorageService) StoreMessage(context.Context, *contracts.Message) error {
 	return s.storeErr
 }
 func (s *stubStorageService) RetrieveMessage(context.Context, string) (*contracts.Message, error) {
+	if s.retrieveErr != nil {
+		return nil, s.retrieveErr
+	}
 	return &contracts.Message{}, nil
 }
 func (s *stubStorageService) GetMessage(context.Context, string) (*contracts.Message, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+	}
 	return &contracts.Message{}, nil
 }
-func (s *stubStorageService) GetUnviewedMessagesForReminders(context.Context, int, int, int) ([]*contracts.UnviewedMessage, error) {
-	return nil, nil
+func (s *stubStorageService) GetUnviewedMessagesForReminders(_ context.Context, olderThanHours, maxReminders, intervalHours int) ([]*contracts.UnviewedMessage, error) {
+	s.gotOlderThanHours, s.gotMaxReminders, s.gotIntervalHours = olderThanHours, maxReminders, intervalHours
+	return s.unviewedMessages, s.unviewedErr
 }
-func (s *stubStorageService) LogReminderSent(context.Context, int, string) error { return nil }
-func (s *stubStorageService) GetReminderHistory(context.Context, int) ([]*contracts.ReminderLogEntry, error) {
-	return nil, nil
+func (s *stubStorageService) LogReminderSent(_ context.Context, messageID int, email string) error {
+	s.gotLogMessageID, s.gotLogEmail = messageID, email
+	return s.logReminderErr
+}
+func (s *stubStorageService) GetReminderHistory(_ context.Context, messageID int) ([]*contracts.ReminderLogEntry, error) {
+	s.gotHistoryMessageID = messageID
+	return s.reminderHistory, s.reminderHistErr
 }
 func (s *stubStorageService) CleanupExpiredMessages(context.Context) error { return nil }
 func (s *stubStorageService) HealthCheck(context.Context) error            { return s.healthErr }
@@ -114,6 +142,89 @@ func TestInsert_MapsDomainValidationErrorsToInvalidArgument(t *testing.T) {
 			}
 			if got := st.Code(); got != codes.InvalidArgument {
 				t.Errorf("expected codes.InvalidArgument, got %v", got)
+			}
+		})
+	}
+}
+
+// TestRetrievalAndReminderRPCs_MapDomainErrorsToStatus verifies that every
+// read/reminder RPC routes domain sentinels through domainErrorToStatus, not
+// just Insert. Before this was fixed only Insert mapped errors, so a validation
+// or not-found error from Select/GetMessage/GetUnviewedMessagesForReminders/
+// LogReminderSent/GetReminderHistory reached clients as codes.Unknown and
+// retry-on-Unknown clients looped forever on deterministic failures.
+func TestRetrievalAndReminderRPCs_MapDomainErrorsToStatus(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		want    codes.Code
+		newStub func() *stubStorageService
+		callRPC func(*GRPCServer) error
+	}{
+		{
+			name:    "Select not found",
+			want:    codes.NotFound,
+			newStub: func() *stubStorageService { return &stubStorageService{retrieveErr: domain.ErrMessageNotFound} },
+			callRPC: func(s *GRPCServer) error {
+				_, err := s.Select(context.Background(), &database.SelectRequest{Uuid: "abc"})
+				return err
+			},
+		},
+		{
+			name:    "GetMessage empty unique id",
+			want:    codes.InvalidArgument,
+			newStub: func() *stubStorageService { return &stubStorageService{getErr: domain.ErrEmptyUniqueID} },
+			callRPC: func(s *GRPCServer) error {
+				_, err := s.GetMessage(context.Background(), &database.SelectRequest{Uuid: ""})
+				return err
+			},
+		},
+		{
+			name:    "GetUnviewedMessagesForReminders invalid parameter",
+			want:    codes.InvalidArgument,
+			newStub: func() *stubStorageService { return &stubStorageService{unviewedErr: domain.ErrInvalidParameter} },
+			callRPC: func(s *GRPCServer) error {
+				_, err := s.GetUnviewedMessagesForReminders(context.Background(), &database.GetUnviewedMessagesRequest{})
+				return err
+			},
+		},
+		{
+			name:    "LogReminderSent empty email",
+			want:    codes.InvalidArgument,
+			newStub: func() *stubStorageService { return &stubStorageService{logReminderErr: domain.ErrEmptyEmailAddress} },
+			callRPC: func(s *GRPCServer) error {
+				_, err := s.LogReminderSent(context.Background(), &database.LogReminderRequest{MessageId: 1})
+				return err
+			},
+		},
+		{
+			name:    "GetReminderHistory invalid parameter",
+			want:    codes.InvalidArgument,
+			newStub: func() *stubStorageService { return &stubStorageService{reminderHistErr: domain.ErrInvalidParameter} },
+			callRPC: func(s *GRPCServer) error {
+				_, err := s.GetReminderHistory(context.Background(), &database.GetReminderHistoryRequest{})
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			server := NewGRPCServer(tc.newStub(), "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+			err := tc.callRPC(server)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			st, ok := status.FromError(err)
+			if !ok {
+				t.Fatalf("expected gRPC status error, got %v", err)
+			}
+			if got := st.Code(); got != tc.want {
+				t.Errorf("expected %v, got %v", tc.want, got)
 			}
 		})
 	}
