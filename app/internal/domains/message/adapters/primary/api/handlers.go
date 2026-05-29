@@ -21,6 +21,11 @@ import (
 // up behind a wedged dependency.
 const readyzTimeout = 2 * time.Second
 
+// healthCheckTimeout bounds how long the public /api/v1/health endpoint waits
+// on its downstream dependency checks. Unlike readyzTimeout this is not a k8s
+// probe, so it can be a touch more lenient.
+const healthCheckTimeout = 5 * time.Second
+
 // MessageAPIHandler handles REST API requests for message operations
 type MessageAPIHandler struct {
 	messageService    primary.MessageServicePort
@@ -340,16 +345,60 @@ func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 		Interface("correlation_id", correlationID).
 		Msg("Health check requested")
 
-	// TODO: Implement actual health checks for services
+	ctx, cancel := context.WithTimeout(c.Request.Context(), healthCheckTimeout)
+	defer cancel()
+
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		services = make(map[string]string)
+	)
+
+	checks := []struct {
+		name string
+		fn   func(context.Context) error
+	}{
+		// "database" is reported by the storage gRPC client port.
+		{"database", h.storageService.HealthCheck},
+		{"encryption", h.encryptionService.HealthCheck},
+	}
+
+	for _, check := range checks {
+		wg.Add(1)
+		go func(name string, fn func(context.Context) error) {
+			defer wg.Done()
+			status := "healthy"
+			if err := fn(ctx); err != nil {
+				status = "unhealthy"
+				logging.Warn().Err(err).Str("dep", name).Msg("Health check dependency failed")
+			}
+			mu.Lock()
+			services[name] = status
+			mu.Unlock()
+		}(check.name, check.fn)
+	}
+	wg.Wait()
+
+	failed := 0
+	for _, status := range services {
+		if status == "unhealthy" {
+			failed++
+		}
+	}
+
+	overall := "healthy"
+	switch {
+	case failed == len(services):
+		overall = "unhealthy"
+	case failed > 0:
+		overall = "degraded"
+	}
+
 	response := models.HealthCheckResponse{
-		Status:    "healthy",
+		Status:    overall,
 		Version:   "1.0.0", // TODO: Get from build info
 		Timestamp: time.Now(),
-		Services: map[string]string{
-			"database":   "healthy", // TODO: Check database service
-			"encryption": "healthy", // TODO: Check encryption service
-			"email":      "healthy", // TODO: Check email service
-		},
+		Services:  services,
 	}
 
 	c.JSON(http.StatusOK, response)

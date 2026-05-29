@@ -296,9 +296,103 @@ func TestHealthCheck(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "healthy", response.Status)
 	assert.Equal(t, "1.0.0", response.Version)
-	assert.Contains(t, response.Services, "database")
-	assert.Contains(t, response.Services, "encryption")
-	assert.Contains(t, response.Services, "email")
+	assert.Equal(t, "healthy", response.Services["database"])
+	assert.Equal(t, "healthy", response.Services["encryption"])
+	assert.NotContains(t, response.Services, "email")
+}
+
+func TestHealthCheck_DegradedWhenStorageUnhealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error { return nil }}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return errors.New("storage down") }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.HealthCheckResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "degraded", response.Status)
+	assert.Equal(t, "unhealthy", response.Services["database"])
+	assert.Equal(t, "healthy", response.Services["encryption"])
+}
+
+func TestHealthCheck_DegradedWhenEncryptionUnhealthy(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error { return errors.New("encryption down") }}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.HealthCheckResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "degraded", response.Status)
+	assert.Equal(t, "healthy", response.Services["database"])
+	assert.Equal(t, "unhealthy", response.Services["encryption"])
+}
+
+func TestHealthCheck_UnhealthyWhenAllDown(t *testing.T) {
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(context.Context) error { return errors.New("encryption down") }}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return errors.New("storage down") }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.HealthCheckResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "unhealthy", response.Status)
+	assert.Equal(t, "unhealthy", response.Services["database"])
+	assert.Equal(t, "unhealthy", response.Services["encryption"])
+}
+
+func TestHealthCheck_AbortsViaContextTimeout(t *testing.T) {
+	// A stuck dependency must not hang the public health endpoint. The handler
+	// attaches a deadline to the dispatched context; the stub blocks until that
+	// fires and then returns ctx.Err(), so /api/v1/health must still respond
+	// (200, that dep marked "unhealthy") rather than blocking indefinitely.
+	mockService := new(MockMessageService)
+	enc := &stubEncryptionPort{healthCheck: func(ctx context.Context) error {
+		<-ctx.Done()
+		return ctx.Err()
+	}}
+	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
+	router := setupTestRouterWithProbes(mockService, enc, stor)
+
+	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	w := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		router.ServeHTTP(w, req)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("/api/v1/health blocked past the in-handler deadline")
+	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.HealthCheckResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "degraded", response.Status)
+	assert.Equal(t, "unhealthy", response.Services["encryption"])
+	assert.Equal(t, "healthy", response.Services["database"])
 }
 
 func TestAPIInfo(t *testing.T) {
