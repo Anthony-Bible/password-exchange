@@ -31,9 +31,28 @@ jobs:
           echo "VERSION=${VERSION_VAL}" >> $GITHUB_OUTPUT
           echo "PHASE=${PHASE_VAL}" >> $GITHUB_OUTPUT
 
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: app/go.mod
+          cache-dependency-path: app/go.sum
+      - name: Run unit tests
+        working-directory: app
+        run: go test ./...
+      - name: Run integration tests
+        working-directory: app
+        # Integration tests are gated behind the `integration` build tag and use
+        # testcontainers, which relies on the Docker daemon preinstalled on the
+        # GitHub-hosted ubuntu runner.
+        run: go test -tags=integration ./...
+
   build_main_image:
     runs-on: ubuntu-24.04
-    needs: [determine_version]
+    needs: [determine_version, test]
     outputs:
       main_image_digest: ${{ steps.build-and-push-main.outputs.digest }}
     env:
@@ -63,7 +82,7 @@ jobs:
 
   build_slackbot_image:
     runs-on: ubuntu-24.04
-    needs: determine_version
+    needs: [determine_version, test]
     outputs:
       slackbot_image_digest: ${{ steps.build-and-push-slackbot.outputs.digest }}
     env:
