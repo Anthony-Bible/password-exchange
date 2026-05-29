@@ -284,7 +284,6 @@ paths:
                     services:
                       database: "healthy"
                       encryption: "healthy"
-                      email: "healthy"
 
   /info:
     get:
@@ -484,7 +483,7 @@ components:
       properties:
         status:
           type: string
-          enum: [healthy, unhealthy]
+          enum: [healthy, degraded, unhealthy]
           description: Overall system health status
           example: "healthy"
         version:
@@ -505,7 +504,6 @@ components:
           example:
             database: "healthy"
             encryption: "healthy"
-            email: "healthy"
 
     APIInfoResponse:
       type: object
