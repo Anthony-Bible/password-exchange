@@ -68,12 +68,21 @@ func (r *Recorder) append(e Entry) {
 	r.entries = append(r.entries, e)
 }
 
-// Entries returns a copy of every recorded entry in emission order.
+// Entries returns a copy of every recorded entry in emission order. Each
+// entry's Fields map is also copied, so callers can mutate the result without
+// corrupting the recorder's internal state.
 func (r *Recorder) Entries() []Entry {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	out := make([]Entry, len(r.entries))
-	copy(out, r.entries)
+	for i, e := range r.entries {
+		fields := make(map[string]any, len(e.Fields))
+		for k, v := range e.Fields {
+			fields[k] = v
+		}
+		e.Fields = fields
+		out[i] = e
+	}
 	return out
 }
 
