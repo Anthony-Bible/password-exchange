@@ -149,7 +149,7 @@ func (s *GRPCServer) Select(ctx context.Context, request *database.SelectRequest
 	message, err := s.storageService.RetrieveMessage(ctx, request.GetUuid())
 	if err != nil {
 		s.logger.Error().Err(err).Str("uuid", request.GetUuid()).Msg("Failed to select message via gRPC")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	response := &database.SelectResponse{
@@ -178,7 +178,7 @@ func (s *GRPCServer) GetMessage(
 			Err(err).
 			Str("uuid", request.GetUuid()).
 			Msg("Failed to select message without incrementing view count via gRPC")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	response := &database.SelectResponse{
@@ -209,7 +209,7 @@ func (s *GRPCServer) GetUnviewedMessagesForReminders(
 	)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to get unviewed messages for reminders via gRPC")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	var unviewedMessages []*database.UnviewedMessage
@@ -239,7 +239,7 @@ func (s *GRPCServer) LogReminderSent(
 			Int32("messageID", request.GetMessageId()).
 			Str("emailAddress", s.validator.SanitizeEmailForLogging(request.GetEmailAddress())).
 			Msg("Failed to log reminder sent via gRPC")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	s.logger.Info().
@@ -257,7 +257,7 @@ func (s *GRPCServer) GetReminderHistory(
 	history, err := s.storageService.GetReminderHistory(ctx, int(request.GetMessageId()))
 	if err != nil {
 		s.logger.Error().Err(err).Int32("messageID", request.GetMessageId()).Msg("Failed to get reminder history via gRPC")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	var entries []*database.ReminderLogEntry
