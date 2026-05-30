@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const notificationPublishTimeout = 2 * time.Second
+
 // NotificationPublisher implements the NotificationServicePort using RabbitMQ
 type NotificationPublisher struct {
 	connection *amqp.Connection
@@ -46,6 +48,21 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 		return nil, fmt.Errorf("failed to open RabbitMQ channel: %w", err)
 	}
 
+	_, err = ch.QueueDeclare(
+		config.QueueName, // name
+		true,             // durable
+		false,            // delete when unused
+		false,            // exclusive
+		false,            // no-wait
+		nil,              // arguments
+	)
+	if err != nil {
+		logging.Error().Err(err).Str("queue", config.QueueName).Msg("Failed to declare queue")
+		ch.Close()
+		conn.Close()
+		return nil, fmt.Errorf("failed to declare queue: %w", err)
+	}
+
 	return &NotificationPublisher{
 		connection: conn,
 		channel:    ch,
@@ -56,20 +73,6 @@ func NewNotificationPublisher(config NotificationConfig) (*NotificationPublisher
 // SendMessageNotification sends a notification about a new message
 func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req domain.MessageNotificationRequest) error {
 	logging.Debug().Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Msg("Sending message notification")
-
-	// Declare the queue
-	q, err := p.channel.QueueDeclare(
-		p.queueName, // name
-		true,        // durable
-		false,       // delete when unused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // arguments
-	)
-	if err != nil {
-		logging.Error().Err(err).Str("queue", p.queueName).Msg("Failed to declare queue")
-		return fmt.Errorf("failed to declare queue: %w", err)
-	}
 
 	// Create protobuf message
 	pbMsg := &messagepb.Message{
@@ -90,13 +93,26 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	}
 
 	// Create context with timeout
-	publishCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	publishCtx, cancel := context.WithTimeout(ctx, notificationPublishTimeout)
 	defer cancel()
+
+	_, err = p.channel.QueueDeclare(
+		p.queueName, // name
+		true,        // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
+	)
+	if err != nil {
+		logging.Error().Err(err).Str("queue", p.queueName).Msg("Failed to declare queue")
+		return fmt.Errorf("failed to declare queue: %w", err)
+	}
 
 	// Publish the message
 	err = p.channel.PublishWithContext(publishCtx,
-		"",     // exchange
-		q.Name, // routing key
+		"",          // exchange
+		p.queueName, // routing key
 		false,  // mandatory
 		false,  // immediate
 		amqp.Publishing{

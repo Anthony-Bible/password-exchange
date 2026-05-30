@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const notificationAsyncReturnThreshold = 1 * time.Second
+
 // --- Mocks ---
 
 type mockEncryptionService struct{ mock.Mock }
@@ -72,6 +74,23 @@ type mockNotificationService struct{ mock.Mock }
 
 func (m *mockNotificationService) SendMessageNotification(ctx context.Context, req MessageNotificationRequest) error {
 	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
+// blockingNotificationService simulates a notification sender that blocks until released.
+type blockingNotificationService struct {
+	mock.Mock
+	release chan struct{}
+	called  chan struct{}
+}
+
+func (m *blockingNotificationService) SendMessageNotification(ctx context.Context, req MessageNotificationRequest) error {
+	args := m.Called(ctx, req)
+	select {
+	case m.called <- struct{}{}:
+	default:
+	}
+	<-m.release
 	return args.Error(0)
 }
 
@@ -418,4 +437,78 @@ func TestSubmitMessage_ExpirationHoursValidation(t *testing.T) {
 	}
 
 	stor.AssertNotCalled(t, "StoreMessage", mock.Anything, mock.Anything)
+}
+
+func TestSubmitMessage_DoesNotWaitForNotificationPublish(t *testing.T) {
+	enc := new(mockEncryptionService)
+	stor := new(mockStorageService)
+	notif := &blockingNotificationService{
+		release: make(chan struct{}),
+		called:  make(chan struct{}, 1),
+	}
+	hasher := new(mockPasswordHasher)
+	urlb := new(mockURLBuilder)
+	turnstile := new(mockTurnstileValidator)
+	logger := new(mockLogger)
+	config := new(mockConfig)
+	validation := new(mockValidation)
+
+	setupLenientLoggerMock(logger)
+	validation.On("SanitizeEmailForLogging", mock.Anything).Return("sanitized-email@example.com").Maybe()
+	config.On("GetDefaultMaxViewCount").Return(5).Maybe()
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	turnstile.On("ValidateToken", mock.Anything, "turnstile-token", "").Return(true, nil)
+	enc.On("GenerateKey", mock.Anything, int32(32)).Return([]byte("key12345678901234567890123456789"), nil)
+	enc.On("Encrypt", mock.Anything, []string{"secret"}, []byte("key12345678901234567890123456789")).Return([]string{"ciphertext"}, nil)
+	enc.On("GenerateID", mock.Anything).Return("msg-notify-async", nil)
+	stor.On("StoreMessage", mock.Anything, mock.MatchedBy(func(req MessageStorageRequest) bool {
+		return req.MessageID == "msg-notify-async" && req.RecipientEmail == "recipient@example.com"
+	})).Return(nil)
+	urlb.On("BuildDecryptURL", "msg-notify-async", []byte("key12345678901234567890123456789")).Return("https://example.com/decrypt/msg-notify-async")
+	notif.On("SendMessageNotification", mock.Anything, mock.Anything).Return(nil)
+
+	done := make(chan struct{})
+	var resp *MessageSubmissionResponse
+	var err error
+
+	go func() {
+		resp, err = svc.SubmitMessage(context.Background(), MessageSubmissionRequest{
+			Content:          "secret",
+			SendNotification: true,
+			TurnstileToken:   "turnstile-token",
+			SenderName:       "Sender",
+			SenderEmail:      "sender@example.com",
+			RecipientName:    "Recipient",
+			RecipientEmail:   "recipient@example.com",
+		})
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(notificationAsyncReturnThreshold):
+		t.Fatalf(
+			"SubmitMessage should return within %v even when notification publish is blocked",
+			notificationAsyncReturnThreshold,
+		)
+	}
+
+	close(notif.release)
+
+	select {
+	case <-notif.called:
+	case <-time.After(1 * time.Second):
+		t.Fatal("expected notification send to be invoked")
+	}
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, "msg-notify-async", resp.MessageID)
+
+	turnstile.AssertExpectations(t)
+	enc.AssertExpectations(t)
+	stor.AssertExpectations(t)
+	notif.AssertExpectations(t)
 }
