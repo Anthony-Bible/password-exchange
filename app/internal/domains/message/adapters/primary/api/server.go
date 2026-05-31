@@ -110,10 +110,12 @@ func setupRouter(
 
 	// Process-alive (/livez) and dependency-aware (/readyz) probes live on the
 	// root, not under /api/v1, so k8s probes don't get versioned along with
-	// the public REST surface. Same lenient rate limit as /health to avoid
-	// throttling the kubelet.
-	router.GET("/livez", middleware.HealthCheckRateLimit(), handler.Livez)
-	router.GET("/readyz", middleware.HealthCheckRateLimit(), handler.Readyz)
+	// the public REST surface. They are deliberately NOT rate limited: the
+	// kubelet probes both endpoints from a single node IP every few seconds,
+	// which blows past any per-IP limit and turns a 429 into a failed readiness
+	// probe that pulls a healthy pod out of rotation.
+	router.GET("/livez", handler.Livez)
+	router.GET("/readyz", handler.Readyz)
 
 	// API routes with rate limiting
 	v1 := router.Group("/api/v1")
