@@ -153,11 +153,20 @@ func (h *FileAPIHandler) DownloadFile(c *gin.Context) {
 		writeFileServiceError(c, err, "Failed to download file")
 		return
 	}
+	defer func() {
+		if response != nil && response.Data != nil {
+			_ = response.Data.Close()
+		}
+	}()
 
 	filename := sanitizeDownloadFilename(response.Filename)
 	c.Header("Content-Type", response.ContentType)
 	c.Header("Content-Disposition", `attachment; filename=`+strconv.Quote(filename))
-	c.Data(http.StatusOK, response.ContentType, response.Data)
+	c.Status(http.StatusOK)
+	if _, err := io.Copy(c.Writer, response.Data); err != nil {
+		logging.Error().Err(err).Str("file_id", c.Param("fileID")).Msg("failed to stream decrypted file to client")
+		panic(http.ErrAbortHandler)
+	}
 }
 
 func sanitizeDownloadFilename(filename string) string {

@@ -1,7 +1,10 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
 	"os"
+	"runtime/debug"
 	"time"
 
 	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
@@ -79,7 +82,17 @@ func setupRouter(
 	fileHandler *FileAPIHandler,
 ) *gin.Engine {
 	router := gin.New()
-	router.Use(gin.Recovery())
+	// Use a custom recovery that re-panics http.ErrAbortHandler so net/http's
+	// serve() goroutine can cleanly close the TCP connection when streaming fails
+	// mid-response. gin.Recovery() would otherwise swallow the sentinel and call
+	// AbortWithStatus(500) on an already-committed 200 response.
+	router.Use(gin.CustomRecoveryWithWriter(gin.DefaultErrorWriter, func(c *gin.Context, err any) {
+		if err == http.ErrAbortHandler {
+			panic(err)
+		}
+		fmt.Fprintf(gin.DefaultErrorWriter, "panic recovered: %v\n%s\n", err, debug.Stack())
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}))
 
 	// Global middleware — use a redacting logger so the ?key= query parameter
 	// (AES-256 decryption key for file downloads) is never written to access logs.

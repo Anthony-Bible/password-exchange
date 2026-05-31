@@ -75,6 +75,20 @@ func TestEncryptChunk_DecryptFile_RoundTrip(t *testing.T) {
 	assert.Equal(t, []byte("hello brave world"), plaintext)
 }
 
+func TestDecryptFileStream_RoundTrip(t *testing.T) {
+	t.Parallel()
+	a := NewFileEncryptionAdapter(nil)
+	key := newTestKey()
+	fileID := "file-abc"
+	chunks := [][]byte{[]byte("hello "), []byte("brave "), []byte("world")}
+	blob := encryptAll(t, a, key, fileID, chunks)
+
+	var out bytes.Buffer
+	err := a.DecryptFileStream(context.Background(), bytes.NewReader(blob), &out, key, secondary.FileMeta{FileID: fileID, TotalChunks: len(chunks), MaxFrameSize: 1024})
+	require.NoError(t, err)
+	assert.Equal(t, []byte("hello brave world"), out.Bytes())
+}
+
 func TestEncryptChunk_NoDoubleEncoding(t *testing.T) {
 	t.Parallel()
 	a := NewFileEncryptionAdapter(nil)
@@ -182,6 +196,31 @@ func TestDecryptFile_RejectsOversizedFrameLength(t *testing.T) {
 	blob := make([]byte, 4+8)
 	binary.BigEndian.PutUint32(blob[:4], 0xFFFFFFFF)
 	_, err := a.DecryptFile(context.Background(), blob, key, secondary.FileMeta{FileID: "f", TotalChunks: 1})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrMalformedCiphertext)
+}
+
+func TestDecryptFileStream_RejectsFrameOverConfiguredMax(t *testing.T) {
+	t.Parallel()
+	a := NewFileEncryptionAdapter(nil)
+	key := newTestKey()
+	fileID := "file-abc"
+	blob := encryptAll(t, a, key, fileID, [][]byte{bytes.Repeat([]byte("a"), 64)})
+
+	var out bytes.Buffer
+	err := a.DecryptFileStream(context.Background(), bytes.NewReader(blob), &out, key, secondary.FileMeta{FileID: fileID, TotalChunks: 1, MaxFrameSize: 16})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrMalformedCiphertext)
+}
+
+func TestDecryptFile_HonorsMaxFrameSize(t *testing.T) {
+	t.Parallel()
+	a := NewFileEncryptionAdapter(nil)
+	key := newTestKey()
+	fileID := "file-abc"
+	blob := encryptAll(t, a, key, fileID, [][]byte{bytes.Repeat([]byte("a"), 64)})
+
+	_, err := a.DecryptFile(context.Background(), blob, key, secondary.FileMeta{FileID: fileID, TotalChunks: 1, MaxFrameSize: 16})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrMalformedCiphertext)
 }

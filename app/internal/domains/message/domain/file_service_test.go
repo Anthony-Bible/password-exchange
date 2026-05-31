@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
 	"testing"
 	"time"
 
@@ -48,6 +49,11 @@ func (m *mockFileEncryptionService) DecryptFile(ctx context.Context, data []byte
 		decrypted = value.([]byte)
 	}
 	return decrypted, args.Error(1)
+}
+
+func (m *mockFileEncryptionService) DecryptFileStream(ctx context.Context, src io.Reader, dst io.Writer, key []byte, meta secondary.FileMeta) error {
+	args := m.Called(ctx, src, dst, key, meta)
+	return args.Error(0)
 }
 
 type mockObjectStoragePort struct{ mock.Mock }
@@ -468,7 +474,10 @@ func TestFileService_DownloadFile_Success(t *testing.T) {
 
 	state.On("GetSessionByFileID", mock.Anything, "file-123").Return(session, nil).Once()
 	storage.On("GetObject", mock.Anything, "file-123").Return(io.NopCloser(bytes.NewReader([]byte("encrypted-file"))), int64(len("encrypted-file")), nil).Once()
-	enc.On("DecryptFile", mock.Anything, []byte("encrypted-file"), []byte("download-key"), secondary.FileMeta{FileID: "file-123", TotalChunks: 3}).Return([]byte("decrypted-content"), nil).Once()
+	enc.On("DecryptFileStream", mock.Anything, mock.Anything, mock.Anything, []byte("download-key"), secondary.FileMeta{FileID: "file-123", TotalChunks: 3, MaxFrameSize: 4096 + 28}).Run(func(args mock.Arguments) {
+		dst := args.Get(2).(io.Writer)
+		_, _ = dst.Write([]byte("decrypted-content"))
+	}).Return(nil).Once()
 
 	response, err := service.DownloadFile(context.Background(), contracts.DownloadFileRequest{
 		FileID: "file-123",
@@ -479,7 +488,12 @@ func TestFileService_DownloadFile_Success(t *testing.T) {
 	require.NotNil(t, response)
 	assert.Equal(t, "report.pdf", response.Filename)
 	assert.Equal(t, "application/pdf", response.ContentType)
-	assert.Equal(t, []byte("decrypted-content"), response.Data)
+	defer func() {
+		_ = response.Data.Close()
+	}()
+	decryptedData, err := io.ReadAll(response.Data)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("decrypted-content"), decryptedData)
 
 	enc.AssertExpectations(t)
 	storage.AssertExpectations(t)
@@ -530,4 +544,21 @@ func TestFileService_AbortUpload_PropagatesAbortFailure(t *testing.T) {
 
 	assert.ErrorIs(t, err, abortErr)
 	state.AssertNotCalled(t, "DeleteSession", mock.Anything, mock.Anything)
+}
+
+func TestAddEncryptedPayloadOverhead(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, int64(128), addEncryptedPayloadOverhead(100))
+	assert.Equal(t, int64(math.MaxInt64), addEncryptedPayloadOverhead(math.MaxInt64))
+	assert.Equal(t, int64(math.MaxInt64), addEncryptedPayloadOverhead(math.MaxInt64-secondary.EncryptedFramePayloadOverheadBytes))
+}
+
+func TestAddEncryptedStoredOverhead(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, int64(100)+2*secondary.EncryptedFrameStoredOverheadBytes, addEncryptedStoredOverhead(100, 2))
+	assert.Equal(t, int64(math.MaxInt64), addEncryptedStoredOverhead(math.MaxInt64, 1))
+	assert.Equal(t, int64(math.MaxInt64), addEncryptedStoredOverhead(math.MaxInt64-secondary.EncryptedFrameStoredOverheadBytes+1, 1))
+	assert.Equal(t, int64(math.MaxInt64), addEncryptedStoredOverhead(0, int(math.MaxInt64/secondary.EncryptedFrameStoredOverheadBytes+1)))
 }

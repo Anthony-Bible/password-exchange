@@ -4,6 +4,7 @@
 package contracts
 
 import (
+	"io"
 	"time"
 
 	logport "github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/port"
@@ -204,6 +205,6 @@ type DownloadFileResponse struct {
 	Filename string
 	// ContentType is the media type associated with the file.
 	ContentType string
-	// Data contains the decrypted file bytes.
-	Data []byte
+	// Data streams decrypted file bytes to the caller.
+	Data io.ReadCloser
 }
