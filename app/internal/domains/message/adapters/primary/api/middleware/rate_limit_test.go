@@ -245,8 +245,8 @@ func TestFileUploadRateLimit(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{"message": "chunk uploaded"})
 	})
 
-	// Test that we can make 500 requests within the hour limit (spot-check 50)
-	for i := 0; i < 50; i++ {
+	// Test that we can make 500 requests within the hour limit
+	for i := 0; i < 500; i++ {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/files/test-file/chunks", nil)
 		req.Header.Set("X-Forwarded-For", "192.168.1.1")
 		w := httptest.NewRecorder()
@@ -254,6 +254,14 @@ func TestFileUploadRateLimit(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code, "request %d should succeed", i+1)
 	}
+
+	// Test that the 501st request is rate limited
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/files/test-file/chunks", nil)
+	req.Header.Set("X-Forwarded-For", "192.168.1.1")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusTooManyRequests, w.Code, "501st request should be rate limited")
 }
 
 func TestHealthCheckRateLimit(t *testing.T) {
