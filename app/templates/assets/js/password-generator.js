@@ -59,7 +59,7 @@ async function loadEFFWordList() {
     showWordlistStatus('loading');
     
     try {
-        const response = await fetch('./assets/eff_large_wordlist.txt');
+        const response = await fetch('./eff_large_wordlist.txt');
         if (!response.ok) {
             throw new Error(`Failed to fetch wordlist: ${response.status} ${response.statusText}`);
         }
@@ -350,7 +350,36 @@ const PHONETIC_MAP = {
 
 function getPhoneticLabel(char) {
     const upper = char.toUpperCase();
-    return PHONETIC_MAP[upper] || char;
+    const label = PHONETIC_MAP[upper] || char;
+    if (/[A-Z]/.test(char)) return 'cap. ' + label;
+    if (/[a-z]/.test(char)) return label.toLowerCase();
+    return label;
+}
+
+function renderPhoneticPreview(text, containerEl) {
+    containerEl.innerHTML = '';
+    if (!text) return;
+    const fragment = document.createDocumentFragment();
+    text.split('').forEach(char => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'd-flex flex-column align-items-center';
+        wrapper.style.gap = '2px';
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-light text-dark border font-monospace';
+        badge.textContent = char;
+        const phonetic = document.createElement('span');
+        phonetic.className = 'text-muted';
+        phonetic.style.fontSize = '0.6rem';
+        phonetic.style.lineHeight = '1';
+        phonetic.style.maxWidth = '3.5rem';
+        phonetic.style.textAlign = 'center';
+        phonetic.style.wordBreak = 'break-word';
+        phonetic.textContent = getPhoneticLabel(char);
+        wrapper.appendChild(badge);
+        wrapper.appendChild(phonetic);
+        fragment.appendChild(wrapper);
+    });
+    containerEl.appendChild(fragment);
 }
 
 // Initialize password generator functionality
@@ -369,23 +398,6 @@ function initializePasswordGenerator() {
     const messageTextarea = document.getElementById('form_message');
     const phoneticPreview = document.getElementById('phonetic-preview');
 
-    function updatePhoneticPreview(password) {
-        if (!phoneticPreview) return;
-
-        phoneticPreview.innerHTML = '';
-        if (!password) return;
-
-        const fragment = document.createDocumentFragment();
-        password.split('').forEach(char => {
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-light text-dark border font-monospace';
-            badge.textContent = char;
-            badge.title = getPhoneticLabel(char);
-            fragment.appendChild(badge);
-        });
-        phoneticPreview.appendChild(fragment);
-    }
-    
     // Update length display in modal and trigger real-time generation
     modalLengthSlider.addEventListener('input', function() {
         modalLengthValue.textContent = this.value;
@@ -495,7 +507,7 @@ function initializePasswordGenerator() {
                         document.getElementById('entropy-text').textContent = '';
                         document.getElementById('char-types').innerHTML = '';
                         document.getElementById('security-features').innerHTML = '';
-                        updatePhoneticPreview('');
+                        renderPhoneticPreview('', phoneticPreview);
                         return;
                     }
                     password = generateSecurePassword(length, includeUppercase, includeLowercase, includeNumbers, includeSymbols, excludeAmbiguous);
@@ -510,7 +522,7 @@ function initializePasswordGenerator() {
                 
                 // Update password strength analysis
                 updatePasswordStrength(password);
-                updatePhoneticPreview(password);
+                renderPhoneticPreview(password, phoneticPreview);
                 
             } catch (error) {
                 console.error('Real-time password generation error:', error);
@@ -532,7 +544,7 @@ function initializePasswordGenerator() {
                 document.getElementById('entropy-text').textContent = '';
                 document.getElementById('char-types').innerHTML = '';
                 document.getElementById('security-features').innerHTML = '';
-                updatePhoneticPreview('');
+                renderPhoneticPreview('', phoneticPreview);
             }
         }, 200); // 200ms debounce delay
     }
@@ -690,7 +702,7 @@ function initializePasswordGenerator() {
                     insertPasswordBtn.style.display = 'inline-block';
                     passwordOptionsSection.style.display = 'none';
                     updatePasswordStrength(password);
-                    updatePhoneticPreview(password);
+                    renderPhoneticPreview(password, phoneticPreview);
                 });
                 
                 passwordOptionsList.appendChild(optionElement);
@@ -744,7 +756,7 @@ function initializePasswordGenerator() {
         insertPasswordBtn.style.display = 'none';
         generatedPasswordInput.value = '';
         passwordOptionsList.innerHTML = '';
-        updatePhoneticPreview('');
+        renderPhoneticPreview('', phoneticPreview);
         
         // Clear any pending generation timeouts
         clearTimeout(realtimeGenerationTimeout);
