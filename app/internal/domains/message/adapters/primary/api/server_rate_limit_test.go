@@ -186,6 +186,31 @@ func TestServerRateLimiting(t *testing.T) {
 		assert.Equal(t, http.StatusTooManyRequests, w.Code, "301st request should be rate limited")
 	})
 
+	t.Run("kubernetes probes are never rate limited", func(t *testing.T) {
+		// The kubelet probes /livez and /readyz from a single node IP every few
+		// seconds. Rate limiting them turns a healthy pod into a 429, which K8s
+		// reads as a failed readiness probe and pulls the pod from the load
+		// balancer. These infrastructure endpoints must never be throttled.
+		mockService := &MockMessageService{}
+		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})
+		router := server.GetRouter()
+
+		// Far more requests than any rate limit window would allow, all from the
+		// same source IP (mimicking the kubelet node).
+		for _, path := range []string{"/livez", "/readyz"} {
+			for i := 0; i < 500; i++ {
+				req := httptest.NewRequest(http.MethodGet, path, nil)
+				req.Header.Set("X-Forwarded-For", "10.88.1.130")
+				w := httptest.NewRecorder()
+
+				router.ServeHTTP(w, req)
+				require.NotEqual(t, http.StatusTooManyRequests, w.Code,
+					"%s request %d must not be rate limited", path, i+1)
+				assert.Equal(t, http.StatusOK, w.Code, "%s request %d should return 200", path, i+1)
+			}
+		}
+	})
+
 	t.Run("different IPs have separate rate limits", func(t *testing.T) {
 		mockService := &MockMessageService{}
 		server := NewServer(mockService, &stubEncryptionPort{}, &stubStoragePort{})

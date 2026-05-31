@@ -110,9 +110,13 @@ func (s *WebServer) setupAPIRoutes() {
 	// Process-alive and dependency-aware probes live on the root, not under
 	// /api/v1 — k8s probe paths shouldn't be versioned alongside the public
 	// REST surface. They're attached to s.router (not the apiGroup) so they
-	// stay reachable at the documented /livez and /readyz paths.
-	s.router.GET("/livez", middleware.HealthCheckRateLimit(), apiHandler.Livez)
-	s.router.GET("/readyz", middleware.HealthCheckRateLimit(), apiHandler.Readyz)
+	// stay reachable at the documented /livez and /readyz paths. They are
+	// deliberately NOT rate limited: the kubelet probes both endpoints from a
+	// single node IP every few seconds, which blows past any per-IP limit and
+	// turns a 429 into a failed readiness probe that pulls a healthy pod out of
+	// rotation.
+	s.router.GET("/livez", apiHandler.Livez)
+	s.router.GET("/readyz", apiHandler.Readyz)
 
 	// Add API middleware
 	apiGroup := s.router.Group("/api")
