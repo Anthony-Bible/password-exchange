@@ -934,21 +934,22 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.ok) {
                 // Attempt optional file upload now that we have a messageID.
-                let fileShareURL = null;
+                let uploadResult = null;
                 const fileUploadSection = document.getElementById('file-upload-section');
                 if (fileUploadSection && typeof fileUploadSection.runUpload === 'function') {
                     try {
                         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading file…';
-                        const uploadResult = await fileUploadSection.runUpload(result.messageId);
-                        if (uploadResult) {
-                            fileShareURL = uploadResult.shareURL;
-                        }
+                        uploadResult = await fileUploadSection.runUpload(result.messageId, { showResult: false });
                     } catch (fileErr) {
                         // File upload failure is non-fatal: the message was already created.
                         // The file-upload-section already shows its own error state.
                         console.warn('File upload failed:', fileErr);
                     }
                 }
+
+                const shareURL = uploadResult
+                    ? buildCombinedShareURL(result.webUrl, uploadResult.fileID, uploadResult.encodedKey)
+                    : result.webUrl;
 
                 // Success - show the secure link
                 const successDiv = document.getElementById('success');
@@ -959,10 +960,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             Secure Link Created Successfully!
                         </h5>
                         <hr>
-                        <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
+                        <p class="mb-3">Share this secure link with the recipient:</p>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control font-monospace"
-                                   value="${result.webUrl}"
+                                   value="${shareURL}"
                                    id="secure-url" readonly>
                             <button class="btn btn-outline-secondary"
                                     type="button" onclick="copyToClipboard()"
@@ -970,22 +971,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        ${fileShareURL ? `
-                        <p class="mb-2 fw-bold">
-                            <i class="fas fa-paperclip me-1"></i>
-                            File download link (share this with the recipient):
-                        </p>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control font-monospace"
-                                   value="${fileShareURL}"
-                                   id="file-share-url" readonly>
-                            <button class="btn btn-outline-secondary"
-                                    type="button"
-                                    onclick="(function(){const el=document.getElementById('file-share-url');navigator.clipboard.writeText(el.value).catch(()=>{el.select();document.execCommand('copy')});})()"
-                                    title="Copy file link">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>` : ''}
                         ${result.notificationSent ?
                             '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' :
                             ''}

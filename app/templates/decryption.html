@@ -72,6 +72,23 @@
                         </small>
                     </div>
                 </div>
+
+                <div id="file-section" class="mt-4" style="display:none;">
+                    <hr>
+                    <div class="alert alert-info d-flex align-items-start">
+                        <i class="fas fa-paperclip me-3 fs-5 mt-1"></i>
+                        <div>
+                            <strong>Attached File</strong><br>
+                            <small>Click below to decrypt and download the file attached to this message.</small>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" id="file-download-btn" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i>Download Attached File
+                        </button>
+                        <p id="file-download-status" class="form-text text-center mt-2" style="display:none;"></p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -145,6 +162,9 @@
 </div>
 
 <script>
+// Parse once — the hash never changes during the page's lifetime.
+const combinedFileParams = extractCombinedFileParams();
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
     const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -161,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showError('Invalid URL format. Please check the link and try again.');
         return;
     }
-    
+
     // Try to decrypt message directly without passphrase first
     decryptMessage(messageId, key, '');
     
@@ -303,6 +323,32 @@ function handleDecryptionSuccess(data) {
     // Auto-resize textarea to fit content (must happen after element is visible)
     messageInput.style.height = 'auto';
     messageInput.style.height = messageInput.scrollHeight + 'px';
+
+    // Show file download section if the share URL contains embedded file params
+    if (combinedFileParams) {
+        document.getElementById('file-section').style.display = 'block';
+        const fileBtn = document.getElementById('file-download-btn');
+        const fileStatus = document.getElementById('file-download-status');
+        // Use onclick to avoid stacking handlers if decryption succeeds after a retry.
+        fileBtn.onclick = async function () {
+            fileBtn.disabled = true;
+            fileBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Downloading…';
+            fileStatus.textContent = 'Decrypting and downloading…';
+            fileStatus.classList.remove('text-danger');
+            fileStatus.style.display = 'block';
+            try {
+                await fetchAndSaveFile(combinedFileParams.fileID, combinedFileParams.encodedKey);
+                fileBtn.innerHTML = '<i class="fas fa-check me-2"></i>Downloaded';
+                fileBtn.classList.replace('btn-primary', 'btn-success');
+                fileStatus.textContent = 'File saved — check your downloads folder.';
+            } catch (err) {
+                fileBtn.disabled = false;
+                fileBtn.innerHTML = '<i class="fas fa-download me-2"></i>Download Attached File';
+                fileStatus.textContent = 'Download failed: ' + err.message;
+                fileStatus.classList.add('text-danger');
+            }
+        };
+    }
 }
 
 // UI Helper Functions
