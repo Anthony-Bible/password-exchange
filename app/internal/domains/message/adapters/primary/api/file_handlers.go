@@ -14,6 +14,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
 )
 
@@ -197,6 +198,15 @@ func writeFileServiceError(c *gin.Context, err error, fallbackMessage string) {
 		status = http.StatusGone
 		code = models.ErrorCodeSessionExpired
 		message = err.Error()
+	}
+
+	if status == http.StatusInternalServerError {
+		correlationID, _ := c.Get(middleware.CorrelationIDKey)
+		logging.Error().
+			Err(err).
+			Interface("correlation_id", correlationID).
+			Str("path", c.Request.URL.Path).
+			Msg("file service internal error")
 	}
 
 	middleware.JSONErrorResponse(c, status, code, message, nil)
