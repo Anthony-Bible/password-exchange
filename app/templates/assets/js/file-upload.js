@@ -18,6 +18,7 @@
 // Default chunk size: 5 MiB (must fit within the server's multipart memory
 // limit and leave room for the GCM overhead on the stored side).
 const FILE_UPLOAD_CHUNK_SIZE = 5 * 1024 * 1024;
+const FILE_UPLOAD_CHUNK_CONCURRENCY = 4;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -90,6 +91,44 @@ function showProgress(container) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Processes every item in `items` by calling `fn(item)`, keeping at most
+ * `limit` concurrent promises in flight.
+ *
+ * Rejects as soon as any `fn` call rejects, and stops scheduling new items
+ * after the first failure.
+ */
+async function runWithConcurrency(items, fn, limit, onError) {
+    if (!limit || limit < 1) limit = 1;
+
+    const iter = items[Symbol.iterator]();
+    let stopped = false;
+
+    async function worker() {
+        for (;;) {
+            if (stopped) return;
+            const { value, done } = iter.next();
+            if (done) return;
+            try {
+                await fn(value);
+            } catch (err) {
+                stopped = true;
+                if (onError) {
+                    try {
+                        onError(err);
+                    } catch (_) {
+                        // Ignore onError callback failures; preserve the original error.
+                    }
+                }
+                throw err;
+            }
+        }
+    }
+
+    const workerCount = Math.min(limit, Array.isArray(items) ? items.length : limit);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+}
+
+/**
  * uploadFile drives the full chunked upload flow:
  *   1. POST /api/v1/files/initiate  → { fileID, sessionID, encodedKey }
  *   2. POST /api/v1/files/:fileID/chunks  (one per chunk, 1-based index)
@@ -130,8 +169,22 @@ async function uploadFile(file, messageID, onProgress, signal) {
         throw new Error('Unexpected response from file initiation: missing fileID, sessionID, or encodedKey');
     }
 
-    // --- Step 2: Upload chunks ---
-    for (let chunkIndex = 1; chunkIndex <= totalChunks; chunkIndex++) {
+    // --- Step 2: Upload chunks (parallel, capped at FILE_UPLOAD_CHUNK_CONCURRENCY) ---
+    let completedChunks = 0;
+    let uploadFailed = false;
+
+    // Internal controller lets us cancel all in-flight chunk fetches the moment
+    // any single chunk fails, avoiding wasted bandwidth against a dead session.
+    const chunkAbortController = new AbortController();
+    const chunkSignal = signal
+        ? (AbortSignal.any
+            ? AbortSignal.any([signal, chunkAbortController.signal])
+            : chunkAbortController.signal)
+        : chunkAbortController.signal;
+
+    const chunkIndices = Array.from({ length: totalChunks }, (_, i) => i + 1);
+
+    await runWithConcurrency(chunkIndices, async (chunkIndex) => {
         const start = (chunkIndex - 1) * chunkSize;
         const end = Math.min(start + chunkSize, totalSize);
         const chunkBlob = file.slice(start, end);
@@ -145,24 +198,25 @@ async function uploadFile(file, messageID, onProgress, signal) {
         const chunkResp = await fetch('/api/v1/files/' + encodeURIComponent(fileID) + '/chunks', {
             method: 'POST',
             body: formData,
-            signal,
+            signal: chunkSignal,
         });
 
         if (!chunkResp.ok) {
             const body = await chunkResp.json().catch(() => ({}));
-            if (chunkResp.status === 410) {
-                throw new Error('Upload session expired. Please try again.');
-            }
-            if (chunkResp.status === 404) {
-                throw new Error('Upload session not found. Please try again.');
-            }
+            if (chunkResp.status === 410) throw new Error('Upload session expired. Please try again.');
+            if (chunkResp.status === 404) throw new Error('Upload session not found. Please try again.');
             throw new Error(body.message || 'Failed to upload chunk ' + chunkIndex + ' (' + chunkResp.status + ')');
         }
 
-        if (onProgress) {
-            onProgress(chunkIndex, totalChunks);
-        }
-    }
+        completedChunks++;
+        // Guard needed: in-flight workers can resolve *after* runWithConcurrency's
+        // internal stopped flag is set, so we need uploadFailed to suppress stale
+        // progress callbacks that would fire after a sibling chunk has already failed.
+        if (!uploadFailed && onProgress) onProgress(completedChunks, totalChunks);
+    }, FILE_UPLOAD_CHUNK_CONCURRENCY, () => {
+        uploadFailed = true;
+        chunkAbortController.abort();
+    });
 
     return { fileID, encodedKey };
 }
@@ -197,7 +251,9 @@ function buildFileShareURL(fileID, encodedKey, origin) {
  * @param {string} encodedKey
  */
 function buildCombinedShareURL(messageWebUrl, fileID, encodedKey) {
-    return messageWebUrl + '#fid=' + encodeURIComponent(fileID) + '&fk=' + encodedKey;
+    const u = new URL(messageWebUrl, window.location.origin);
+    u.hash = 'fid=' + encodeURIComponent(fileID) + '&fk=' + encodedKey;
+    return u.toString();
 }
 
 /**

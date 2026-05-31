@@ -51,35 +51,22 @@ func NewRateLimitMiddleware(config RateLimitConfig) gin.HandlerFunc {
 	)
 }
 
+// newHourlyRateLimit returns a rate limiter allowing limit requests per hour per IP.
+func newHourlyRateLimit(limit int64) gin.HandlerFunc {
+	return NewRateLimitMiddleware(RateLimitConfig{Period: 1 * time.Hour, Limit: limit})
+}
+
 // MessageSubmissionRateLimit creates rate limiter for message submission
 // 10 requests per hour per IP
-func MessageSubmissionRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  10,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func MessageSubmissionRateLimit() gin.HandlerFunc { return newHourlyRateLimit(10) }
 
 // MessageAccessRateLimit creates rate limiter for message access
 // 100 requests per hour per IP
-func MessageAccessRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  100,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func MessageAccessRateLimit() gin.HandlerFunc { return newHourlyRateLimit(100) }
 
 // MessageDecryptRateLimit creates rate limiter for message decryption
 // 20 requests per hour per IP
-func MessageDecryptRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  20,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func MessageDecryptRateLimit() gin.HandlerFunc { return newHourlyRateLimit(20) }
 
 // CustomRateLimitErrorHandler creates a rate limiter middleware with custom JSON error responses
 func CustomRateLimitErrorHandler() gin.HandlerFunc {
@@ -121,30 +108,12 @@ func CustomRateLimitReachedHandler(c *gin.Context) {
 
 // FileInitiateRateLimit creates rate limiter for file upload initiation
 // 30 requests per hour per IP
-func FileInitiateRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  30,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func FileInitiateRateLimit() gin.HandlerFunc { return newHourlyRateLimit(30) }
 
 // FileUploadRateLimit creates rate limiter for file chunk uploads
 // 500 requests per hour per IP to accommodate large files split into many chunks
-func FileUploadRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  500,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func FileUploadRateLimit() gin.HandlerFunc { return newHourlyRateLimit(500) }
 
 // HealthCheckRateLimit creates a more lenient rate limiter for health checks
 // 300 requests per hour per IP
-func HealthCheckRateLimit() gin.HandlerFunc {
-	config := RateLimitConfig{
-		Period: 1 * time.Hour,
-		Limit:  300,
-	}
-	return NewRateLimitMiddleware(config)
-}
+func HealthCheckRateLimit() gin.HandlerFunc { return newHourlyRateLimit(300) }
