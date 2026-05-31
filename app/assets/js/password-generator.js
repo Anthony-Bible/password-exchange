@@ -350,7 +350,10 @@ const PHONETIC_MAP = {
 
 function getPhoneticLabel(char) {
     const upper = char.toUpperCase();
-    return PHONETIC_MAP[upper] || char;
+    const label = PHONETIC_MAP[upper] || char;
+    if (/[A-Z]/.test(char)) return 'cap. ' + label;
+    if (/[a-z]/.test(char)) return label.toLowerCase();
+    return label;
 }
 
 // Initialize password generator functionality
