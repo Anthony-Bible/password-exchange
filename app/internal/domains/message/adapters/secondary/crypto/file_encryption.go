@@ -9,6 +9,8 @@
 package crypto
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
@@ -24,14 +26,22 @@ import (
 // keyLength is the required AES-256 key size in bytes.
 const keyLength = 32
 
+const (
+	// frameLengthPrefixSize is the uint32 length-prefix size as an untyped
+	// constant so it can be used as an array size in [frameLengthPrefixSize]byte.
+	frameLengthPrefixSize        = 4
+	defaultMaxPlaintextFrameSize = 100 * 1024 * 1024
+	defaultMaxFrameSize          = defaultMaxPlaintextFrameSize + secondary.EncryptedFramePayloadOverheadBytes
+)
+
 var (
 	// ErrInvalidKeyLength indicates the supplied key is not 32 bytes.
 	ErrInvalidKeyLength = errors.New("crypto: encryption key must be 32 bytes")
-	// ErrMalformedCiphertext indicates the stored framing could not be parsed.
-	ErrMalformedCiphertext = errors.New("crypto: malformed encrypted chunk framing")
-	// ErrChunkCountMismatch indicates the recovered chunk count differs from the
-	// expected total, signalling truncated or padded ciphertext.
-	ErrChunkCountMismatch = errors.New("crypto: encrypted chunk count does not match expected total")
+	// ErrMalformedCiphertext aliases the shared secondary sentinel so callers in
+	// both the domain and adapter layers can use errors.Is against one value.
+	ErrMalformedCiphertext = secondary.ErrMalformedCiphertext
+	// ErrChunkCountMismatch aliases the shared secondary sentinel.
+	ErrChunkCountMismatch = secondary.ErrChunkCountMismatch
 )
 
 var _ secondary.FileEncryptionServicePort = (*FileEncryptionAdapter)(nil)
@@ -96,35 +106,96 @@ func (a *FileEncryptionAdapter) EncryptChunk(_ context.Context, data []byte, key
 // recovered chunk count matches meta.TotalChunks, and opens each frame with the
 // AAD reconstructed from its one-based position. Any reordering, truncation,
 // relocation, or tampering fails GCM authentication.
-func (a *FileEncryptionAdapter) DecryptFile(_ context.Context, data []byte, key []byte, meta secondary.FileMeta) ([]byte, error) {
+func (a *FileEncryptionAdapter) DecryptFile(ctx context.Context, data []byte, key []byte, meta secondary.FileMeta) ([]byte, error) {
+	var plaintext bytes.Buffer
+	if err := a.DecryptFileStream(ctx, bytes.NewReader(data), &plaintext, key, meta); err != nil {
+		return nil, err
+	}
+	return plaintext.Bytes(), nil
+}
+
+// DecryptFileStream incrementally parses framed encrypted chunks from src,
+// authenticates each chunk with position-bound AAD, and writes plaintext to dst.
+func (a *FileEncryptionAdapter) DecryptFileStream(ctx context.Context, src io.Reader, dst io.Writer, key []byte, meta secondary.FileMeta) error {
 	gcm, err := newGCM(key)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	frames, err := parseFrames(data)
-	if err != nil {
-		return nil, err
-	}
-	if len(frames) != meta.TotalChunks {
-		return nil, fmt.Errorf("%w: got %d, want %d", ErrChunkCountMismatch, len(frames), meta.TotalChunks)
+	maxFrameSize := meta.MaxFrameSize
+	if maxFrameSize <= 0 {
+		maxFrameSize = defaultMaxFrameSize
 	}
 
-	var plaintext []byte
+	buffered := bufio.NewReader(src)
 	nonceSize := gcm.NonceSize()
-	for i, sealed := range frames {
-		if len(sealed) < nonceSize {
-			return nil, ErrMalformedCiphertext
+	chunkCount := 0
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-		nonce, ciphertext := sealed[:nonceSize], sealed[nonceSize:]
-		aad := chunkAAD(meta.FileID, i+1, meta.TotalChunks)
-		chunk, err := gcm.Open(nil, nonce, ciphertext, aad)
+
+		var lengthPrefix [frameLengthPrefixSize]byte
+		n, err := io.ReadFull(buffered, lengthPrefix[:])
 		if err != nil {
-			return nil, fmt.Errorf("crypto: authenticating chunk %d: %w", i+1, err)
+			if errors.Is(err, io.EOF) && n == 0 {
+				break
+			}
+			// ErrUnexpectedEOF means the stored data is truncated — a format error.
+			// Any other error (network failure, storage error) is passed through
+			// so callers can distinguish storage failures from decryption failures.
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				return fmt.Errorf("%w: dangling length prefix", ErrMalformedCiphertext)
+			}
+			return fmt.Errorf("%w: reading frame length prefix: %w", secondary.ErrCiphertextReadFailed, err)
 		}
-		plaintext = append(plaintext, chunk...)
+
+		sizeU32 := binary.BigEndian.Uint32(lengthPrefix[:])
+		size := int64(sizeU32)
+		if sizeU32 == 0 || size > maxFrameSize || size > int64(int(^uint(0)>>1)) {
+			return fmt.Errorf("%w: frame length %d is invalid or exceeds maximum %d", ErrMalformedCiphertext, size, maxFrameSize)
+		}
+
+		chunkCount++
+		if chunkCount > meta.TotalChunks {
+			return fmt.Errorf("%w: got at least %d, want %d", ErrChunkCountMismatch, chunkCount, meta.TotalChunks)
+		}
+
+		sealed := make([]byte, int(size))
+		if _, err := io.ReadFull(buffered, sealed); err != nil {
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				return fmt.Errorf("%w: frame body truncated at declared length %d", ErrMalformedCiphertext, size)
+			}
+			return fmt.Errorf("%w: reading frame body: %w", secondary.ErrCiphertextReadFailed, err)
+		}
+		if len(sealed) < nonceSize+gcm.Overhead() {
+			return fmt.Errorf(
+				"%w: frame body length %d shorter than nonce+tag minimum %d",
+				ErrMalformedCiphertext,
+				len(sealed),
+				nonceSize+gcm.Overhead(),
+			)
+		}
+
+		nonce, ciphertext := sealed[:nonceSize], sealed[nonceSize:]
+		aad := chunkAAD(meta.FileID, chunkCount, meta.TotalChunks)
+		plaintext, err := gcm.Open(nil, nonce, ciphertext, aad)
+		if err != nil {
+			return fmt.Errorf("%w: authenticating chunk %d: %v", ErrMalformedCiphertext, chunkCount, err)
+		}
+		n, err = dst.Write(plaintext)
+		if err != nil {
+			return fmt.Errorf("crypto: writing decrypted chunk %d: %w", chunkCount, err)
+		}
+		if n != len(plaintext) {
+			return fmt.Errorf("crypto: writing decrypted chunk %d: %w", chunkCount, io.ErrShortWrite)
+		}
 	}
-	return plaintext, nil
+
+	if chunkCount != meta.TotalChunks {
+		return fmt.Errorf("%w: got %d, want %d", ErrChunkCountMismatch, chunkCount, meta.TotalChunks)
+	}
+	return nil
 }
 
 // newGCM builds an AES-256-GCM AEAD from key, validating its length.

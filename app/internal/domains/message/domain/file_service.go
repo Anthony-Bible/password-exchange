@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 	"time"
 
@@ -184,34 +185,73 @@ func (s *FileService) DownloadFile(ctx context.Context, req DownloadFileRequest)
 	if err != nil {
 		return nil, wrapWithSentinel(ErrObjectStorageFailed, err)
 	}
-	defer func() {
-		_ = reader.Close()
-	}()
 
 	if session.TotalSize > 0 && session.TotalChunks > 0 {
-		maxEncryptedSize := session.TotalSize + int64(session.TotalChunks)*32
+		maxEncryptedSize := addEncryptedStoredOverhead(session.TotalSize, session.TotalChunks)
 		if size > maxEncryptedSize {
+			_ = reader.Close()
 			return nil, ErrFileTooLarge
 		}
-	} else if s.maxFileSize > 0 && size > s.maxFileSize {
-		return nil, ErrFileTooLarge
+	} else if s.maxFileSize > 0 {
+		chunkCount := session.TotalChunks
+		if chunkCount <= 0 {
+			chunkCount = 1
+		}
+		maxEncryptedSize := addEncryptedStoredOverhead(s.maxFileSize, chunkCount)
+		if size > maxEncryptedSize {
+			_ = reader.Close()
+			return nil, ErrFileTooLarge
+		}
 	}
 
-	encryptedData, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, wrapWithSentinel(ErrObjectStorageFailed, err)
+	// maxFrameSize caps per-frame allocations in DecryptFileStream.
+	//
+	// Note: TotalChunks is derived from the client-provided chunk size at upload
+	// initiation (TotalChunks = ceil(TotalSize/ChunkSize)), but ChunkSize is not
+	// persisted in the session. Using TotalSize/TotalChunks here would therefore
+	// under-estimate the maximum chunk size for many valid uploads (especially when
+	// the last chunk is small) and cause downloads to fail. The only safe bound
+	// available from persisted metadata is the full plaintext size.
+	maxFrameSize := int64(0)
+	if session.TotalSize > 0 {
+		maxFrameSize = addEncryptedPayloadOverhead(session.TotalSize)
+	} else if s.maxFileSize > 0 {
+		maxFrameSize = addEncryptedPayloadOverhead(s.maxFileSize)
 	}
 
-	fileMeta := secondary.FileMeta{FileID: req.FileID, TotalChunks: session.TotalChunks}
-	decryptedData, err := s.encryptionService.DecryptFile(ctx, encryptedData, req.Key, fileMeta)
-	if err != nil {
-		return nil, wrapWithSentinel(ErrFileDecryptionFailed, err)
-	}
+	fileMeta := secondary.FileMeta{FileID: req.FileID, TotalChunks: session.TotalChunks, MaxFrameSize: maxFrameSize}
+	decryptedReader, decryptedWriter := io.Pipe()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() { _ = reader.Close() }()
+		if err := s.encryptionService.DecryptFileStream(ctx, reader, decryptedWriter, req.Key, fileMeta); err != nil {
+			// Only I/O errors while reading ciphertext should be treated as storage failures.
+			if errors.Is(err, secondary.ErrCiphertextReadFailed) {
+				_ = decryptedWriter.CloseWithError(wrapWithSentinel(ErrObjectStorageFailed, err))
+			} else {
+				_ = decryptedWriter.CloseWithError(wrapWithSentinel(ErrFileDecryptionFailed, err))
+			}
+			return
+		}
+		_ = decryptedWriter.Close()
+	}()
+	// Safety net: if the caller discards response.Data without closing it the
+	// goroutine above would block forever in dst.Write. Closing the write end
+	// when the request context finishes guarantees the goroutine exits even
+	// when the caller abandons the reader.
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = decryptedWriter.CloseWithError(ctx.Err())
+		case <-done:
+		}
+	}()
 
 	return &DownloadFileResponse{
 		Filename:    session.Filename,
 		ContentType: session.ContentType,
-		Data:        decryptedData,
+		Data:        decryptedReader,
 	}, nil
 }
 
@@ -308,4 +348,27 @@ func wrapWithSentinel(sentinel error, err error) error {
 		return sentinel
 	}
 	return fmt.Errorf("%w: %w", sentinel, err)
+}
+
+// addEncryptedPayloadOverhead adds per-frame AEAD payload overhead to a
+// plaintext size while saturating on int64 overflow.
+func addEncryptedPayloadOverhead(plaintextSize int64) int64 {
+	if plaintextSize > math.MaxInt64-secondary.EncryptedFramePayloadOverheadBytes {
+		return math.MaxInt64
+	}
+	return plaintextSize + secondary.EncryptedFramePayloadOverheadBytes
+}
+
+// addEncryptedStoredOverhead adds per-frame storage overhead for total chunks
+// while saturating on int64 overflow.
+func addEncryptedStoredOverhead(baseSize int64, totalChunks int) int64 {
+	chunkCount := int64(totalChunks)
+	if chunkCount > 0 && chunkCount > math.MaxInt64/secondary.EncryptedFrameStoredOverheadBytes {
+		return math.MaxInt64
+	}
+	overhead := chunkCount * secondary.EncryptedFrameStoredOverheadBytes
+	if baseSize > math.MaxInt64-overhead {
+		return math.MaxInt64
+	}
+	return baseSize + overhead
 }

@@ -1,6 +1,35 @@
 package secondary
 
-import "context"
+import (
+	"context"
+	"errors"
+	"io"
+)
+
+// Wire-format constants for the length-prefixed encrypted frame layout:
+//
+//	[uint32 big-endian length (4 bytes)][12-byte nonce][ciphertext + 16-byte GCM tag]
+const (
+	// FrameLengthPrefixBytes is the size of the uint32 big-endian length prefix.
+	FrameLengthPrefixBytes = int64(4)
+	// EncryptedFramePayloadOverheadBytes is the per-frame overhead from the
+	// AES-256-GCM nonce (12 bytes) and authentication tag (16 bytes).
+	EncryptedFramePayloadOverheadBytes = int64(28)
+	// EncryptedFrameStoredOverheadBytes is the total per-frame storage overhead
+	// including the length prefix.
+	EncryptedFrameStoredOverheadBytes = FrameLengthPrefixBytes + EncryptedFramePayloadOverheadBytes
+)
+
+var (
+	// ErrMalformedCiphertext indicates the stored framing could not be parsed.
+	ErrMalformedCiphertext = errors.New("crypto: malformed encrypted chunk framing")
+	// ErrChunkCountMismatch indicates the recovered chunk count differs from the
+	// expected total, signalling truncated or padded ciphertext.
+	ErrChunkCountMismatch = errors.New("crypto: encrypted chunk count does not match expected total")
+	// ErrCiphertextReadFailed indicates an underlying I/O error occurred while
+	// reading the ciphertext stream (e.g., object storage/network failure).
+	ErrCiphertextReadFailed = errors.New("crypto: failed to read ciphertext stream")
+)
 
 // ChunkMeta carries the per-chunk context bound into the authenticated
 // encryption of a single uploaded chunk. Binding these values as AES-GCM
@@ -24,6 +53,10 @@ type FileMeta struct {
 	FileID string
 	// TotalChunks is the number of chunks the file is expected to contain.
 	TotalChunks int
+	// MaxFrameSize is the maximum allowed encrypted frame payload length in bytes
+	// (nonce + ciphertext + tag), used to bound per-frame allocations while
+	// streaming decryption.
+	MaxFrameSize int64
 }
 
 // FileEncryptionServicePort defines the secondary port used by the file service
@@ -45,4 +78,8 @@ type FileEncryptionServicePort interface {
 	// key. It verifies that the recovered chunk count and each chunk's bound
 	// metadata match meta, rejecting reordered, truncated, or tampered content.
 	DecryptFile(ctx context.Context, data []byte, key []byte, meta FileMeta) ([]byte, error)
+	// DecryptFileStream decrypts the framed ciphertext from src and streams the
+	// recovered plaintext to dst, enforcing the same integrity checks as
+	// DecryptFile while keeping memory bounded to one frame.
+	DecryptFileStream(ctx context.Context, src io.Reader, dst io.Writer, key []byte, meta FileMeta) error
 }

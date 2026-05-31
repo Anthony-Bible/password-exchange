@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +21,28 @@ import (
 )
 
 type MockFileService struct{ mock.Mock }
+
+type partialErrorReadCloser struct {
+	data []byte
+	err  error
+	read bool
+}
+
+func (r *partialErrorReadCloser) Read(p []byte) (int, error) {
+	if !r.read {
+		r.read = true
+		n := copy(p, r.data)
+		if n > 0 {
+			return n, nil
+		}
+	}
+	if r.err == nil {
+		return 0, io.EOF
+	}
+	return 0, r.err
+}
+
+func (r *partialErrorReadCloser) Close() error { return nil }
 
 func (m *MockFileService) InitiateUpload(ctx context.Context, req domain.InitiateUploadRequest) (*domain.InitiateUploadResponse, error) {
 	args := m.Called(ctx, req)
@@ -58,6 +81,14 @@ func setupFileTestRouter(fileService *MockFileService) *gin.Engine {
 
 	handler := NewFileAPIHandler(fileService)
 	router := gin.New()
+	// Mirror the production custom recovery so tests exercise the same panic
+	// propagation behaviour as the real server.
+	router.Use(gin.CustomRecoveryWithWriter(gin.DefaultErrorWriter, func(c *gin.Context, err any) {
+		if err == http.ErrAbortHandler {
+			panic(err)
+		}
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}))
 	v1 := router.Group("/api/v1")
 	files := v1.Group("/files")
 	files.POST("/initiate", handler.InitiateUpload)
@@ -354,7 +385,7 @@ func TestDownloadFileHandler_Success_ViaHeader(t *testing.T) {
 	}).Return(&domain.DownloadFileResponse{
 		Filename:    "report.pdf",
 		ContentType: "application/pdf",
-		Data:        []byte("decrypted-content"),
+		Data:        io.NopCloser(bytes.NewReader([]byte("decrypted-content"))),
 	}, nil).Once()
 
 	req, err := http.NewRequest(http.MethodGet, "/api/v1/files/file-123", nil)
@@ -417,5 +448,30 @@ func TestDownloadFileHandler_ServiceError(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	service.AssertExpectations(t)
+}
+
+func TestDownloadFileHandler_StreamReadErrorAbortsConnection(t *testing.T) {
+	service := new(MockFileService)
+	router := setupFileTestRouter(service)
+
+	encodedKey := base64.URLEncoding.EncodeToString([]byte("download-key"))
+	service.On("DownloadFile", mock.Anything, mock.Anything).Return(&domain.DownloadFileResponse{
+		Filename:    "report.pdf",
+		ContentType: "application/pdf",
+		Data: &partialErrorReadCloser{
+			data: []byte("partial"),
+			err:  errors.New("decrypt failed mid-stream"),
+		},
+	}, nil).Once()
+
+	req, err := http.NewRequest(http.MethodGet, "/api/v1/files/file-123", nil)
+	require.NoError(t, err)
+	req.Header.Set("X-File-Key", encodedKey)
+
+	w := httptest.NewRecorder()
+	require.PanicsWithValue(t, http.ErrAbortHandler, func() {
+		router.ServeHTTP(w, req)
+	})
 	service.AssertExpectations(t)
 }
