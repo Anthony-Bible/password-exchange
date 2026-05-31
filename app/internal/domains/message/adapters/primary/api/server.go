@@ -128,8 +128,8 @@ func setupRouter(
 
 		if fileHandler != nil {
 			files := v1.Group("/files")
-			files.POST("/initiate", middleware.MessageSubmissionRateLimit(), fileHandler.InitiateUpload)
-			files.POST("/:fileID/chunks", middleware.MessageSubmissionRateLimit(), fileHandler.UploadChunk)
+			files.POST("/initiate", middleware.FileInitiateRateLimit(), fileHandler.InitiateUpload)
+			files.POST("/:fileID/chunks", middleware.FileUploadRateLimit(), fileHandler.UploadChunk)
 			files.GET("/:fileID", middleware.MessageAccessRateLimit(), fileHandler.DownloadFile)
 		}
 

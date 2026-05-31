@@ -146,8 +146,8 @@ func (s *WebServer) setupAPIRoutes() {
 
 		if s.fileHandler != nil {
 			files := v1.Group("/files")
-			files.POST("/initiate", middleware.MessageSubmissionRateLimit(), s.fileHandler.InitiateUpload)
-			files.POST("/:fileID/chunks", middleware.MessageSubmissionRateLimit(), s.fileHandler.UploadChunk)
+			files.POST("/initiate", middleware.FileInitiateRateLimit(), s.fileHandler.InitiateUpload)
+			files.POST("/:fileID/chunks", middleware.FileUploadRateLimit(), s.fileHandler.UploadChunk)
 			files.GET("/:fileID", middleware.MessageAccessRateLimit(), s.fileHandler.DownloadFile)
 		}
 

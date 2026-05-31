@@ -119,6 +119,26 @@ func CustomRateLimitReachedHandler(c *gin.Context) {
 	c.JSON(http.StatusTooManyRequests, errorResponse)
 }
 
+// FileInitiateRateLimit creates rate limiter for file upload initiation
+// 30 requests per hour per IP
+func FileInitiateRateLimit() gin.HandlerFunc {
+	config := RateLimitConfig{
+		Period: 1 * time.Hour,
+		Limit:  30,
+	}
+	return NewRateLimitMiddleware(config)
+}
+
+// FileUploadRateLimit creates rate limiter for file chunk uploads
+// 500 requests per hour per IP to accommodate large files split into many chunks
+func FileUploadRateLimit() gin.HandlerFunc {
+	config := RateLimitConfig{
+		Period: 1 * time.Hour,
+		Limit:  500,
+	}
+	return NewRateLimitMiddleware(config)
+}
+
 // HealthCheckRateLimit creates a more lenient rate limiter for health checks
 // 300 requests per hour per IP
 func HealthCheckRateLimit() gin.HandlerFunc {
