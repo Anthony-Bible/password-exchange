@@ -255,6 +255,16 @@ func (h *MessageHandler) Confirmation(c *gin.Context) {
 	h.renderHTMLOrMarkdown(c, http.StatusOK, "confirmation.html", data, nil)
 }
 
+// FileDownload serves the file download page for a given fileID. The page
+// reads the decryption key from the URL fragment client-side and calls the
+// file API to fetch and save the decrypted file.
+func (h *MessageHandler) FileDownload(c *gin.Context) {
+	data := gin.H{
+		"Title": "Download File - Password Exchange",
+	}
+	h.renderHTMLOrMarkdown(c, http.StatusOK, "file-download.html", data, nil)
+}
+
 func (h *MessageHandler) NotFound(c *gin.Context) {
 	h.render404(c)
 }

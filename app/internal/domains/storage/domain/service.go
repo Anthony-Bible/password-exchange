@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/secondary"
@@ -181,4 +182,56 @@ func (s *StorageService) HealthCheck(ctx context.Context) error {
 	}
 	s.logger.Debug().Msg("Storage health check succeeded")
 	return nil
+}
+
+// CreateUploadSession persists a new file upload session with validation.
+func (s *StorageService) CreateUploadSession(ctx context.Context, session contracts.UploadSession) error {
+	if session.SessionID == "" {
+		s.logger.Warn().Msg("Attempted to create upload session with empty session ID")
+		return ErrInvalidParameter
+	}
+	return s.repository.CreateUploadSession(ctx, session)
+}
+
+// GetUploadSession retrieves an upload session by session_id or file_id.
+func (s *StorageService) GetUploadSession(ctx context.Context, id string) (*contracts.UploadSession, error) {
+	if id == "" {
+		s.logger.Warn().Msg("Attempted to get upload session with empty ID")
+		return nil, ErrInvalidParameter
+	}
+	return s.repository.GetUploadSession(ctx, id)
+}
+
+// AddCompletedPart records a successfully uploaded chunk for the session.
+func (s *StorageService) AddCompletedPart(ctx context.Context, sessionID string, part contracts.UploadSessionPart) error {
+	if sessionID == "" {
+		s.logger.Warn().Msg("Attempted to add completed part with empty session ID")
+		return ErrInvalidParameter
+	}
+	return s.repository.AddCompletedPart(ctx, sessionID, part)
+}
+
+// CompleteUploadSession marks the session assembled and clears its encryption
+// key from persistent state.
+func (s *StorageService) CompleteUploadSession(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		s.logger.Warn().Msg("Attempted to complete upload session with empty session ID")
+		return ErrInvalidParameter
+	}
+	return s.repository.CompleteUploadSession(ctx, sessionID)
+}
+
+// DeleteUploadSession removes a session row; non-existent sessions are a no-op.
+func (s *StorageService) DeleteUploadSession(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		s.logger.Warn().Msg("Attempted to delete upload session with empty session ID")
+		return ErrInvalidParameter
+	}
+	return s.repository.DeleteUploadSession(ctx, sessionID)
+}
+
+// DeleteExpiredUploadSessions sweeps incomplete sessions expiring before asOf
+// and returns them for caller-side object-storage cleanup.
+func (s *StorageService) DeleteExpiredUploadSessions(ctx context.Context, asOf time.Time) ([]contracts.UploadSession, error) {
+	return s.repository.DeleteExpiredUploadSessions(ctx, asOf)
 }

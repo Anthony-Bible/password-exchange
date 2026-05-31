@@ -309,6 +309,76 @@
                 </div>
             </div>
 
+            <!-- File Attachment (optional) -->
+            <div class="section-group file-upload-section" id="file-upload-section">
+                <h5 class="section-title">
+                    <i class="fas fa-paperclip me-2"></i>
+                    Attach a File (Optional)
+                </h5>
+                <p class="text-muted mb-3">
+                    Upload a file alongside your message. It will be encrypted server-side and
+                    the recipient will receive a separate download link.
+                </p>
+
+                <div class="mb-3">
+                    <label for="file-upload-input" class="form-label">File</label>
+                    <div class="input-group">
+                        <label class="input-group-text" for="file-upload-input" style="cursor:pointer;">
+                            <i class="fas fa-folder-open me-1"></i> Browse
+                        </label>
+                        <input type="file"
+                               id="file-upload-input"
+                               class="form-control"
+                               aria-describedby="fileUploadHelp">
+                    </div>
+                    <div id="fileUploadHelp" class="form-text d-flex justify-content-between">
+                        <span class="file-upload-label-text">No file chosen</span>
+                        <span class="file-upload-size-hint text-muted"></span>
+                    </div>
+                </div>
+
+                <!-- Progress bar (hidden until upload starts) -->
+                <div class="file-upload-progress-section" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="file-upload-status text-muted">Uploading…</small>
+                    </div>
+                    <div class="progress" style="height:8px;" role="progressbar"
+                         aria-label="File upload progress" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar bg-primary file-upload-progress-bar"
+                             style="width:0%"
+                             aria-valuenow="0"></div>
+                    </div>
+                </div>
+
+                <!-- Error display -->
+                <div class="file-upload-error text-danger small mt-2" style="display:none;"></div>
+
+                <!-- Result: copyable download link (shown after successful upload) -->
+                <div class="file-upload-result-section mt-3" style="display:none;">
+                    <label for="file-upload-result-url" class="form-label fw-bold small">
+                        <i class="fas fa-link me-1"></i>
+                        File Download Link
+                    </label>
+                    <div class="input-group">
+                        <input type="text"
+                               id="file-upload-result-url"
+                               class="form-control font-monospace small"
+                               readonly
+                               aria-label="File download URL">
+                        <button type="button"
+                                id="file-upload-copy-btn"
+                                class="btn btn-outline-secondary"
+                                title="Copy file download link to clipboard">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        Share this link with the recipient so they can download the file.
+                        Keep it private — it contains the decryption key.
+                    </div>
+                </div>
+            </div>
+
             <!-- Cloudflare Turnstile -->
             <div id="turnstile-section" class="section-group">
                 <h5 class="section-title">Security Verification</h5>
@@ -863,6 +933,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
             
             if (response.ok) {
+                // Attempt optional file upload now that we have a messageID.
+                let fileShareURL = null;
+                const fileUploadSection = document.getElementById('file-upload-section');
+                if (fileUploadSection && typeof fileUploadSection.runUpload === 'function') {
+                    try {
+                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading file…';
+                        const uploadResult = await fileUploadSection.runUpload(result.messageId);
+                        if (uploadResult) {
+                            fileShareURL = uploadResult.shareURL;
+                        }
+                    } catch (fileErr) {
+                        // File upload failure is non-fatal: the message was already created.
+                        // The file-upload-section already shows its own error state.
+                        console.warn('File upload failed:', fileErr);
+                    }
+                }
+
                 // Success - show the secure link
                 const successDiv = document.getElementById('success');
                 successDiv.innerHTML = `
@@ -874,17 +961,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         <hr>
                         <p class="mb-3">Your secure message has been encrypted and is ready to share:</p>
                         <div class="input-group mb-3">
-                            <input type="text" class="form-control font-monospace" 
-                                   value="${result.webUrl}" 
+                            <input type="text" class="form-control font-monospace"
+                                   value="${result.webUrl}"
                                    id="secure-url" readonly>
-                            <button class="btn btn-outline-secondary" 
-                                    type="button" onclick="copyToClipboard()" 
+                            <button class="btn btn-outline-secondary"
+                                    type="button" onclick="copyToClipboard()"
                                     title="Copy to clipboard">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        ${result.notificationSent ? 
-                            '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' : 
+                        ${fileShareURL ? `
+                        <p class="mb-2 fw-bold">
+                            <i class="fas fa-paperclip me-1"></i>
+                            File download link (share this with the recipient):
+                        </p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control font-monospace"
+                                   value="${fileShareURL}"
+                                   id="file-share-url" readonly>
+                            <button class="btn btn-outline-secondary"
+                                    type="button"
+                                    onclick="(function(){const el=document.getElementById('file-share-url');navigator.clipboard.writeText(el.value).catch(()=>{el.select();document.execCommand('copy')});})()"
+                                    title="Copy file link">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>` : ''}
+                        ${result.notificationSent ?
+                            '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' :
                             ''}
                         ${result.expiresAt ?
                             `<p class="mb-0 text-muted small">
@@ -893,7 +996,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </p>` : ''}
                     </div>
                 `;
-                
+
                 // Reset form
                 form.reset();
                 updateEmailDependentFields();
@@ -1014,6 +1117,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize password generator functionality
     initializePasswordGenerator();
+
+    // Initialize file upload UI (no-op if the section is absent or file routes
+    // are disabled — the section is always rendered but uploads will simply show
+    // an API error if object storage is not configured server-side).
+    const fileUploadSection = document.getElementById('file-upload-section');
+    if (fileUploadSection && typeof initializeFileUpload === 'function') {
+        initializeFileUpload(fileUploadSection);
+    }
 });
 </script>
 

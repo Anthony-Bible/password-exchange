@@ -68,6 +68,42 @@ func (m *MockStorageService) GetReminderHistory(ctx context.Context, messageID i
 	return args.Get(0).([]*storageContracts.ReminderLogEntry), args.Error(1)
 }
 
+func (m *MockStorageService) CreateUploadSession(ctx context.Context, session storageContracts.UploadSession) error {
+	args := m.Called(ctx, session)
+	return args.Error(0)
+}
+
+func (m *MockStorageService) GetUploadSession(ctx context.Context, id string) (*storageContracts.UploadSession, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*storageContracts.UploadSession), args.Error(1)
+}
+
+func (m *MockStorageService) AddCompletedPart(ctx context.Context, sessionID string, part storageContracts.UploadSessionPart) error {
+	args := m.Called(ctx, sessionID, part)
+	return args.Error(0)
+}
+
+func (m *MockStorageService) CompleteUploadSession(ctx context.Context, sessionID string) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockStorageService) DeleteUploadSession(ctx context.Context, sessionID string) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockStorageService) DeleteExpiredUploadSessions(ctx context.Context, asOf time.Time) ([]storageContracts.UploadSession, error) {
+	args := m.Called(ctx, asOf)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]storageContracts.UploadSession), args.Error(1)
+}
+
 func TestGetUnviewedMessagesForReminders_Success(t *testing.T) {
 	// Arrange
 	mockStorage := &MockStorageService{}

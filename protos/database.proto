@@ -64,6 +64,78 @@ message GetReminderHistoryResponse {
     repeated ReminderLogEntry entries = 1;
 }
 
+// UploadSessionPart represents a single successfully uploaded multipart part.
+message UploadSessionPart {
+    int32 part_number = 1;
+    string etag = 2;
+}
+
+// UploadSession is the wire representation of a file_upload_sessions row.
+// encryption_key is absent (empty bytes) for completed sessions where the
+// server has already cleared the key at rest.
+message UploadSession {
+    string session_id     = 1;
+    string file_id        = 2;
+    string message_id     = 3;
+    string upload_id      = 4;
+    string filename       = 5;
+    string content_type   = 6;
+    int64  total_size     = 7;
+    int32  total_chunks   = 8;
+    string status         = 9;
+    bytes  encryption_key = 10;  // empty for completed sessions
+    repeated UploadSessionPart completed_parts = 11;
+    string created_at     = 12;  // RFC3339 timestamp
+    string expires_at     = 13;  // RFC3339 timestamp
+}
+
+// CreateUploadSessionRequest carries the full session record to persist.
+message CreateUploadSessionRequest {
+    UploadSession session = 1;
+}
+
+// GetUploadSessionRequest looks up a session by either its session_id or
+// file_id — whichever non-empty field is provided is used as the lookup key.
+message GetUploadSessionRequest {
+    string session_id = 1;
+    string file_id    = 2;
+}
+
+// GetUploadSessionResponse returns the found session or a NOT_FOUND status.
+message GetUploadSessionResponse {
+    UploadSession session = 1;
+}
+
+// AddCompletedPartRequest records a successfully uploaded chunk for a session.
+message AddCompletedPartRequest {
+    string session_id = 1;
+    UploadSessionPart part = 2;
+}
+
+// CompleteUploadSessionRequest marks the upload session as assembled and
+// instructs the database service to clear the stored encryption key.
+message CompleteUploadSessionRequest {
+    string session_id = 1;
+}
+
+// DeleteUploadSessionRequest removes a single upload session row.
+message DeleteUploadSessionRequest {
+    string session_id = 1;
+}
+
+// DeleteExpiredUploadSessionsRequest triggers a sweep of all incomplete
+// sessions whose expires_at is before as_of.
+message DeleteExpiredUploadSessionsRequest {
+    string as_of = 1;  // RFC3339 timestamp
+}
+
+// DeleteExpiredUploadSessionsResponse returns the sessions that were removed
+// so the caller can release their associated multipart uploads in object
+// storage.
+message DeleteExpiredUploadSessionsResponse {
+    repeated UploadSession removed_sessions = 1;
+}
+
 service dbService{
     rpc Select(SelectRequest) returns (SelectResponse) {}
     rpc Insert(InsertRequest) returns (google.protobuf.Empty) {}
@@ -71,4 +143,14 @@ service dbService{
     rpc GetUnviewedMessagesForReminders(GetUnviewedMessagesRequest) returns (GetUnviewedMessagesResponse) {}
     rpc LogReminderSent(LogReminderRequest) returns (google.protobuf.Empty) {}
     rpc GetReminderHistory(GetReminderHistoryRequest) returns (GetReminderHistoryResponse) {}
+
+    // Upload-session RPCs — the database service owns the file_upload_sessions
+    // table and all SQL for it.  The web service must call these instead of
+    // reaching MySQL directly.
+    rpc CreateUploadSession(CreateUploadSessionRequest) returns (google.protobuf.Empty) {}
+    rpc GetUploadSession(GetUploadSessionRequest) returns (GetUploadSessionResponse) {}
+    rpc AddCompletedPart(AddCompletedPartRequest) returns (google.protobuf.Empty) {}
+    rpc CompleteUploadSession(CompleteUploadSessionRequest) returns (google.protobuf.Empty) {}
+    rpc DeleteUploadSession(DeleteUploadSessionRequest) returns (google.protobuf.Empty) {}
+    rpc DeleteExpiredUploadSessions(DeleteExpiredUploadSessionsRequest) returns (DeleteExpiredUploadSessionsResponse) {}
   }

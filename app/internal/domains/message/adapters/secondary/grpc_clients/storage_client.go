@@ -152,6 +152,14 @@ func (c *StorageClient) HealthCheck(ctx context.Context) error {
 	return checkServing(ctx, c.healthClient, "storage")
 }
 
+// NewUploadStateAdapter returns an UploadStateGRPCAdapter backed by the same
+// underlying DbServiceClient as this StorageClient. Callers that already hold
+// a StorageClient can obtain an upload-state adapter without opening a second
+// connection to the database service.
+func (c *StorageClient) NewUploadStateAdapter() *UploadStateGRPCAdapter {
+	return NewUploadStateGRPCAdapter(c.client)
+}
+
 // Close closes the gRPC connection
 func (c *StorageClient) Close() error {
 	if c.conn != nil {

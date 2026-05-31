@@ -2,6 +2,7 @@ package web
 
 import (
 	"html/template"
+	"os"
 
 	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api"
@@ -20,6 +21,7 @@ type WebServer struct {
 	messageService    primary.MessageServicePort
 	encryptionService secondary.EncryptionServicePort
 	storageService    secondary.StorageServicePort
+	fileHandler       *api.FileAPIHandler
 	router            *gin.Engine
 }
 
@@ -32,7 +34,14 @@ func NewWebServer(
 ) *WebServer {
 	messageHandler := NewMessageHandler(messageService)
 
-	router := gin.Default()
+	// Use gin.New() + RedactingLogger instead of gin.Default() so that the
+	// ?key= query parameter (AES-256 file-decryption key) is never written to
+	// access logs. gin.Default() wraps gin.Logger() which logs the full URL
+	// including all query params. gin.Recovery() is added to retain panic
+	// recovery behaviour from the original Default.
+	router := gin.New()
+	router.Use(middleware.RedactingLogger(os.Stdout))
+	router.Use(gin.Recovery())
 
 	// Create template functions
 	funcMap := template.FuncMap{
@@ -55,6 +64,12 @@ func NewWebServer(
 	}
 }
 
+// WithFileHandler registers the optional file API handler used for chunked uploads.
+func (s *WebServer) WithFileHandler(fileHandler *api.FileAPIHandler) *WebServer {
+	s.fileHandler = fileHandler
+	return s
+}
+
 // SetupRoutes configures the HTTP routes
 func (s *WebServer) SetupRoutes() {
 	// Setup API routes directly on the main router
@@ -64,6 +79,11 @@ func (s *WebServer) SetupRoutes() {
 	s.router.GET("/", s.messageHandler.Home)
 	s.router.GET("/about", s.messageHandler.About)
 	s.router.GET("/confirmation", s.messageHandler.Confirmation)
+
+	// File download page — serves the download UI for a shared file link.
+	// The decryption key is carried in the URL fragment (#key=...) so it
+	// never reaches the server; the page JS reads it and calls the file API.
+	s.router.GET("/files/:fileID", s.messageHandler.FileDownload)
 
 	// Agent discovery (sitemap, robots, API catalog)
 	s.router.GET("/robots.txt", s.messageHandler.RobotsTxt)
@@ -102,7 +122,7 @@ func (s *WebServer) setupAPIRoutes() {
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header(
 			"Access-Control-Allow-Headers",
-			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID",
+			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID, X-File-Key",
 		)
 
 		if c.Request.Method == "OPTIONS" {
@@ -123,6 +143,13 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.POST("/messages", apiHandler.SubmitMessage)
 		v1.GET("/messages/:id", apiHandler.GetMessageInfo)
 		v1.POST("/messages/:id/decrypt", apiHandler.DecryptMessage)
+
+		if s.fileHandler != nil {
+			files := v1.Group("/files")
+			files.POST("/initiate", middleware.MessageSubmissionRateLimit(), s.fileHandler.InitiateUpload)
+			files.POST("/:fileID/chunks", middleware.MessageSubmissionRateLimit(), s.fileHandler.UploadChunk)
+			files.GET("/:fileID", middleware.MessageAccessRateLimit(), s.fileHandler.DownloadFile)
+		}
 
 		// Utility endpoints
 		v1.GET("/health", apiHandler.HealthCheck)

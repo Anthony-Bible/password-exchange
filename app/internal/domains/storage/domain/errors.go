@@ -35,4 +35,12 @@ var (
 	// ErrRepositoryClosed is returned when a MessageRepository operation is
 	// attempted after Close() has been called.
 	ErrRepositoryClosed = errors.New("storage repository is closed")
+
+	// ErrUploadSessionNotFound is returned when an upload session cannot be
+	// found by the given session_id or file_id.
+	ErrUploadSessionNotFound = errors.New("upload session not found")
+
+	// ErrUploadSessionAlreadyExists is returned when CreateSession is called
+	// with a session_id that already exists in persistent state.
+	ErrUploadSessionAlreadyExists = errors.New("upload session already exists")
 )
