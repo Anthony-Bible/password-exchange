@@ -17,8 +17,8 @@ webServer := webAdapter.NewWebServer(messageService, encryptionClient, storageCl
 ```go
 if s.fileHandler != nil {
     files := v1.Group("/files")
-    files.POST("/initiate", middleware.MessageSubmissionRateLimit(), s.fileHandler.InitiateUpload)
-    files.POST("/:fileID/chunks", middleware.MessageSubmissionRateLimit(), s.fileHandler.UploadChunk)
+    files.POST("/initiate", middleware.FileInitiateRateLimit(), s.fileHandler.InitiateUpload)
+    files.POST("/:fileID/chunks", middleware.FileUploadRateLimit(), s.fileHandler.UploadChunk)
     files.GET("/:fileID", middleware.MessageAccessRateLimit(), s.fileHandler.DownloadFile)
 }
 ```
@@ -39,7 +39,7 @@ All endpoints sit under `/api/v1/files`. The `/api` group applies CORS (`Access-
 |---|---|
 | Method | `POST` |
 | Path | `/api/v1/files/initiate` |
-| Rate limit | `MessageSubmissionRateLimit` |
+| Rate limit | `FileInitiateRateLimit` (30 req/hr per IP) |
 | Request Content-Type | `application/json` |
 
 **Request body** (`file_handlers.go:36–42`):
@@ -85,7 +85,7 @@ All fields except `contentType` are required. `filename` and `messageID` must be
 |---|---|
 | Method | `POST` |
 | Path | `/api/v1/files/:fileID/chunks` |
-| Rate limit | `MessageSubmissionRateLimit` |
+| Rate limit | `FileUploadRateLimit` (500 req/hr per IP) |
 | Request Content-Type | `multipart/form-data` |
 
 **Multipart form fields** (`file_handlers.go:79–113`):

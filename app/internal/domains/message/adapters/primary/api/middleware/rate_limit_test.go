@@ -208,6 +208,54 @@ func TestMessageDecryptRateLimit(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, w.Code, "21st request should be rate limited")
 }
 
+func TestFileInitiateRateLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(FileInitiateRateLimit())
+	router.POST("/api/v1/files/initiate", func(c *gin.Context) {
+		c.JSON(http.StatusCreated, gin.H{"message": "initiated"})
+	})
+
+	// Test that we can make 30 requests within the hour limit
+	for i := 0; i < 30; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/files/initiate", nil)
+		req.Header.Set("X-Forwarded-For", "192.168.1.1")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code, "request %d should succeed", i+1)
+	}
+
+	// Test that the 31st request is rate limited
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/files/initiate", nil)
+	req.Header.Set("X-Forwarded-For", "192.168.1.1")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusTooManyRequests, w.Code, "31st request should be rate limited")
+}
+
+func TestFileUploadRateLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(FileUploadRateLimit())
+	router.POST("/api/v1/files/:fileID/chunks", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "chunk uploaded"})
+	})
+
+	// Test that we can make 500 requests within the hour limit (spot-check 50)
+	for i := 0; i < 50; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/files/test-file/chunks", nil)
+		req.Header.Set("X-Forwarded-For", "192.168.1.1")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code, "request %d should succeed", i+1)
+	}
+}
+
 func TestHealthCheckRateLimit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
