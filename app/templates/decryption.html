@@ -334,6 +334,7 @@ function handleDecryptionSuccess(data) {
             fileBtn.disabled = true;
             fileBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Downloading…';
             fileStatus.textContent = 'Decrypting and downloading…';
+            fileStatus.classList.remove('text-danger');
             fileStatus.style.display = 'block';
             try {
                 await fetchAndSaveFile(combinedFileParams.fileID, combinedFileParams.encodedKey);
