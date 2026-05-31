@@ -53,15 +53,23 @@
                 <div class="message-content">
                     <h5 class="section-title">Your Secure Message:</h5>
                     <div class="input-group mb-3">
-                        <textarea class="form-control font-monospace message-textarea" 
+                        <textarea class="form-control font-monospace message-textarea"
                                id="message-content-input" readonly></textarea>
-                        <button type="button" 
-                                class="btn btn-outline-secondary" 
-                                id="copy-message-btn" 
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                id="copy-message-btn"
                                 title="Copy to clipboard">
                             <i class="fas fa-copy"></i>
                         </button>
                     </div>
+                    <button type="button"
+                            class="btn btn-outline-secondary btn-sm mt-2"
+                            id="toggle-phonetic-btn">
+                        <i class="fas fa-spell-check me-1"></i>Show Phonetic
+                    </button>
+                    <div id="decryption-phonetic-preview"
+                         class="mt-2 d-flex flex-wrap align-items-start gap-2 small text-muted"
+                         style="display: none !important;"></div>
                 </div>
                 
                 <div class="mt-4">
@@ -228,6 +236,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyMessageBtn = document.getElementById('copy-message-btn');
     if (copyMessageBtn) {
         copyMessageBtn.addEventListener('click', copyMessageToClipboard);
+    }
+
+    // Phonetic toggle
+    const togglePhoneticBtn = document.getElementById('toggle-phonetic-btn');
+    const phoneticPreviewEl = document.getElementById('decryption-phonetic-preview');
+    let phoneticVisible = false;
+
+    if (togglePhoneticBtn) {
+        togglePhoneticBtn.addEventListener('click', function() {
+            phoneticVisible = !phoneticVisible;
+            if (phoneticVisible) {
+                const text = document.getElementById('message-content-input').value;
+                renderPhoneticPreview(text, phoneticPreviewEl);
+                phoneticPreviewEl.style.cssText = 'display: flex !important; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem;';
+                this.innerHTML = '<i class="fas fa-spell-check me-1"></i>Hide Phonetic';
+            } else {
+                phoneticPreviewEl.style.cssText = 'display: none !important;';
+                this.innerHTML = '<i class="fas fa-spell-check me-1"></i>Show Phonetic';
+            }
+        });
     }
 });
 
