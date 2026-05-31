@@ -189,6 +189,32 @@ function buildFileShareURL(fileID, encodedKey, origin) {
 }
 
 /**
+ * buildCombinedShareURL appends file params to a message share URL so the
+ * recipient can download the attached file from the same link.
+ *
+ * @param {string} messageWebUrl  The message share URL (e.g. result.webUrl)
+ * @param {string} fileID
+ * @param {string} encodedKey
+ */
+function buildCombinedShareURL(messageWebUrl, fileID, encodedKey) {
+    return messageWebUrl + '#fid=' + encodeURIComponent(fileID) + '&fk=' + encodedKey;
+}
+
+/**
+ * extractCombinedFileParams reads the fid/fk params embedded in the current
+ * page's URL fragment by buildCombinedShareURL.
+ *
+ * Returns { fileID, encodedKey } or null if either value is absent.
+ */
+function extractCombinedFileParams() {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    const fileID = params.get('fid');
+    const encodedKey = params.get('fk');
+    if (!fileID || !encodedKey) return null;
+    return { fileID: decodeURIComponent(fileID), encodedKey };
+}
+
+/**
  * extractFileDownloadParams parses the current page URL to recover the fileID
  * and encodedKey needed to call the download API.
  *
@@ -348,7 +374,9 @@ function initializeFileUpload(container, getMessageID) {
     // Expose an async function that the form-submit handler can await.
     // Returns { fileID, encodedKey, shareURL } on success, null if no file was
     // selected. Throws on error.
-    container.runUpload = async function (messageID) {
+    // opts.showResult (default true) controls whether the built-in result URL
+    // banner is shown; pass false when the caller embeds the URL elsewhere.
+    container.runUpload = async function (messageID, opts) {
         const file = fileInput.files && fileInput.files[0];
         if (!file) return null;
 
@@ -371,7 +399,7 @@ function initializeFileUpload(container, getMessageID) {
             const shareURL = buildFileShareURL(fileID, encodedKey);
 
             if (resultUrl) resultUrl.value = shareURL;
-            if (resultSection) resultSection.style.display = 'block';
+            if (resultSection && (!opts || opts.showResult !== false)) resultSection.style.display = 'block';
 
             return { fileID, encodedKey, shareURL };
         } catch (err) {
