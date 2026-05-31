@@ -61,9 +61,9 @@ if [ $? -eq 0 ]; then
   # Fix swagger generation issue with LeftDelim/RightDelim fields
   if grep -q "LeftDelim\|RightDelim" docs/docs.go; then
     echo "Fixing swagger generation compatibility issue..."
-    sed -i '/LeftDelim:/d; /RightDelim:/d' docs/docs.go
+    sed -i.bak -e '/LeftDelim:/d' -e '/RightDelim:/d' docs/docs.go && rm -f docs/docs.go.bak
     # Fix any trailing comma issues
-    sed -i 's/SwaggerTemplate:  docTemplate,$/SwaggerTemplate:  docTemplate,/' docs/docs.go
+    sed -i.bak -e 's/SwaggerTemplate:  docTemplate,$/SwaggerTemplate:  docTemplate,/' docs/docs.go && rm -f docs/docs.go.bak
   fi
   
   # Verify generated files contain expected content
@@ -85,26 +85,32 @@ else
   exit 1
 fi
 
-echo "Testing Docker build for main application..."
 cd ..
-docker build -t passwordexchange-test .
-if [ $? -eq 0 ]; then
-  echo "Docker build for main application successful!"
-  MAIN_IMAGE_SHA=$(docker inspect -f "{{.Id}}" passwordexchange-test)
-else
-  echo "Docker build for main application failed!"
-  exit 1
-fi
 
-echo "Testing Docker build for slackbot..."
-
-docker build -t slackbot-test -f slackbot/Dockerfile .
-if [ $? -eq 0 ]; then
-  echo "Docker build for slackbot successful!"
-  SLACKBOT_IMAGE_SHA=$(docker inspect -f "{{.Id}}" slackbot-test)
+if ! command -v docker &> /dev/null || ! docker info &> /dev/null 2>&1; then
+  echo "⚠️  docker not available — skipping image build"
+  MAIN_IMAGE_SHA="skipped"
+  SLACKBOT_IMAGE_SHA="skipped"
 else
-  echo "Docker build for slackbot failed!"
-  exit 1
+  echo "Testing Docker build for main application..."
+  docker build -t passwordexchange-test .
+  if [ $? -eq 0 ]; then
+    echo "Docker build for main application successful!"
+    MAIN_IMAGE_SHA=$(docker inspect -f "{{.Id}}" passwordexchange-test)
+  else
+    echo "Docker build for main application failed!"
+    exit 1
+  fi
+
+  echo "Testing Docker build for slackbot..."
+  docker build -t slackbot-test -f slackbot/Dockerfile .
+  if [ $? -eq 0 ]; then
+    echo "Docker build for slackbot successful!"
+    SLACKBOT_IMAGE_SHA=$(docker inspect -f "{{.Id}}" slackbot-test)
+  else
+    echo "Docker build for slackbot failed!"
+    exit 1
+  fi
 fi
 
 echo "Testing Kubernetes manifest generation..."
@@ -130,12 +136,12 @@ for f in k8s/*.yaml; do
   first=0
 done
 
-sed -i \
+sed -i.bak \
   -e "s/%{VERSION}/${VERSION}/g" \
   -e "s/%{PHASE}/${PHASE}/g" \
   -e "s/%{MAIN_IMAGE_SHA}/${MAIN_IMAGE_SHA}/g" \
   -e "s/%{SLACKBOT_IMAGE_SHA}/${SLACKBOT_IMAGE_SHA}/g" \
-  combined.yaml
+  combined.yaml && rm -f combined.yaml.bak
 if [ -f combined.yaml ]; then
   echo "Kubernetes manifest generation successful!"
 else

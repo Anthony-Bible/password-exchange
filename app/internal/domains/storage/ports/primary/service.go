@@ -2,6 +2,7 @@ package primary
 
 import (
 	"context"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 )
@@ -32,4 +33,24 @@ type StorageServicePort interface {
 
 	// HealthCheck verifies the storage service is healthy
 	HealthCheck(ctx context.Context) error
+
+	// CreateUploadSession persists a new file upload session.
+	CreateUploadSession(ctx context.Context, session contracts.UploadSession) error
+
+	// GetUploadSession retrieves an upload session by session_id or file_id.
+	GetUploadSession(ctx context.Context, id string) (*contracts.UploadSession, error)
+
+	// AddCompletedPart records a successfully uploaded chunk for the session.
+	AddCompletedPart(ctx context.Context, sessionID string, part contracts.UploadSessionPart) error
+
+	// CompleteUploadSession marks the session as assembled and clears its
+	// encryption key from persistent state.
+	CompleteUploadSession(ctx context.Context, sessionID string) error
+
+	// DeleteUploadSession removes a session row (best-effort, no-op if missing).
+	DeleteUploadSession(ctx context.Context, sessionID string) error
+
+	// DeleteExpiredUploadSessions sweeps incomplete sessions expiring before asOf
+	// and returns the removed sessions for caller-side object-storage cleanup.
+	DeleteExpiredUploadSessions(ctx context.Context, asOf time.Time) ([]contracts.UploadSession, error)
 }

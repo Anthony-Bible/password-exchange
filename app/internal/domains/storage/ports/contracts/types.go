@@ -59,3 +59,46 @@ type DatabaseConfig struct {
 // stays independent of any concrete logging implementation while a new field
 // is added in exactly one place across every domain.
 type LogEvent = logport.LogEvent
+
+// UploadSessionPart represents a successfully uploaded chunk in a multipart
+// object-storage upload.
+type UploadSessionPart struct {
+	// PartNumber identifies the chunk position (1-based).
+	PartNumber int
+	// ETag is the checksum token returned by the object storage provider.
+	ETag string
+}
+
+// UploadSession is the persistent record for an in-progress or completed
+// chunked file upload. It mirrors the file_upload_sessions table managed by
+// the database service.
+type UploadSession struct {
+	// SessionID is the opaque identifier tracked across chunk requests.
+	SessionID string
+	// FileID identifies the object-storage object being written.
+	FileID string
+	// MessageID links the file to its parent message.
+	MessageID string
+	// UploadID is the object-storage provider's multipart upload identifier.
+	UploadID string
+	// Filename is the original client-supplied filename.
+	Filename string
+	// ContentType is the client-supplied MIME type.
+	ContentType string
+	// TotalSize is the expected total plaintext byte count.
+	TotalSize int64
+	// TotalChunks is the expected total number of chunks.
+	TotalChunks int
+	// Status tracks whether the session is active, complete, or aborted.
+	Status string
+	// EncryptionKey is the symmetric AES key used during chunk encryption.
+	// It is cleared (set to nil) server-side when CompleteSession is called so
+	// the key no longer rests in the database once the upload is finished.
+	EncryptionKey []byte
+	// CompletedParts holds the parts confirmed uploaded so far.
+	CompletedParts []UploadSessionPart
+	// CreatedAt records when the session was initiated.
+	CreatedAt time.Time
+	// ExpiresAt records the deadline after which an incomplete session is swept.
+	ExpiresAt time.Time
+}

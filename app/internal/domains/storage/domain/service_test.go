@@ -87,6 +87,42 @@ func (m *MockMessageRepository) Ping(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *MockMessageRepository) CreateUploadSession(ctx context.Context, session contracts.UploadSession) error {
+	args := m.Called(ctx, session)
+	return args.Error(0)
+}
+
+func (m *MockMessageRepository) GetUploadSession(ctx context.Context, id string) (*contracts.UploadSession, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*contracts.UploadSession), args.Error(1)
+}
+
+func (m *MockMessageRepository) AddCompletedPart(ctx context.Context, sessionID string, part contracts.UploadSessionPart) error {
+	args := m.Called(ctx, sessionID, part)
+	return args.Error(0)
+}
+
+func (m *MockMessageRepository) CompleteUploadSession(ctx context.Context, sessionID string) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockMessageRepository) DeleteUploadSession(ctx context.Context, sessionID string) error {
+	args := m.Called(ctx, sessionID)
+	return args.Error(0)
+}
+
+func (m *MockMessageRepository) DeleteExpiredUploadSessions(ctx context.Context, asOf time.Time) ([]contracts.UploadSession, error) {
+	args := m.Called(ctx, asOf)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]contracts.UploadSession), args.Error(1)
+}
+
 // MockValidationPort is a hand-written mock implementing secondary.ValidationPort.
 type MockValidationPort struct {
 	mock.Mock
@@ -483,5 +519,130 @@ func TestHealthCheck_SurfacesRepositoryPingError(t *testing.T) {
 
 	require.Error(t, err)
 	assert.ErrorIs(t, err, boom)
+	repo.AssertExpectations(t)
+}
+
+// --- Upload session domain service tests ---
+
+func TestCreateUploadSession_DelegatesAndRejectsEmptySessionID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	err := svc.CreateUploadSession(context.Background(), contracts.UploadSession{SessionID: ""})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidParameter)
+	repo.AssertNotCalled(t, "CreateUploadSession")
+}
+
+func TestCreateUploadSession_DelegatesOnValidInput(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	sess := contracts.UploadSession{SessionID: "s1", FileID: "f1"}
+	repo.On("CreateUploadSession", mock.Anything, sess).Return(nil).Once()
+
+	err := svc.CreateUploadSession(context.Background(), sess)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestGetUploadSession_RejectsEmptyID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	_, err := svc.GetUploadSession(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidParameter)
+	repo.AssertNotCalled(t, "GetUploadSession")
+}
+
+func TestGetUploadSession_DelegatesOnValidID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	want := &contracts.UploadSession{SessionID: "s1", FileID: "f1"}
+	repo.On("GetUploadSession", mock.Anything, "s1").Return(want, nil).Once()
+
+	got, err := svc.GetUploadSession(context.Background(), "s1")
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+	repo.AssertExpectations(t)
+}
+
+func TestAddCompletedPart_RejectsEmptySessionID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	err := svc.AddCompletedPart(context.Background(), "", contracts.UploadSessionPart{PartNumber: 1})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidParameter)
+	repo.AssertNotCalled(t, "AddCompletedPart")
+}
+
+func TestAddCompletedPart_DelegatesOnValidInput(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	part := contracts.UploadSessionPart{PartNumber: 1, ETag: "etag"}
+	repo.On("AddCompletedPart", mock.Anything, "s1", part).Return(nil).Once()
+
+	err := svc.AddCompletedPart(context.Background(), "s1", part)
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestCompleteUploadSession_RejectsEmptySessionID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	err := svc.CompleteUploadSession(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidParameter)
+	repo.AssertNotCalled(t, "CompleteUploadSession")
+}
+
+func TestCompleteUploadSession_DelegatesOnValidInput(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	repo.On("CompleteUploadSession", mock.Anything, "s1").Return(nil).Once()
+
+	err := svc.CompleteUploadSession(context.Background(), "s1")
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestDeleteUploadSession_RejectsEmptySessionID(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	err := svc.DeleteUploadSession(context.Background(), "")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidParameter)
+	repo.AssertNotCalled(t, "DeleteUploadSession")
+}
+
+func TestDeleteUploadSession_DelegatesOnValidInput(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	repo.On("DeleteUploadSession", mock.Anything, "s1").Return(nil).Once()
+
+	err := svc.DeleteUploadSession(context.Background(), "s1")
+	require.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestDeleteExpiredUploadSessions_DelegatesAsOf(t *testing.T) {
+	t.Parallel()
+	svc, repo, _, _ := newServiceWithMocks(t)
+
+	asOf := time.Now().UTC()
+	want := []contracts.UploadSession{{SessionID: "s1"}}
+	repo.On("DeleteExpiredUploadSessions", mock.Anything, asOf).Return(want, nil).Once()
+
+	got, err := svc.DeleteExpiredUploadSessions(context.Background(), asOf)
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
 	repo.AssertExpectations(t)
 }

@@ -71,6 +71,17 @@ type stubStorageService struct {
 	gotLogMessageID                                      int
 	gotLogEmail                                          string
 	gotHistoryMessageID                                  int
+
+	// Upload-session canned responses and captured inputs.
+	uploadCreateErr    error
+	uploadGetErr       error
+	uploadGetSession   *contracts.UploadSession
+	uploadAddPartErr   error
+	uploadCompleteErr  error
+	uploadDeleteErr    error
+	uploadExpiredErr   error
+	expiredSessions    []contracts.UploadSession
+	lastCreatedSession *contracts.UploadSession
 }
 
 func (s *stubStorageService) StoreMessage(context.Context, *contracts.Message) error {
@@ -102,6 +113,36 @@ func (s *stubStorageService) GetReminderHistory(_ context.Context, messageID int
 }
 func (s *stubStorageService) CleanupExpiredMessages(context.Context) error { return nil }
 func (s *stubStorageService) HealthCheck(context.Context) error            { return s.healthErr }
+
+// Upload session stubs — canned responses for server-handler tests.
+func (s *stubStorageService) CreateUploadSession(_ context.Context, sess contracts.UploadSession) error {
+	if s.uploadCreateErr != nil {
+		return s.uploadCreateErr
+	}
+	s.lastCreatedSession = &sess
+	return nil
+}
+func (s *stubStorageService) GetUploadSession(_ context.Context, id string) (*contracts.UploadSession, error) {
+	if s.uploadGetErr != nil {
+		return nil, s.uploadGetErr
+	}
+	if s.uploadGetSession != nil {
+		return s.uploadGetSession, nil
+	}
+	return &contracts.UploadSession{SessionID: id}, nil
+}
+func (s *stubStorageService) AddCompletedPart(_ context.Context, _ string, _ contracts.UploadSessionPart) error {
+	return s.uploadAddPartErr
+}
+func (s *stubStorageService) CompleteUploadSession(_ context.Context, _ string) error {
+	return s.uploadCompleteErr
+}
+func (s *stubStorageService) DeleteUploadSession(_ context.Context, _ string) error {
+	return s.uploadDeleteErr
+}
+func (s *stubStorageService) DeleteExpiredUploadSessions(_ context.Context, _ time.Time) ([]contracts.UploadSession, error) {
+	return s.expiredSessions, s.uploadExpiredErr
+}
 
 // TestInsert_MapsDomainValidationErrorsToInvalidArgument verifies that domain
 // validation sentinels returned from StoreMessage surface to gRPC clients as
@@ -363,5 +404,139 @@ func TestParseExpiresAt_ValidRFC3339(t *testing.T) {
 	expected, _ := time.Parse(time.RFC3339, input)
 	if !result.Equal(expected) {
 		t.Errorf("expected %v, got %v", expected, *result)
+	}
+}
+
+// --- Upload session gRPC handler tests ---
+
+func TestCreateUploadSession_ReturnsEmptyOnSuccess(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	svc := &stubStorageService{}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	_, err := server.CreateUploadSession(context.Background(), &database.CreateUploadSessionRequest{
+		Session: &database.UploadSession{
+			SessionId:   "sess-1",
+			FileId:      "file-1",
+			MessageId:   "msg-1",
+			UploadId:    "upload-1",
+			Filename:    "test.txt",
+			ContentType: "text/plain",
+			TotalSize:   1024,
+			TotalChunks: 2,
+			Status:      "active",
+			CreatedAt:   now.Format(time.RFC3339),
+			ExpiresAt:   now.Add(time.Hour).Format(time.RFC3339),
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if svc.lastCreatedSession == nil {
+		t.Fatal("expected domain CreateUploadSession to be called")
+	}
+	if svc.lastCreatedSession.SessionID != "sess-1" {
+		t.Errorf("expected SessionID=sess-1, got %q", svc.lastCreatedSession.SessionID)
+	}
+}
+
+func TestCreateUploadSession_MissingSession_ReturnsInvalidArgument(t *testing.T) {
+	t.Parallel()
+	server := NewGRPCServer(&stubStorageService{}, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	_, err := server.CreateUploadSession(context.Background(), &database.CreateUploadSessionRequest{Session: nil})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	st, _ := status.FromError(err)
+	if got := st.Code(); got != codes.InvalidArgument {
+		t.Errorf("expected InvalidArgument, got %v", got)
+	}
+}
+
+func TestGetUploadSession_ReturnsSession(t *testing.T) {
+	t.Parallel()
+	svc := &stubStorageService{
+		uploadGetSession: &contracts.UploadSession{SessionID: "sess-1", FileID: "file-1"},
+	}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	resp, err := server.GetUploadSession(context.Background(), &database.GetUploadSessionRequest{
+		SessionId: "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if resp.GetSession().GetSessionId() != "sess-1" {
+		t.Errorf("expected SessionId=sess-1, got %q", resp.GetSession().GetSessionId())
+	}
+}
+
+func TestGetUploadSession_EmptyID_ReturnsInvalidArgument(t *testing.T) {
+	t.Parallel()
+	server := NewGRPCServer(&stubStorageService{}, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	_, err := server.GetUploadSession(context.Background(), &database.GetUploadSessionRequest{})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	st, _ := status.FromError(err)
+	if got := st.Code(); got != codes.InvalidArgument {
+		t.Errorf("expected InvalidArgument, got %v", got)
+	}
+}
+
+func TestGetUploadSession_NotFound_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
+	svc := &stubStorageService{uploadGetErr: domain.ErrUploadSessionNotFound}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	_, err := server.GetUploadSession(context.Background(), &database.GetUploadSessionRequest{SessionId: "missing"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	st, _ := status.FromError(err)
+	if got := st.Code(); got != codes.NotFound {
+		t.Errorf("expected NotFound, got %v", got)
+	}
+}
+
+func TestCompleteUploadSession_NotFound_ReturnsNotFound(t *testing.T) {
+	t.Parallel()
+	svc := &stubStorageService{uploadCompleteErr: domain.ErrUploadSessionNotFound}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	_, err := server.CompleteUploadSession(context.Background(), &database.CompleteUploadSessionRequest{SessionId: "gone"})
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	st, _ := status.FromError(err)
+	if got := st.Code(); got != codes.NotFound {
+		t.Errorf("expected NotFound, got %v", got)
+	}
+}
+
+func TestDeleteExpiredUploadSessions_ReturnsRemovedSessions(t *testing.T) {
+	t.Parallel()
+	now := time.Now().UTC()
+	svc := &stubStorageService{
+		expiredSessions: []contracts.UploadSession{
+			{SessionID: "expired-1", FileID: "file-exp-1"},
+		},
+	}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	resp, err := server.DeleteExpiredUploadSessions(context.Background(), &database.DeleteExpiredUploadSessionsRequest{
+		AsOf: now.Format(time.RFC3339),
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(resp.GetRemovedSessions()) != 1 {
+		t.Errorf("expected 1 removed session, got %d", len(resp.GetRemovedSessions()))
+	}
+	if resp.GetRemovedSessions()[0].GetSessionId() != "expired-1" {
+		t.Errorf("expected session_id=expired-1, got %q", resp.GetRemovedSessions()[0].GetSessionId())
 	}
 }

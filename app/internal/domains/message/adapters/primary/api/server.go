@@ -1,6 +1,7 @@
 package api
 
 import (
+	"os"
 	"time"
 
 	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
@@ -16,6 +17,7 @@ import (
 // Server represents the API server
 type Server struct {
 	handler           *MessageAPIHandler
+	fileHandler       *FileAPIHandler
 	router            *gin.Engine
 	metricsRegistry   *prometheus.Registry
 	prometheusMetrics *middleware.PrometheusMetrics
@@ -29,16 +31,35 @@ func NewServer(
 	encryptionService secondary.EncryptionServicePort,
 	storageService secondary.StorageServicePort,
 ) *Server {
+	return newServer(messageService, encryptionService, storageService, nil)
+}
+
+// NewServerWithFileHandler creates a new API server and optionally registers the
+// chunked file upload endpoints when a file handler is provided.
+func NewServerWithFileHandler(
+	messageService primary.MessageServicePort,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+	fileHandler *FileAPIHandler,
+) *Server {
+	return newServer(messageService, encryptionService, storageService, fileHandler)
+}
+
+func newServer(
+	messageService primary.MessageServicePort,
+	encryptionService secondary.EncryptionServicePort,
+	storageService secondary.StorageServicePort,
+	fileHandler *FileAPIHandler,
+) *Server {
 	handler := NewMessageAPIHandler(messageService, encryptionService, storageService)
 
-	// Initialize Prometheus metrics
 	metricsRegistry := prometheus.NewRegistry()
 	prometheusMetrics := middleware.NewPrometheusMetrics(metricsRegistry)
-
-	router := setupRouter(handler, prometheusMetrics, metricsRegistry)
+	router := setupRouter(handler, prometheusMetrics, metricsRegistry, fileHandler)
 
 	return &Server{
 		handler:           handler,
+		fileHandler:       fileHandler,
 		router:            router,
 		metricsRegistry:   metricsRegistry,
 		prometheusMetrics: prometheusMetrics,
@@ -55,11 +76,14 @@ func setupRouter(
 	handler *MessageAPIHandler,
 	prometheusMetrics *middleware.PrometheusMetrics,
 	metricsRegistry *prometheus.Registry,
+	fileHandler *FileAPIHandler,
 ) *gin.Engine {
 	router := gin.New()
+	router.Use(gin.Recovery())
 
-	// Global middleware
-	router.Use(gin.Logger())
+	// Global middleware — use a redacting logger so the ?key= query parameter
+	// (AES-256 decryption key for file downloads) is never written to access logs.
+	router.Use(middleware.RedactingLogger(os.Stdout))
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.CorrelationID())
 	router.Use(middleware.PrometheusMiddleware(prometheusMetrics)) // Add Prometheus metrics collection
@@ -73,7 +97,7 @@ func setupRouter(
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header(
 			"Access-Control-Allow-Headers",
-			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID",
+			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID, X-File-Key",
 		)
 
 		if c.Request.Method == "OPTIONS" {
@@ -100,6 +124,13 @@ func setupRouter(
 			messages.POST("", middleware.MessageSubmissionRateLimit(), handler.SubmitMessage)
 			messages.GET("/:id", middleware.MessageAccessRateLimit(), handler.GetMessageInfo)
 			messages.POST("/:id/decrypt", middleware.MessageDecryptRateLimit(), handler.DecryptMessage)
+		}
+
+		if fileHandler != nil {
+			files := v1.Group("/files")
+			files.POST("/initiate", middleware.MessageSubmissionRateLimit(), fileHandler.InitiateUpload)
+			files.POST("/:fileID/chunks", middleware.MessageSubmissionRateLimit(), fileHandler.UploadChunk)
+			files.GET("/:fileID", middleware.MessageAccessRateLimit(), fileHandler.DownloadFile)
 		}
 
 		// Utility endpoints with lenient rate limits

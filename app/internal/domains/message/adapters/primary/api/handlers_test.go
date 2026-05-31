@@ -65,15 +65,19 @@ type stubEncryptionPort struct {
 func (s *stubEncryptionPort) GenerateKey(context.Context, int32) ([]byte, error) {
 	panic("stubEncryptionPort.GenerateKey not implemented")
 }
+
 func (s *stubEncryptionPort) Encrypt(context.Context, []string, []byte) ([]string, error) {
 	panic("stubEncryptionPort.Encrypt not implemented")
 }
+
 func (s *stubEncryptionPort) Decrypt(context.Context, []string, []byte) ([]string, error) {
 	panic("stubEncryptionPort.Decrypt not implemented")
 }
+
 func (s *stubEncryptionPort) GenerateID(context.Context) (string, error) {
 	panic("stubEncryptionPort.GenerateID not implemented")
 }
+
 func (s *stubEncryptionPort) HealthCheck(ctx context.Context) error {
 	if s.healthCheck == nil {
 		return nil
@@ -90,18 +94,21 @@ type stubStoragePort struct {
 func (s *stubStoragePort) StoreMessage(context.Context, contracts.MessageStorageRequest) error {
 	panic("stubStoragePort.StoreMessage not implemented")
 }
+
 func (s *stubStoragePort) RetrieveMessage(
 	context.Context,
 	contracts.MessageRetrievalStorageRequest,
 ) (*contracts.MessageStorageResponse, error) {
 	panic("stubStoragePort.RetrieveMessage not implemented")
 }
+
 func (s *stubStoragePort) GetMessage(
 	context.Context,
 	contracts.MessageRetrievalStorageRequest,
 ) (*contracts.MessageStorageResponse, error) {
 	panic("stubStoragePort.GetMessage not implemented")
 }
+
 func (s *stubStoragePort) HealthCheck(ctx context.Context) error {
 	if s.healthCheck == nil {
 		return nil
@@ -124,7 +131,7 @@ func setupTestRouterWithProbes(
 	registry := prometheus.NewRegistry()
 	metrics := middleware.NewPrometheusMetrics(registry)
 
-	return setupRouter(NewMessageAPIHandler(mockService, enc, stor), metrics, registry)
+	return setupRouter(NewMessageAPIHandler(mockService, enc, stor), metrics, registry, nil)
 }
 
 func TestSubmitMessage_Success(t *testing.T) {

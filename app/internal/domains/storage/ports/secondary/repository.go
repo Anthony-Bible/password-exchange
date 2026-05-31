@@ -6,6 +6,7 @@ package secondary
 
 import (
 	"context"
+	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 )
@@ -136,4 +137,37 @@ type MessageRepository interface {
 	//   - domain.ErrRepositoryClosed if Close has already been called
 	//   - An error wrapping domain.ErrDatabaseConnection if the ping fails
 	Ping(ctx context.Context) error
+
+	// CreateUploadSession persists a new file upload session row. The session
+	// MUST carry a unique SessionID; duplicate session_ids return
+	// domain.ErrUploadSessionAlreadyExists.
+	CreateUploadSession(ctx context.Context, session contracts.UploadSession) error
+
+	// GetUploadSession retrieves an upload session by either its SessionID or
+	// FileID. The id argument is matched against both columns so callers on the
+	// chunk-upload path (session_id) and the download path (file_id) can share
+	// the same call.
+	//
+	// Returns domain.ErrUploadSessionNotFound when no row matches.
+	GetUploadSession(ctx context.Context, id string) (*contracts.UploadSession, error)
+
+	// AddCompletedPart appends (or replaces, if the PartNumber already exists) a
+	// successfully uploaded chunk to the session's completed_parts list.
+	AddCompletedPart(ctx context.Context, sessionID string, part contracts.UploadSessionPart) error
+
+	// CompleteUploadSession atomically marks the session status as complete and
+	// sets encryption_key = NULL so the key is no longer at rest in the database.
+	//
+	// Returns domain.ErrUploadSessionNotFound when sessionID does not match any row.
+	CompleteUploadSession(ctx context.Context, sessionID string) error
+
+	// DeleteUploadSession removes a single session row. Deletion of a
+	// non-existent session is treated as a no-op (best-effort contract).
+	DeleteUploadSession(ctx context.Context, sessionID string) error
+
+	// DeleteExpiredUploadSessions selects all incomplete sessions whose
+	// expires_at is before asOf, returns them for caller-side object-storage
+	// cleanup, then deletes them in a single statement. Completed sessions are
+	// kept so their associated files remain accessible.
+	DeleteExpiredUploadSessions(ctx context.Context, asOf time.Time) ([]contracts.UploadSession, error)
 }
