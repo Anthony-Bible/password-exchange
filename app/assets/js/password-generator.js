@@ -350,7 +350,10 @@ const PHONETIC_MAP = {
 
 function getPhoneticLabel(char) {
     const upper = char.toUpperCase();
-    return PHONETIC_MAP[upper] || char;
+    const label = PHONETIC_MAP[upper] || char;
+    if (/[A-Z]/.test(char)) return 'cap. ' + label;
+    if (/[a-z]/.test(char)) return label.toLowerCase();
+    return label;
 }
 
 // Initialize password generator functionality
@@ -377,11 +380,26 @@ function initializePasswordGenerator() {
 
         const fragment = document.createDocumentFragment();
         password.split('').forEach(char => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex flex-column align-items-center';
+            wrapper.style.gap = '2px';
+
             const badge = document.createElement('span');
             badge.className = 'badge bg-light text-dark border font-monospace';
             badge.textContent = char;
-            badge.title = getPhoneticLabel(char);
-            fragment.appendChild(badge);
+
+            const phonetic = document.createElement('span');
+            phonetic.className = 'text-muted';
+            phonetic.style.fontSize = '0.6rem';
+            phonetic.style.lineHeight = '1';
+            phonetic.style.maxWidth = '3.5rem';
+            phonetic.style.textAlign = 'center';
+            phonetic.style.wordBreak = 'break-word';
+            phonetic.textContent = getPhoneticLabel(char);
+
+            wrapper.appendChild(badge);
+            wrapper.appendChild(phonetic);
+            fragment.appendChild(wrapper);
         });
         phoneticPreview.appendChild(fragment);
     }
