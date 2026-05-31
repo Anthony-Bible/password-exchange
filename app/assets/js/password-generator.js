@@ -332,26 +332,25 @@ function getUserFriendlyErrorMessage(errorMessage) {
     return 'An unexpected error occurred. Please try again or refresh the page.';
 }
 
+const PHONETIC_MAP = {
+    A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot', G: 'Golf',
+    H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima', M: 'Mike', N: 'November',
+    O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo', S: 'Sierra', T: 'Tango', U: 'Uniform',
+    V: 'Victor', W: 'Whiskey', X: 'X-ray', Y: 'Yankee', Z: 'Zulu',
+    '0': 'Zero', '1': 'One', '2': 'Two', '3': 'Three', '4': 'Four',
+    '5': 'Five', '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine',
+    '!': 'Exclamation mark', '@': 'At sign', '#': 'Number sign', '$': 'Dollar sign',
+    '%': 'Percent sign', '^': 'Caret', '&': 'Ampersand', '*': 'Asterisk',
+    '(': 'Left parenthesis', ')': 'Right parenthesis', '_': 'Underscore',
+    '+': 'Plus sign', '-': 'Hyphen', '=': 'Equals sign', '[': 'Left bracket',
+    ']': 'Right bracket', '{': 'Left brace', '}': 'Right brace', '|': 'Pipe',
+    ';': 'Semicolon', ':': 'Colon', ',': 'Comma', '.': 'Period',
+    '<': 'Less than', '>': 'Greater than', '?': 'Question mark', '/': 'Forward slash'
+};
+
 function getPhoneticLabel(char) {
-    const phoneticMap = {
-        A: 'Alpha', B: 'Bravo', C: 'Charlie', D: 'Delta', E: 'Echo', F: 'Foxtrot', G: 'Golf',
-        H: 'Hotel', I: 'India', J: 'Juliett', K: 'Kilo', L: 'Lima', M: 'Mike', N: 'November',
-        O: 'Oscar', P: 'Papa', Q: 'Quebec', R: 'Romeo', S: 'Sierra', T: 'Tango', U: 'Uniform',
-        V: 'Victor', W: 'Whiskey', X: 'X-ray', Y: 'Yankee', Z: 'Zulu',
-        '0': 'Zero', '1': 'One', '2': 'Two', '3': 'Three', '4': 'Four',
-        '5': 'Five', '6': 'Six', '7': 'Seven', '8': 'Eight', '9': 'Nine',
-        '!': 'Exclamation mark', '@': 'At sign', '#': 'Number sign', '$': 'Dollar sign',
-        '%': 'Percent sign', '^': 'Caret', '&': 'Ampersand', '*': 'Asterisk',
-        '(': 'Left parenthesis', ')': 'Right parenthesis', '_': 'Underscore',
-        '+': 'Plus sign', '-': 'Hyphen', '=': 'Equals sign', '[': 'Left bracket',
-        ']': 'Right bracket', '{': 'Left brace', '}': 'Right brace', '|': 'Pipe',
-        ';': 'Semicolon', ':': 'Colon', ',': 'Comma', '.': 'Period',
-        '<': 'Less than', '>': 'Greater than', '?': 'Question mark', '/': 'Forward slash'
-    };
     const upper = char.toUpperCase();
-    if (phoneticMap[upper]) return phoneticMap[upper];
-    if (phoneticMap[char]) return phoneticMap[char];
-    return char;
+    return PHONETIC_MAP[upper] || char;
 }
 
 // Initialize password generator functionality
@@ -376,13 +375,15 @@ function initializePasswordGenerator() {
         phoneticPreview.innerHTML = '';
         if (!password) return;
 
+        const fragment = document.createDocumentFragment();
         password.split('').forEach(char => {
             const badge = document.createElement('span');
             badge.className = 'badge bg-light text-dark border font-monospace';
             badge.textContent = char;
             badge.title = getPhoneticLabel(char);
-            phoneticPreview.appendChild(badge);
+            fragment.appendChild(badge);
         });
+        phoneticPreview.appendChild(fragment);
     }
     
     // Update length display in modal and trigger real-time generation
