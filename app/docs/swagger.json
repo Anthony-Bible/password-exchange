@@ -494,22 +494,27 @@
             "type": "object",
             "properties": {
                 "exists": {
+                    "description": "True if the message exists and has not yet been consumed.",
                     "type": "boolean"
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "Time at which the message will be automatically deleted. Null for legacy messages.",
                     "type": "string"
                 },
                 "hasBeenAccessed": {
+                    "description": "True if the message has already been viewed at least once.",
                     "type": "boolean"
                 },
                 "isClientEncrypted": {
+                    "description": "True when the stored content is client-side encrypted (E2E mode); decryption happens in the browser.",
                     "type": "boolean"
                 },
                 "messageId": {
+                    "description": "Unique ID of the message.",
                     "type": "string"
                 },
                 "requiresPassphrase": {
+                    "description": "True if the message requires a passphrase before it can be decrypted.",
                     "type": "boolean"
                 }
             }
@@ -518,10 +523,12 @@
             "type": "object",
             "properties": {
                 "decryptionKey": {
+                    "description": "Optional. Base64url-encoded decryption key. Omit for client-encrypted (E2E) messages\nwhere decryption happens client-side. Max 4096 characters.",
                     "type": "string",
                     "maxLength": 4096
                 },
                 "passphrase": {
+                    "description": "Optional. Passphrase required if the message was created with one.",
                     "type": "string"
                 }
             }
@@ -530,25 +537,31 @@
             "type": "object",
             "properties": {
                 "content": {
+                    "description": "Decrypted message content. For E2E messages this is the raw ciphertext; the client decrypts it.",
                     "type": "string"
                 },
                 "decryptedAt": {
+                    "description": "Timestamp of this decryption.",
                     "type": "string"
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "Time at which the message will be automatically deleted. Null for legacy messages.",
                     "type": "string"
                 },
                 "isClientEncrypted": {
+                    "description": "True when the content is client-side encrypted (E2E mode).",
                     "type": "boolean"
                 },
                 "maxViewCount": {
+                    "description": "Maximum allowed views before deletion. 0 means unlimited.",
                     "type": "integer"
                 },
                 "messageId": {
+                    "description": "Unique ID of the message.",
                     "type": "string"
                 },
                 "viewCount": {
+                    "description": "Number of times this message has been viewed.",
                     "type": "integer"
                 }
             }
@@ -560,46 +573,65 @@
             ],
             "properties": {
                 "additionalInfo": {
+                    "description": "Optional. Free-form text included in the notification email body.",
                     "type": "string"
                 },
                 "antiSpamAnswer": {
+                    "description": "Optional. Answer to the anti-spam question identified by questionId.\nRequired when sendNotification is true.",
                     "type": "string"
                 },
                 "content": {
+                    "description": "Required. The message content to encrypt and store. 1–10000 characters.",
                     "type": "string",
                     "minLength": 1
                 },
                 "expirationHours": {
-                    "description": "ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.\nValid range: 1–2160 (1 hour to 90 days).",
+                    "description": "Optional. Custom expiration in hours. When 0 or omitted the server default (168 h / 7 days) applies.\nValid range: 1–2160 (1 hour to 90 days).",
                     "type": "integer",
                     "maximum": 2160,
                     "minimum": 0
                 },
                 "isClientEncrypted": {
+                    "description": "Optional. Set to true if the content is already client-side encrypted (E2E mode).\nWhen true, the server stores the ciphertext as-is without re-encrypting.",
                     "type": "boolean"
                 },
                 "maxViewCount": {
+                    "description": "Optional. Maximum number of times the message may be viewed before it is deleted. 0 means unlimited.",
                     "type": "integer",
                     "maximum": 100,
                     "minimum": 0
                 },
                 "passphrase": {
+                    "description": "Optional. Passphrase that the recipient must supply before decrypting. Max 500 characters.",
                     "type": "string",
                     "maxLength": 500
                 },
                 "questionId": {
+                    "description": "Optional. ID of the anti-spam question the user answered.\nRequired when sendNotification is true.",
                     "type": "integer"
                 },
                 "recipient": {
-                    "$ref": "#/definitions/models.Recipient"
+                    "description": "Optional. Recipient details. Required when sendNotification is true.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Recipient"
+                        }
+                    ]
                 },
                 "sendNotification": {
+                    "description": "Optional. Set to true to send an email notification to the recipient.\nRequires sender and recipient to be set.",
                     "type": "boolean"
                 },
                 "sender": {
-                    "$ref": "#/definitions/models.Sender"
+                    "description": "Optional. Sender details. Required when sendNotification is true.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.Sender"
+                        }
+                    ]
                 },
                 "turnstileToken": {
+                    "description": "Optional. Cloudflare Turnstile token for bot protection. Max 2048 characters.",
                     "type": "string",
                     "maxLength": 2048
                 }
@@ -609,25 +641,31 @@
             "type": "object",
             "properties": {
                 "decryptUrl": {
+                    "description": "Full URL the recipient should visit to decrypt the message.",
                     "type": "string"
                 },
                 "expiresAt": {
-                    "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
+                    "description": "Time at which the message will be automatically deleted. Null for legacy messages.",
                     "type": "string"
                 },
                 "isClientEncrypted": {
+                    "description": "True when the stored content is client-side encrypted (E2E mode).",
                     "type": "boolean"
                 },
                 "key": {
+                    "description": "Base64url-encoded decryption key. Include this in the share URL fragment so it never reaches the server.",
                     "type": "string"
                 },
                 "messageId": {
+                    "description": "Unique ID of the created message.",
                     "type": "string"
                 },
                 "notificationSent": {
+                    "description": "True if an email notification was successfully sent to the recipient.",
                     "type": "boolean"
                 },
                 "webUrl": {
+                    "description": "Web UI URL for the message (without the key fragment).",
                     "type": "string"
                 }
             }
@@ -639,9 +677,11 @@
             ],
             "properties": {
                 "email": {
+                    "description": "Required. Recipient's email address.",
                     "type": "string"
                 },
                 "name": {
+                    "description": "Optional. Recipient's display name. 1–100 characters.",
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
@@ -656,9 +696,11 @@
             ],
             "properties": {
                 "email": {
+                    "description": "Required. Sender's email address.",
                     "type": "string"
                 },
                 "name": {
+                    "description": "Required. Sender's display name. 1–100 characters.",
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
