@@ -22,6 +22,194 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/files/initiate": {
+            "post": {
+                "description": "Creates an upload session for a file associated with a message. Returns a fileID, sessionID, and base64url-encoded AES-256 encryption key for use when uploading chunks.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Initiate a chunked file upload",
+                "parameters": [
+                    {
+                        "description": "Upload initiation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/api.initiateUploadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "fileID, sessionID, and encodedKey",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{fileID}": {
+            "get": {
+                "description": "Downloads and decrypts a file. The AES-256 decryption key must be supplied via the X-File-Key header as a base64url-encoded string. The key is kept out of the URL to prevent it appearing in server logs or browser history. Direct browser navigation will not work — callers must use fetch() or XMLHttpRequest.",
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Download a file",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID",
+                        "name": "fileID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Base64url-encoded AES-256 decryption key",
+                        "name": "X-File-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Decrypted file content with Content-Disposition attachment header",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid key",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "File not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/files/{fileID}/chunks": {
+            "post": {
+                "description": "Uploads a single chunk as multipart/form-data. Chunks must be uploaded in order starting from index 1. The upload is complete when chunkIndex equals totalChunks.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Upload a file chunk",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "File ID returned by the initiate endpoint",
+                        "name": "fileID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Upload session ID",
+                        "name": "sessionID",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1-based chunk index",
+                        "name": "chunkIndex",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Total number of chunks",
+                        "name": "totalChunks",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Chunk binary data",
+                        "name": "data",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "fileID, chunkIndex, and done flag",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Upload session not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "410": {
+                        "description": "Upload session expired",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Returns the health status of the API and its dependencies",
@@ -241,6 +429,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "api.initiateUploadRequest": {
+            "type": "object",
+            "properties": {
+                "chunkSize": {
+                    "type": "integer"
+                },
+                "contentType": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                },
+                "messageID": {
+                    "type": "string"
+                },
+                "totalSize": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.APIInfoResponse": {
             "type": "object",
             "properties": {
@@ -297,6 +505,9 @@ const docTemplate = `{
                 "hasBeenAccessed": {
                     "type": "boolean"
                 },
+                "isClientEncrypted": {
+                    "type": "boolean"
+                },
                 "messageId": {
                     "type": "string"
                 },
@@ -307,12 +518,10 @@ const docTemplate = `{
         },
         "models.MessageDecryptRequest": {
             "type": "object",
-            "required": [
-                "decryptionKey"
-            ],
             "properties": {
                 "decryptionKey": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 4096
                 },
                 "passphrase": {
                     "type": "string"
@@ -331,6 +540,9 @@ const docTemplate = `{
                 "expiresAt": {
                     "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
+                },
+                "isClientEncrypted": {
+                    "type": "boolean"
                 },
                 "maxViewCount": {
                     "type": "integer"
@@ -357,7 +569,6 @@ const docTemplate = `{
                 },
                 "content": {
                     "type": "string",
-                    "maxLength": 10000,
                     "minLength": 1
                 },
                 "expirationHours": {
@@ -365,6 +576,9 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 2160,
                     "minimum": 0
+                },
+                "isClientEncrypted": {
+                    "type": "boolean"
                 },
                 "maxViewCount": {
                     "type": "integer",
@@ -402,6 +616,9 @@ const docTemplate = `{
                 "expiresAt": {
                     "description": "ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.",
                     "type": "string"
+                },
+                "isClientEncrypted": {
+                    "type": "boolean"
                 },
                 "key": {
                     "type": "string"

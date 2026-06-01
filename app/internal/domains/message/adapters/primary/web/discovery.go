@@ -50,7 +50,7 @@ func (h *MessageHandler) SitemapXML(c *gin.Context) {
 		URLs: []sitemapURL{
 			{Loc: base + "/"},
 			{Loc: base + "/about"},
-			{Loc: base + "/api/v1/docs/"},
+			{Loc: base + "/api/v1/docs/index.html"},
 		},
 	}
 	out, err := xml.MarshalIndent(set, "", "  ")
@@ -89,7 +89,7 @@ func (h *MessageHandler) APICatalog(c *gin.Context) {
 					{Href: base + "/api/v1/docs/doc.json", Type: "application/json"},
 				},
 				ServiceDoc: []linksetHref{
-					{Href: base + "/api/v1/docs/", Type: "text/html"},
+					{Href: base + "/api/v1/docs/index.html", Type: "text/html"},
 				},
 				Status: []linksetHref{
 					{Href: base + "/api/v1/health"},

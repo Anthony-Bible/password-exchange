@@ -152,8 +152,21 @@ func setupRouter(
 		v1.GET("/health", middleware.HealthCheckRateLimit(), handler.HealthCheck)
 		v1.GET("/info", middleware.MessageAccessRateLimit(), handler.APIInfo)
 
-		// Documentation endpoints with lenient rate limits
-		v1.GET("/docs/*any", middleware.HealthCheckRateLimit(), ginSwagger.WrapHandler(swaggerFiles.Handler))
+		// Documentation endpoints — gin-swagger v1.6+ requires a specific filename in
+		// the URL; a bare /docs/ doesn't match its internal regex and returns 404.
+		// /docs (no trailing slash) redirects explicitly. /docs/*any handles everything
+		// else: when any=="/" (bare trailing slash) it also redirects, otherwise it
+		// delegates to ginSwagger. Registering /docs/ as a separate route would panic
+		// because gin disallows a static trailing-slash route alongside a wildcard.
+		v1.GET("/docs", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
+		swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+		v1.GET("/docs/*any", middleware.HealthCheckRateLimit(), func(c *gin.Context) {
+			if c.Param("any") == "/" {
+				c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html")
+				return
+			}
+			swaggerHandler(c)
+		})
 	}
 
 	// Metrics endpoint (outside rate limiting to avoid interfering with monitoring)
