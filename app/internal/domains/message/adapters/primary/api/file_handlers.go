@@ -44,6 +44,16 @@ type initiateUploadRequest struct {
 }
 
 // InitiateUpload handles POST /api/v1/files/initiate.
+// @Summary Initiate a chunked file upload
+// @Description Creates an upload session for a file associated with a message. Returns a fileID, sessionID, and base64url-encoded AES-256 encryption key for use when uploading chunks.
+// @Tags Files
+// @Accept json
+// @Produce json
+// @Param request body initiateUploadRequest true "Upload initiation request"
+// @Success 201 {object} map[string]string "fileID, sessionID, and encodedKey"
+// @Failure 400 {object} models.StandardErrorResponse "Validation error"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /files/initiate [post]
 func (h *FileAPIHandler) InitiateUpload(c *gin.Context) {
 	var req initiateUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -78,6 +88,22 @@ func (h *FileAPIHandler) InitiateUpload(c *gin.Context) {
 }
 
 // UploadChunk handles POST /api/v1/files/:fileID/chunks.
+// @Summary Upload a file chunk
+// @Description Uploads a single chunk as multipart/form-data. Chunks must be uploaded in order starting from index 1. The upload is complete when chunkIndex equals totalChunks.
+// @Tags Files
+// @Accept multipart/form-data
+// @Produce json
+// @Param fileID path string true "File ID returned by the initiate endpoint"
+// @Param sessionID formData string true "Upload session ID"
+// @Param chunkIndex formData int true "1-based chunk index"
+// @Param totalChunks formData int true "Total number of chunks"
+// @Param data formData file true "Chunk binary data"
+// @Success 200 {object} map[string]interface{} "fileID, chunkIndex, and done flag"
+// @Failure 400 {object} models.StandardErrorResponse "Validation error"
+// @Failure 404 {object} models.StandardErrorResponse "Upload session not found"
+// @Failure 410 {object} models.StandardErrorResponse "Upload session expired"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /files/{fileID}/chunks [post]
 func (h *FileAPIHandler) UploadChunk(c *gin.Context) {
 	sessionID := c.PostForm("sessionID")
 	chunkIndex, ciErr := strconv.Atoi(c.PostForm("chunkIndex"))
@@ -135,6 +161,17 @@ const fileKeyHeader = "X-File-Key"
 // query strings appear in server access logs and proxy logs. Clients must use
 // a fetch() call with the header set; direct browser navigation to this
 // endpoint will fail (browsers cannot attach custom headers to navigations).
+// @Summary Download a file
+// @Description Downloads and decrypts a file. The AES-256 decryption key must be supplied via the X-File-Key header as a base64url-encoded string. The key is kept out of the URL to prevent it appearing in server logs or browser history. Direct browser navigation will not work — callers must use fetch() or XMLHttpRequest.
+// @Tags Files
+// @Produce application/octet-stream
+// @Param fileID path string true "File ID"
+// @Param X-File-Key header string true "Base64url-encoded AES-256 decryption key"
+// @Success 200 {file} binary "Decrypted file content with Content-Disposition attachment header"
+// @Failure 400 {object} models.StandardErrorResponse "Missing or invalid key"
+// @Failure 404 {object} models.StandardErrorResponse "File not found"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /files/{fileID} [get]
 func (h *FileAPIHandler) DownloadFile(c *gin.Context) {
 	encodedKey := c.GetHeader(fileKeyHeader)
 	if encodedKey == "" {

@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  api.initiateUploadRequest:
+    properties:
+      chunkSize:
+        type: integer
+      contentType:
+        type: string
+      filename:
+        type: string
+      messageID:
+        type: string
+      totalSize:
+        type: integer
+    type: object
   models.APIInfoResponse:
     properties:
       documentation:
@@ -38,6 +51,8 @@ definitions:
         type: string
       hasBeenAccessed:
         type: boolean
+      isClientEncrypted:
+        type: boolean
       messageId:
         type: string
       requiresPassphrase:
@@ -46,11 +61,10 @@ definitions:
   models.MessageDecryptRequest:
     properties:
       decryptionKey:
+        maxLength: 4096
         type: string
       passphrase:
         type: string
-    required:
-    - decryptionKey
     type: object
   models.MessageDecryptResponse:
     properties:
@@ -62,6 +76,8 @@ definitions:
         description: ExpiresAt is the time the message will expire. Null for legacy
           messages that predate expiry tracking.
         type: string
+      isClientEncrypted:
+        type: boolean
       maxViewCount:
         type: integer
       messageId:
@@ -76,7 +92,6 @@ definitions:
       antiSpamAnswer:
         type: string
       content:
-        maxLength: 10000
         minLength: 1
         type: string
       expirationHours:
@@ -86,6 +101,8 @@ definitions:
         maximum: 2160
         minimum: 0
         type: integer
+      isClientEncrypted:
+        type: boolean
       maxViewCount:
         maximum: 100
         minimum: 0
@@ -115,6 +132,8 @@ definitions:
         description: ExpiresAt is the time the message will expire. Null for legacy
           messages that predate expiry tracking.
         type: string
+      isClientEncrypted:
+        type: boolean
       key:
         type: string
       messageId:
@@ -182,6 +201,140 @@ info:
   title: Password Exchange API
   version: 1.0.0
 paths:
+  /files/{fileID}:
+    get:
+      description: Downloads and decrypts a file. The AES-256 decryption key must
+        be supplied via the X-File-Key header as a base64url-encoded string. The key
+        is kept out of the URL to prevent it appearing in server logs or browser history.
+        Direct browser navigation will not work — callers must use fetch() or XMLHttpRequest.
+      parameters:
+      - description: File ID
+        in: path
+        name: fileID
+        required: true
+        type: string
+      - description: Base64url-encoded AES-256 decryption key
+        in: header
+        name: X-File-Key
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Decrypted file content with Content-Disposition attachment
+            header
+          schema:
+            type: file
+        "400":
+          description: Missing or invalid key
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "404":
+          description: File not found
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Download a file
+      tags:
+      - Files
+  /files/{fileID}/chunks:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a single chunk as multipart/form-data. Chunks must be uploaded
+        in order starting from index 1. The upload is complete when chunkIndex equals
+        totalChunks.
+      parameters:
+      - description: File ID returned by the initiate endpoint
+        in: path
+        name: fileID
+        required: true
+        type: string
+      - description: Upload session ID
+        in: formData
+        name: sessionID
+        required: true
+        type: string
+      - description: 1-based chunk index
+        in: formData
+        name: chunkIndex
+        required: true
+        type: integer
+      - description: Total number of chunks
+        in: formData
+        name: totalChunks
+        required: true
+        type: integer
+      - description: Chunk binary data
+        in: formData
+        name: data
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: fileID, chunkIndex, and done flag
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "404":
+          description: Upload session not found
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "410":
+          description: Upload session expired
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Upload a file chunk
+      tags:
+      - Files
+  /files/initiate:
+    post:
+      consumes:
+      - application/json
+      description: Creates an upload session for a file associated with a message.
+        Returns a fileID, sessionID, and base64url-encoded AES-256 encryption key
+        for use when uploading chunks.
+      parameters:
+      - description: Upload initiation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/api.initiateUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: fileID, sessionID, and encodedKey
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Initiate a chunked file upload
+      tags:
+      - Files
   /health:
     get:
       consumes:
