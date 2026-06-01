@@ -84,7 +84,7 @@ func setupFileTestRouter(fileService *MockFileService) *gin.Engine {
 	// Mirror the production custom recovery so tests exercise the same panic
 	// propagation behaviour as the real server.
 	router.Use(gin.CustomRecoveryWithWriter(gin.DefaultErrorWriter, func(c *gin.Context, err any) {
-		if err == http.ErrAbortHandler {
+		if err == http.ErrAbortHandler { //nolint:errorlint // sentinel value identity check, not error chain
 			panic(err)
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)

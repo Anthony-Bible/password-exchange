@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockMessageService is a mock implementation of MessageServicePort
+// MockMessageService is a mock implementation of MessageServicePort.
 type MockMessageService struct {
 	mock.Mock
 }
@@ -48,6 +48,14 @@ func (m *MockMessageService) RetrieveMessage(
 ) (*domain.MessageRetrievalResponse, error) {
 	args := m.Called(ctx, req)
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
+}
+
+func (m *MockMessageService) NotifyMessage(
+	ctx context.Context,
+	req domain.MessageNotifyRequest,
+) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
 }
 
 // healthCheckFn is a tiny test-only function-typed implementation of the
@@ -177,7 +185,7 @@ func TestSubmitMessage_Success(t *testing.T) {
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -211,7 +219,7 @@ func TestSubmitMessage_ClientEncrypted_PassesFlagAndHidesKey(t *testing.T) {
 	}, nil)
 
 	req, _ := http.NewRequest(
-		"POST",
+		http.MethodPost,
 		"/api/v1/messages",
 		bytes.NewBufferString(`{"content":"MTIzNDU2Nzg5MDEy.Y2lwaGVydGV4dA","isClientEncrypted":true}`),
 	)
@@ -224,7 +232,7 @@ func TestSubmitMessage_ClientEncrypted_PassesFlagAndHidesKey(t *testing.T) {
 
 	var response map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
-	assert.Equal(t, "", response["key"], "key must be empty when isClientEncrypted=true")
+	assert.Empty(t, response["key"], "key must be empty when isClientEncrypted=true")
 	assert.Equal(t, true, response["isClientEncrypted"], "response must include isClientEncrypted=true")
 	mockService.AssertExpectations(t)
 }
@@ -245,7 +253,7 @@ func TestSubmitMessage_ValidationError(t *testing.T) {
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -275,7 +283,7 @@ func TestGetMessageInfo_Success(t *testing.T) {
 
 	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/messages/test-message-id", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -305,7 +313,7 @@ func TestGetMessageInfo_NotFound(t *testing.T) {
 
 	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/messages/test-message-id", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -324,7 +332,7 @@ func TestHealthCheck(t *testing.T) {
 	mockService := new(MockMessageService)
 	router := setupTestRouter(mockService)
 
-	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -347,7 +355,7 @@ func TestHealthCheck_DegradedWhenStorageUnhealthy(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return errors.New("storage down") }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -366,7 +374,7 @@ func TestHealthCheck_DegradedWhenEncryptionUnhealthy(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -385,7 +393,7 @@ func TestHealthCheck_UnhealthyWhenAllDown(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return errors.New("storage down") }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -411,7 +419,7 @@ func TestHealthCheck_AbortsViaContextTimeout(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/api/v1/health", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	w := httptest.NewRecorder()
 
 	done := make(chan struct{})
@@ -439,7 +447,7 @@ func TestAPIInfo(t *testing.T) {
 	mockService := new(MockMessageService)
 	router := setupTestRouter(mockService)
 
-	req, _ := http.NewRequest("GET", "/api/v1/info", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/info", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -499,7 +507,7 @@ func TestSubmitMessage_WithMaxViewCount(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Correlation-ID", "test-correlation-id")
 
@@ -527,7 +535,7 @@ func TestGetMessageInfo_NilExpiresAtIsNullInResponse(t *testing.T) {
 
 	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/messages/test-message-id", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -583,7 +591,7 @@ func TestSubmitMessage_NilExpiresAtIsNullInResponse(t *testing.T) {
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -660,7 +668,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 			}
 
 			body, _ := json.Marshal(requestBody)
-			req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(body))
+			req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("X-Correlation-ID", "test-correlation-id")
 
@@ -689,7 +697,7 @@ func TestGetMessageInfo_UsesRealExpiresAt(t *testing.T) {
 
 	mockService.On("CheckMessageAccess", mock.Anything, "test-message-id").Return(expectedAccessInfo, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/messages/test-message-id", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/messages/test-message-id", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -745,7 +753,7 @@ func TestSubmitMessage_UsesRealExpiresAt(t *testing.T) {
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
-	req, _ := http.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -784,7 +792,7 @@ func TestDecryptMessage_IncludesExpiresAt(t *testing.T) {
 	}, nil)
 
 	body, _ := json.Marshal(models.MessageDecryptRequest{DecryptionKey: "dGVzdGtleQ=="})
-	req, _ := http.NewRequest("POST", "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -814,7 +822,7 @@ func TestLivez_AlwaysReturns200WithoutTouchingDependencies(t *testing.T) {
 	}}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/livez", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/livez", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -831,7 +839,7 @@ func TestReadyz_ReturnsOKWhenBothDependenciesHealthy(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/readyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -846,7 +854,7 @@ func TestReadyz_Returns503WhenEncryptionUnhealthy(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/readyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -867,7 +875,7 @@ func TestReadyz_Returns503WhenStorageUnhealthy(t *testing.T) {
 	}}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/readyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -889,7 +897,7 @@ func TestReadyz_Returns503WhenBothUnhealthy(t *testing.T) {
 	}}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/readyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -915,7 +923,7 @@ func TestReadyz_AbortsViaContextTimeout(t *testing.T) {
 	stor := &stubStoragePort{healthCheck: func(context.Context) error { return nil }}
 	router := setupTestRouterWithProbes(mockService, enc, stor)
 
-	req, _ := http.NewRequest("GET", "/readyz", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/readyz", nil)
 	w := httptest.NewRecorder()
 
 	done := make(chan struct{})
@@ -950,7 +958,7 @@ func TestDecryptMessage_NilExpiresAtIsNullInResponse(t *testing.T) {
 	}, nil)
 
 	body, _ := json.Marshal(models.MessageDecryptRequest{DecryptionKey: "dGVzdGtleQ=="})
-	req, _ := http.NewRequest("POST", "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/messages/test-message-id/decrypt", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()

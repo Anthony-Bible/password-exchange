@@ -15,7 +15,7 @@ import (
 // happens in exactly one place across every domain.
 type LogEvent = logport.LogEvent
 
-// MessageSubmissionRequest represents a request to share a new encrypted message
+// MessageSubmissionRequest represents a request to share a new encrypted message.
 type MessageSubmissionRequest struct {
 	Content           string
 	IsClientEncrypted bool
@@ -36,7 +36,7 @@ type MessageSubmissionRequest struct {
 	ExpirationHours  int
 }
 
-// MessageSubmissionResponse represents the response to a message submission
+// MessageSubmissionResponse represents the response to a message submission.
 type MessageSubmissionResponse struct {
 	MessageID         string
 	Key               string
@@ -47,14 +47,14 @@ type MessageSubmissionResponse struct {
 	Error             error
 }
 
-// MessageRetrievalRequest represents a request to retrieve and decrypt a message
+// MessageRetrievalRequest represents a request to retrieve and decrypt a message.
 type MessageRetrievalRequest struct {
 	MessageID     string
 	DecryptionKey []byte
 	Passphrase    string
 }
 
-// MessageRetrievalResponse represents the response to a message retrieval
+// MessageRetrievalResponse represents the response to a message retrieval.
 type MessageRetrievalResponse struct {
 	MessageID         string
 	Content           string
@@ -66,7 +66,7 @@ type MessageRetrievalResponse struct {
 	Error             error
 }
 
-// MessageAccessInfo provides information about message access requirements
+// MessageAccessInfo provides information about message access requirements.
 type MessageAccessInfo struct {
 	MessageID          string
 	Exists             bool
@@ -75,7 +75,7 @@ type MessageAccessInfo struct {
 	ExpiresAt          *time.Time
 }
 
-// MessageStorageRequest represents a request to store an encrypted message
+// MessageStorageRequest represents a request to store an encrypted message.
 type MessageStorageRequest struct {
 	MessageID         string
 	Content           string
@@ -86,12 +86,12 @@ type MessageStorageRequest struct {
 	ExpiresAt         *time.Time
 }
 
-// MessageRetrievalStorageRequest represents a request to retrieve a stored message
+// MessageRetrievalStorageRequest represents a request to retrieve a stored message.
 type MessageRetrievalStorageRequest struct {
 	MessageID string
 }
 
-// MessageStorageResponse represents a stored message from storage
+// MessageStorageResponse represents a stored message from storage.
 type MessageStorageResponse struct {
 	MessageID         string
 	EncryptedContent  string
@@ -103,7 +103,7 @@ type MessageStorageResponse struct {
 	ExpiresAt         *time.Time
 }
 
-// MessageNotificationRequest represents a request to send a message notification
+// MessageNotificationRequest represents a request to send a message notification.
 type MessageNotificationRequest struct {
 	SenderName     string
 	SenderEmail    string
@@ -111,6 +111,21 @@ type MessageNotificationRequest struct {
 	RecipientEmail string
 	MessageURL     string
 	AdditionalInfo string
+}
+
+// MessageNotifyRequest represents a request to send the email notification for an existing message.
+// It is submitted by the frontend after the file upload completes so the ShareURL can include the
+// complete fragment (including #fid= and #fk= params when a file is attached).
+type MessageNotifyRequest struct {
+	MessageID      string
+	ShareURL       string // complete URL with all fragments (#key=, #fid=, #fk=)
+	SenderName     string
+	SenderEmail    string
+	RecipientName  string
+	RecipientEmail string
+	AdditionalInfo string
+	TurnstileToken string
+	Captcha        string // anti-spam answer
 }
 
 // FileUploadSession represents an in-progress or completed chunked file upload session.

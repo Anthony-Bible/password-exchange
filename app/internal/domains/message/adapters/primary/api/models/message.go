@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// MessageSubmissionRequest represents a REST API request to submit a new message
+// MessageSubmissionRequest represents a REST API request to submit a new message.
 type MessageSubmissionRequest struct {
 	Content           string `json:"content"                  validate:"required,min=1"`
 	IsClientEncrypted bool   `json:"isClientEncrypted,omitempty"`
@@ -26,19 +26,19 @@ type MessageSubmissionRequest struct {
 	ExpirationHours int `json:"expirationHours,omitempty" validate:"min=0,max=2160"`
 }
 
-// Sender represents sender information for message submission
+// Sender represents sender information for message submission.
 type Sender struct {
 	Name  string `json:"name"  validate:"required,min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
-// Recipient represents recipient information for message submission
+// Recipient represents recipient information for message submission.
 type Recipient struct {
 	Name  string `json:"name"  validate:"min=1,max=100"`
 	Email string `json:"email" validate:"required,email"`
 }
 
-// MessageSubmissionResponse represents the response to a message submission
+// MessageSubmissionResponse represents the response to a message submission.
 type MessageSubmissionResponse struct {
 	MessageID         string `json:"messageId"`
 	DecryptURL        string `json:"decryptUrl"`
@@ -50,7 +50,7 @@ type MessageSubmissionResponse struct {
 	NotificationSent bool       `json:"notificationSent"`
 }
 
-// MessageAccessInfoResponse represents information about message access requirements
+// MessageAccessInfoResponse represents information about message access requirements.
 type MessageAccessInfoResponse struct {
 	MessageID          string `json:"messageId"`
 	Exists             bool   `json:"exists"`
@@ -68,7 +68,7 @@ type MessageDecryptRequest struct {
 	Passphrase    string `json:"passphrase,omitempty"`
 }
 
-// MessageDecryptResponse represents the response to a message decryption
+// MessageDecryptResponse represents the response to a message decryption.
 type MessageDecryptResponse struct {
 	MessageID         string    `json:"messageId"`
 	Content           string    `json:"content"`
@@ -80,7 +80,25 @@ type MessageDecryptResponse struct {
 	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
-// HealthCheckResponse represents the response to a health check
+// MessageNotifyRequest is the REST API body for POST /api/v1/messages/:id/notify.
+// The frontend submits this after uploading any file so that ShareURL already
+// contains the complete #fragment (including #fid= / #fk= file-download params).
+type MessageNotifyRequest struct {
+	ShareURL       string     `json:"shareUrl"        validate:"required"`
+	Sender         *Sender    `json:"sender"          validate:"required"`
+	Recipient      *Recipient `json:"recipient"       validate:"required"`
+	AdditionalInfo string     `json:"additionalInfo,omitempty"`
+	TurnstileToken string     `json:"turnstileToken,omitempty" validate:"max=2048"`
+	AntiSpamAnswer string     `json:"antiSpamAnswer,omitempty"`
+	QuestionID     *int       `json:"questionId,omitempty"`
+}
+
+// MessageNotifyResponse is the REST API response for POST /api/v1/messages/:id/notify.
+type MessageNotifyResponse struct {
+	NotificationSent bool `json:"notificationSent"`
+}
+
+// HealthCheckResponse represents the response to a health check.
 type HealthCheckResponse struct {
 	Status    string            `json:"status"`
 	Version   string            `json:"version"`
@@ -88,7 +106,7 @@ type HealthCheckResponse struct {
 	Services  map[string]string `json:"services"`
 }
 
-// APIInfoResponse represents information about the API
+// APIInfoResponse represents information about the API.
 type APIInfoResponse struct {
 	Version       string            `json:"version"`
 	Documentation string            `json:"documentation"`

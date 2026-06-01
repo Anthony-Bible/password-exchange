@@ -6,7 +6,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/contracts"
 )
 
-// Type aliases to contracts - these define the domain's data contracts
+// Type aliases to contracts - these define the domain's data contracts.
 type (
 	LogEvent                       = contracts.LogEvent
 	MessageSubmissionRequest       = contracts.MessageSubmissionRequest
@@ -18,9 +18,10 @@ type (
 	MessageRetrievalStorageRequest = contracts.MessageRetrievalStorageRequest
 	MessageStorageResponse         = contracts.MessageStorageResponse
 	MessageNotificationRequest     = contracts.MessageNotificationRequest
+	MessageNotifyRequest           = contracts.MessageNotifyRequest
 )
 
-// Default settings for the message domain
+// Default settings for the message domain.
 const (
 	DefaultMessageTTL    = 7 * 24 * time.Hour // 7 days
 	MaxExpirationHours   = 90 * 24            // 90 days
@@ -29,7 +30,7 @@ const (
 	AbsoluteMaxViewCount = 100
 )
 
-// Message represents the core domain entity for an encrypted message
+// Message represents the core domain entity for an encrypted message.
 type Message struct {
 	ID             string
 	Content        string

@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockMessageService is a mock implementation of the message service
+// MockMessageService is a mock implementation of the message service.
 type MockMessageService struct {
 	mock.Mock
 }
@@ -50,6 +50,14 @@ func (m *MockMessageService) RetrieveMessage(
 	return args.Get(0).(*domain.MessageRetrievalResponse), args.Error(1)
 }
 
+func (m *MockMessageService) NotifyMessage(
+	ctx context.Context,
+	req domain.MessageNotifyRequest,
+) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
 func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 	// This test verifies the fix: DisplayDecrypted should NOT call RetrieveMessage
 	// regardless of whether a passphrase is required or not
@@ -77,7 +85,7 @@ func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 
 			// Create a test context directly without routing
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
+			req, _ := http.NewRequest(http.MethodGet, "/decrypt/"+messageID+"/somekey", nil)
 
 			// Create gin engine with mock templates
 			gin.SetMode(gin.TestMode)
@@ -118,7 +126,7 @@ func TestDisplayDecrypted_MessageNotFound(t *testing.T) {
 
 	// Create a test context directly
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/decrypt/"+messageID+"/somekey", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/decrypt/"+messageID+"/somekey", nil)
 
 	// Create gin engine with mock templates
 	gin.SetMode(gin.TestMode)
@@ -243,7 +251,7 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 
 			// Create request
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("POST", "/submit", strings.NewReader(formData.Encode()))
+			req, _ := http.NewRequest(http.MethodPost, "/submit", strings.NewReader(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 			// Create gin engine with mock templates
@@ -306,7 +314,7 @@ func TestHTMLEndpoints_DefaultBrowserBehaviorReturnsHTML(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", tc.path, nil)
+			req, _ := http.NewRequest(http.MethodGet, tc.path, nil)
 			if tc.acceptHeader != "" {
 				req.Header.Set("Accept", tc.acceptHeader)
 			}
@@ -408,7 +416,7 @@ func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", tc.path, nil)
+			req, _ := http.NewRequest(http.MethodGet, tc.path, nil)
 			req.Header.Set("Accept", tc.acceptHeader)
 
 			router.ServeHTTP(w, req)
@@ -518,7 +526,7 @@ func TestDecryptMessage_MarkdownPathReturnsBuilderOutput(t *testing.T) {
 	w := httptest.NewRecorder()
 	form := url.Values{}
 	form.Set("passphrase", "secret")
-	req, _ := http.NewRequest("POST", "/decrypt/abc/Zm9v", strings.NewReader(form.Encode()))
+	req, _ := http.NewRequest(http.MethodPost, "/decrypt/abc/Zm9v", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "text/markdown")
 
@@ -546,7 +554,7 @@ func TestDecryptMessage_MarkdownPathReturnsWrongPassphrase(t *testing.T) {
 	router.POST("/decrypt/:uuid/*key", handler.DecryptMessage)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/decrypt/abc/Zm9v", strings.NewReader(""))
+	req, _ := http.NewRequest(http.MethodPost, "/decrypt/abc/Zm9v", strings.NewReader(""))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "text/markdown")
 
@@ -570,7 +578,7 @@ func TestDisplayDecrypted_MarkdownPathReturnsInstructions(t *testing.T) {
 	router.GET("/decrypt/:uuid/*key", handler.DisplayDecrypted)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/decrypt/abc/Zm9v", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/decrypt/abc/Zm9v", nil)
 	req.Header.Set("Accept", "text/markdown")
 
 	router.ServeHTTP(w, req)
@@ -601,7 +609,7 @@ func TestMarkdownPath_StripsScriptsAndStyles(t *testing.T) {
 	router.GET("/", handler.Home)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Accept", "text/markdown")
 
 	router.ServeHTTP(w, req)
@@ -631,7 +639,7 @@ func TestMarkdownPath_VaryHeaderMergesWithUpstream(t *testing.T) {
 	router.GET("/", handler.Home)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("Accept", "text/markdown")
 
 	router.ServeHTTP(w, req)
@@ -641,7 +649,7 @@ func TestMarkdownPath_VaryHeaderMergesWithUpstream(t *testing.T) {
 	assert.Contains(t, vary, "Accept", "handler must contribute Accept to Vary")
 }
 
-// createMockTemplate creates a simple mock template for testing
+// createMockTemplate creates a simple mock template for testing.
 func createMockTemplate() *template.Template {
 	tmpl := template.New("templates")
 	tmpl, _ = tmpl.New("decryption.html").
