@@ -152,7 +152,10 @@ func setupRouter(
 		v1.GET("/health", middleware.HealthCheckRateLimit(), handler.HealthCheck)
 		v1.GET("/info", middleware.MessageAccessRateLimit(), handler.APIInfo)
 
-		// Documentation endpoints with lenient rate limits
+		// Documentation endpoints — gin-swagger v1.6+ requires a specific filename;
+		// redirect bare /docs and /docs/ to index.html to avoid the 404.
+		v1.GET("/docs", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
+		v1.GET("/docs/", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
 		v1.GET("/docs/*any", middleware.HealthCheckRateLimit(), ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 

@@ -2,6 +2,7 @@ package web
 
 import (
 	"html/template"
+	"net/http"
 	"os"
 
 	_ "github.com/Anthony-Bible/password-exchange/app/docs" // Import generated docs
@@ -161,7 +162,11 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.GET("/health", apiHandler.HealthCheck)
 		v1.GET("/info", apiHandler.APIInfo)
 
-		// Documentation endpoints
+		// Documentation endpoints — gin-swagger v1.6+ requires a specific filename in
+		// the URL (index.html, doc.json, etc.); a bare /docs/ doesn't match its regex
+		// and returns 404, so redirect the root docs URL to index.html.
+		v1.GET("/docs", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
+		v1.GET("/docs/", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
 		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
