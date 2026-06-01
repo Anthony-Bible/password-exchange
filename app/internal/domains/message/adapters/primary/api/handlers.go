@@ -97,14 +97,15 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 
 	// Convert API request to domain request
 	domainReq := domain.MessageSubmissionRequest{
-		Content:          req.Content,
-		Passphrase:       req.Passphrase,
-		AdditionalInfo:   req.AdditionalInfo,
-		Captcha:          req.AntiSpamAnswer,
-		TurnstileToken:   req.TurnstileToken,
-		SendNotification: req.SendNotification,
-		MaxViewCount:     req.MaxViewCount,
-		ExpirationHours:  req.ExpirationHours,
+		Content:           req.Content,
+		IsClientEncrypted: req.IsClientEncrypted,
+		Passphrase:        req.Passphrase,
+		AdditionalInfo:    req.AdditionalInfo,
+		Captcha:           req.AntiSpamAnswer,
+		TurnstileToken:    req.TurnstileToken,
+		SendNotification:  req.SendNotification,
+		MaxViewCount:      req.MaxViewCount,
+		ExpirationHours:   req.ExpirationHours,
 	}
 
 	if req.Sender != nil {
@@ -140,14 +141,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	}
 
 	// Build API response — pass ExpiresAt pointer directly from domain (nil for legacy messages)
-	apiResponse := models.MessageSubmissionResponse{
-		MessageID:        response.MessageID,
-		DecryptURL:       response.DecryptURL,
-		Key:              response.Key,
-		WebURL:           response.DecryptURL, // Same URL works for both
-		ExpiresAt:        response.ExpiresAt,
-		NotificationSent: req.SendNotification && response.Success,
-	}
+	apiResponse := buildSubmissionResponse(response, req.SendNotification)
 
 	logging.Info().
 		Str("messageId", response.MessageID).
@@ -214,6 +208,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 		MessageID:          messageID,
 		Exists:             accessInfo.Exists,
 		RequiresPassphrase: accessInfo.RequiresPassphrase,
+		IsClientEncrypted:  accessInfo.IsClientEncrypted,
 		HasBeenAccessed:    false, // TODO: Add this to domain if needed
 		ExpiresAt:          accessInfo.ExpiresAt,
 	}
@@ -260,8 +255,8 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 		return
 	}
 
-	// Decode the encryption key
-	decryptionKey, err := base64.URLEncoding.DecodeString(req.DecryptionKey)
+	// Decode the encryption key when provided (client-encrypted payloads don't send one).
+	decryptionKey, err := decodeDecryptionKey(req.DecryptionKey)
 	if err != nil {
 		middleware.JSONErrorResponse(
 			c,
@@ -314,12 +309,13 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 
 	// Build API response
 	apiResponse := models.MessageDecryptResponse{
-		MessageID:    messageID,
-		Content:      response.Content,
-		ViewCount:    response.ViewCount,
-		MaxViewCount: response.MaxViewCount,
-		DecryptedAt:  time.Now(),
-		ExpiresAt:    response.ExpiresAt,
+		MessageID:         messageID,
+		Content:           response.Content,
+		IsClientEncrypted: response.IsClientEncrypted,
+		ViewCount:         response.ViewCount,
+		MaxViewCount:      response.MaxViewCount,
+		DecryptedAt:       time.Now(),
+		ExpiresAt:         response.ExpiresAt,
 	}
 
 	logging.Debug().
@@ -491,4 +487,26 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func buildSubmissionResponse(
+	response *domain.MessageSubmissionResponse,
+	sendNotification bool,
+) models.MessageSubmissionResponse {
+	return models.MessageSubmissionResponse{
+		MessageID:         response.MessageID,
+		DecryptURL:        response.DecryptURL,
+		Key:               response.Key,
+		IsClientEncrypted: response.IsClientEncrypted,
+		WebURL:            response.DecryptURL, // Same URL works for both
+		ExpiresAt:         response.ExpiresAt,
+		NotificationSent:  sendNotification && response.Success,
+	}
+}
+
+func decodeDecryptionKey(encoded string) ([]byte, error) {
+	if encoded == "" {
+		return nil, nil
+	}
+	return base64.URLEncoding.DecodeString(encoded)
 }

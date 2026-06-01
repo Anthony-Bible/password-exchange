@@ -18,7 +18,7 @@ import (
 const defaultMessageTTL = 7 * 24 * time.Hour
 
 // selectMessageQuery is the standard SELECT statement used to retrieve a message row.
-const selectMessageQuery = "SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
+const selectMessageQuery = "SELECT message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = ?"
 
 // scanMessageRow scans a single message row into a contracts.Message, handling the nullable expires_at field.
 func scanMessageRow(row *sql.Row) (*contracts.Message, error) {
@@ -27,6 +27,7 @@ func scanMessageRow(row *sql.Row) (*contracts.Message, error) {
 	err := row.Scan(
 		&message.Content,
 		&message.UniqueID,
+		&message.IsClientEncrypted,
 		&message.Passphrase,
 		&message.RecipientEmail,
 		&message.ViewCount,
@@ -122,11 +123,12 @@ func (m *MySQLAdapter) InsertMessage(message *contracts.Message) error {
 	} else {
 		expiresAt = time.Now().Add(defaultMessageTTL)
 	}
-	query := "INSERT INTO messages (message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at) VALUES (?, ?, ?, ?, 0, ?, ?)"
+	query := "INSERT INTO messages (message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?)"
 	_, err := m.db.Exec(
 		query,
 		message.Content,
 		message.UniqueID,
+		message.IsClientEncrypted,
 		message.Passphrase,
 		message.RecipientEmail,
 		message.MaxViewCount,

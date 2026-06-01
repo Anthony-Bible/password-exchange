@@ -102,8 +102,8 @@ func TestMySQLAdapter_InsertMessage_WithRecipientEmail(t *testing.T) {
 	}
 
 	// Expected SQL should store recipient email in other_email field and include expires_at
-	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, 0, \?, \?\)`).
-		WithArgs(message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount, sqlmock.AnyArg()).
+	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, \?, 0, \?, \?\)`).
+		WithArgs(message.Content, message.UniqueID, message.IsClientEncrypted, message.Passphrase, message.RecipientEmail, message.MaxViewCount, sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Act
@@ -138,8 +138,8 @@ func TestMySQLAdapter_InsertMessage_WithCustomExpiresAt(t *testing.T) {
 	}
 
 	// The INSERT should use the exact customExpiry value, not AnyArg()
-	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, 0, \?, \?\)`).
-		WithArgs(message.Content, message.UniqueID, message.Passphrase, message.RecipientEmail, message.MaxViewCount, customExpiry).
+	mock.ExpectExec(`INSERT INTO messages \(message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at\) VALUES \(\?, \?, \?, \?, \?, 0, \?, \?\)`).
+		WithArgs(message.Content, message.UniqueID, message.IsClientEncrypted, message.Passphrase, message.RecipientEmail, message.MaxViewCount, customExpiry).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	// Act
@@ -166,10 +166,10 @@ func TestMySQLAdapter_SelectMessageByUniqueID_WithExpiresAt(t *testing.T) {
 
 	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
 
-	rows := sqlmock.NewRows([]string{"message", "uniqueid", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
-		AddRow("encrypted-content", "test-uuid-123", "test-passphrase", "test@example.com", 0, 3, expectedExpiry)
+	rows := sqlmock.NewRows([]string{"message", "uniqueid", "is_client_encrypted", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
+		AddRow("encrypted-content", "test-uuid-123", false, "test-passphrase", "test@example.com", 0, 3, expectedExpiry)
 
-	mock.ExpectQuery(`SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
+	mock.ExpectQuery(`SELECT message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
 		WithArgs("test-uuid-123").
 		WillReturnRows(rows)
 
@@ -203,10 +203,10 @@ func TestMySQLAdapter_GetMessage_WithExpiresAt(t *testing.T) {
 
 	expectedExpiry := time.Now().Add(7 * 24 * time.Hour).Truncate(time.Second)
 
-	rows := sqlmock.NewRows([]string{"message", "uniqueid", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
-		AddRow("encrypted-content", "test-uuid-123", "", "test@example.com", 0, 5, expectedExpiry)
+	rows := sqlmock.NewRows([]string{"message", "uniqueid", "is_client_encrypted", "other_lastname", "other_email", "view_count", "max_view_count", "expires_at"}).
+		AddRow("encrypted-content", "test-uuid-123", false, "", "test@example.com", 0, 5, expectedExpiry)
 
-	mock.ExpectQuery(`SELECT message, uniqueid, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
+	mock.ExpectQuery(`SELECT message, uniqueid, is_client_encrypted, other_lastname, other_email, view_count, max_view_count, expires_at FROM messages WHERE uniqueid = \?`).
 		WithArgs("test-uuid-123").
 		WillReturnRows(rows)
 

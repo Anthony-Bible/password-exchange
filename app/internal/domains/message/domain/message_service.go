@@ -93,18 +93,9 @@ func (s *MessageService) SubmitMessage(
 	} else {
 		s.logger.Debug().Msg("Skipping Turnstile validation - email notifications disabled")
 	}
-	// Generate encryption key
-	encryptionKey, err := s.encryptionService.GenerateKey(ctx, 32)
+	encryptedString, encryptionKey, err := s.prepareStoredContent(ctx, req)
 	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to generate encryption key")
-		return nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, err)
-	}
-
-	// Encrypt the message content
-	encryptedContent, err := s.encryptionService.Encrypt(ctx, []string{req.Content}, encryptionKey)
-	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to encrypt message content")
-		return nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, err)
+		return nil, err
 	}
 
 	// Generate unique ID
@@ -125,7 +116,7 @@ func (s *MessageService) SubmitMessage(
 	}
 
 	// Build the decryption URL
-	decryptURL := s.urlBuilder.BuildDecryptURL(messageID, encryptionKey)
+	decryptURL := s.buildDecryptURL(messageID, req.IsClientEncrypted, encryptionKey)
 
 	// Determine max view count (use request value or default from config)
 	maxViewCount := req.MaxViewCount
@@ -145,11 +136,12 @@ func (s *MessageService) SubmitMessage(
 
 	// Store the encrypted message
 	storeReq := MessageStorageRequest{
-		MessageID:    messageID,
-		Content:      strings.Join(encryptedContent, ""),
-		Passphrase:   hashedPassphrase,
-		MaxViewCount: maxViewCount,
-		ExpiresAt:    &expiresAt,
+		MessageID:         messageID,
+		Content:           encryptedString,
+		IsClientEncrypted: req.IsClientEncrypted,
+		Passphrase:        hashedPassphrase,
+		MaxViewCount:      maxViewCount,
+		ExpiresAt:         &expiresAt,
 	}
 
 	// Only store recipient email if email notifications are enabled
@@ -196,11 +188,15 @@ func (s *MessageService) SubmitMessage(
 	}
 
 	response := &MessageSubmissionResponse{
-		MessageID:  messageID,
-		DecryptURL: decryptURL,
-		Key:        base64.URLEncoding.EncodeToString(encryptionKey),
-		ExpiresAt:  &expiresAt,
-		Success:    true,
+		MessageID:         messageID,
+		DecryptURL:        decryptURL,
+		Key:               base64.URLEncoding.EncodeToString(encryptionKey),
+		IsClientEncrypted: req.IsClientEncrypted,
+		ExpiresAt:         &expiresAt,
+		Success:           true,
+	}
+	if req.IsClientEncrypted {
+		response.Key = ""
 	}
 
 	s.logger.Info().Str("messageId", messageID).Str("url", decryptURL).Msg("Message submitted successfully")
@@ -245,35 +241,19 @@ func (s *MessageService) RetrieveMessage(
 		return nil, fmt.Errorf("%w: %v", ErrMessageNotFound, err)
 	}
 
-	// Decrypt the message content
-	decryptedContent, err := s.encryptionService.Decrypt(
-		ctx,
-		[]string{storedMessage.EncryptedContent},
-		req.DecryptionKey,
-	)
+	finalContent, err := s.resolveRetrievedContent(ctx, req.MessageID, storedMessage, req.DecryptionKey)
 	if err != nil {
-		s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decrypt message content")
-		return nil, fmt.Errorf("%w: %v", ErrDecryptionFailed, err)
-	}
-
-	// Decode the final content
-	finalContent := ""
-	if len(decryptedContent) > 0 {
-		decodedBytes, err := base64.URLEncoding.DecodeString(decryptedContent[0])
-		if err != nil {
-			s.logger.Error().Err(err).Str("messageId", req.MessageID).Msg("Failed to decode message content")
-			return nil, fmt.Errorf("%w: %v", ErrDecodingFailed, err)
-		}
-		finalContent = string(decodedBytes)
+		return nil, err
 	}
 
 	response := &MessageRetrievalResponse{
-		MessageID:    req.MessageID,
-		Content:      finalContent,
-		ViewCount:    storedMessage.ViewCount,
-		MaxViewCount: storedMessage.MaxViewCount,
-		ExpiresAt:    storedMessage.ExpiresAt,
-		Success:      true,
+		MessageID:         req.MessageID,
+		Content:           finalContent,
+		IsClientEncrypted: storedMessage.IsClientEncrypted,
+		ViewCount:         storedMessage.ViewCount,
+		MaxViewCount:      storedMessage.MaxViewCount,
+		ExpiresAt:         storedMessage.ExpiresAt,
+		Success:           true,
 	}
 
 	s.logger.Debug().
@@ -300,6 +280,7 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 	accessInfo := &MessageAccessInfo{
 		MessageID:          messageID,
 		RequiresPassphrase: storedMessage.HasPassphrase,
+		IsClientEncrypted:  storedMessage.IsClientEncrypted,
 		Exists:             true,
 		ExpiresAt:          storedMessage.ExpiresAt,
 	}
@@ -309,6 +290,73 @@ func (s *MessageService) CheckMessageAccess(ctx context.Context, messageID strin
 		Bool("requiresPassphrase", accessInfo.RequiresPassphrase).
 		Msg("Message access checked")
 	return accessInfo, nil
+}
+
+func (s *MessageService) prepareStoredContent(
+	ctx context.Context,
+	req MessageSubmissionRequest,
+) (string, []byte, error) {
+	if req.IsClientEncrypted {
+		return req.Content, nil, nil
+	}
+
+	encryptionKey, err := s.encryptionService.GenerateKey(ctx, 32)
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to generate encryption key")
+		return "", nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, err)
+	}
+
+	encryptedContent, encryptErr := s.encryptionService.Encrypt(ctx, []string{req.Content}, encryptionKey)
+	if encryptErr != nil {
+		s.logger.Error().Err(encryptErr).Msg("Failed to encrypt message content")
+		return "", nil, fmt.Errorf("%w: %v", ErrEncryptionFailed, encryptErr)
+	}
+
+	return strings.Join(encryptedContent, ""), encryptionKey, nil
+}
+
+func (s *MessageService) buildDecryptURL(messageID string, isClientEncrypted bool, encryptionKey []byte) string {
+	if isClientEncrypted {
+		return s.urlBuilder.BuildE2EDecryptURL(messageID)
+	}
+	return s.urlBuilder.BuildDecryptURL(messageID, encryptionKey)
+}
+
+func (s *MessageService) resolveRetrievedContent(
+	ctx context.Context,
+	messageID string,
+	storedMessage *MessageStorageResponse,
+	decryptionKey []byte,
+) (string, error) {
+	if storedMessage == nil {
+		return "", fmt.Errorf("%w: empty storage response", ErrMessageNotFound)
+	}
+
+	if storedMessage.IsClientEncrypted {
+		return storedMessage.EncryptedContent, nil
+	}
+
+	decryptedContent, decryptErr := s.encryptionService.Decrypt(
+		ctx,
+		[]string{storedMessage.EncryptedContent},
+		decryptionKey,
+	)
+	if decryptErr != nil {
+		s.logger.Error().Err(decryptErr).Str("messageId", messageID).Msg("Failed to decrypt message content")
+		return "", fmt.Errorf("%w: %v", ErrDecryptionFailed, decryptErr)
+	}
+
+	if len(decryptedContent) == 0 {
+		return "", nil
+	}
+
+	decodedBytes, decodeErr := base64.URLEncoding.DecodeString(decryptedContent[0])
+	if decodeErr != nil {
+		s.logger.Error().Err(decodeErr).Str("messageId", messageID).Msg("Failed to decode message content")
+		return "", fmt.Errorf("%w: %v", ErrDecodingFailed, decodeErr)
+	}
+
+	return string(decodedBytes), nil
 }
 
 // validateSubmissionRequest validates the message submission request

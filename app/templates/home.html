@@ -882,11 +882,24 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Build API request payload
             const emailEnabled = emailToggle.checked;
+            const originalContent = document.getElementById('form_message').value.trim();
             const payload = {
-                content: document.getElementById('form_message').value.trim(),
+                content: originalContent,
                 sendNotification: emailEnabled,
                 turnstileToken: turnstileToken
             };
+            let e2eKey = null;
+
+            if (window.E2EEncrypt && window.E2EEncrypt.isSupported && window.E2EEncrypt.isSupported()) {
+                try {
+                    const encrypted = await window.E2EEncrypt.encryptText(originalContent);
+                    payload.content = encrypted.ciphertext;
+                    payload.isClientEncrypted = true;
+                    e2eKey = encrypted.keyBase64Url;
+                } catch (e) {
+                    throw new Error('Client-side encryption failed. Your message was not sent. Please try again or use a different browser.');
+                }
+            }
             
             // Add max view count if provided
             const maxViewCount = document.getElementById('max_view_count').value.trim();
@@ -951,6 +964,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const shareURL = uploadResult
                     ? buildCombinedShareURL(result.webUrl, uploadResult.fileID, uploadResult.encodedKey)
                     : result.webUrl;
+                const finalShareURL = (result.isClientEncrypted && e2eKey)
+                    ? `${shareURL}#key=${encodeURIComponent(e2eKey)}`
+                    : shareURL;
 
                 // Success - show the secure link
                 const successDiv = document.getElementById('success');
@@ -964,7 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p class="mb-3">Share this secure link with the recipient:</p>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control font-monospace"
-                                   value="${shareURL}"
+                                   value="${finalShareURL}"
                                    id="secure-url" readonly>
                             <button class="btn btn-outline-secondary"
                                     type="button" onclick="copyToClipboard()"
@@ -1030,13 +1046,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
         } catch (error) {
-            console.error('Network error:', error);
-            document.querySelector('.messages').innerHTML = `
-                <div class="alert alert-danger" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Network error: Unable to connect to the server. Please try again.
-                </div>
-            `;
+            console.error('Submission error:', error);
+            const displayMessage = error.message || 'Network error: Unable to connect to the server. Please try again.';
+            const errAlert = document.createElement('div');
+            errAlert.className = 'alert alert-danger';
+            errAlert.setAttribute('role', 'alert');
+            errAlert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i> ';
+            errAlert.append(displayMessage);
+            document.querySelector('.messages').replaceChildren(errAlert);
             document.querySelector('.messages').scrollIntoView({ behavior: 'smooth' });
         } finally {
             // Restore button text

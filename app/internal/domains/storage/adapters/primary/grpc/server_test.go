@@ -58,6 +58,8 @@ type stubStorageService struct {
 	retrieveErr error
 	getErr      error
 	healthErr   error
+	lastStored  *contracts.Message
+	selectMsg   *contracts.Message
 
 	// Reminder canned responses / errors.
 	unviewedMessages []*contracts.UnviewedMessage
@@ -84,18 +86,26 @@ type stubStorageService struct {
 	lastCreatedSession *contracts.UploadSession
 }
 
-func (s *stubStorageService) StoreMessage(context.Context, *contracts.Message) error {
+func (s *stubStorageService) StoreMessage(_ context.Context, msg *contracts.Message) error {
+	s.lastStored = &contracts.Message{}
+	*s.lastStored = *msg
 	return s.storeErr
 }
 func (s *stubStorageService) RetrieveMessage(context.Context, string) (*contracts.Message, error) {
 	if s.retrieveErr != nil {
 		return nil, s.retrieveErr
 	}
+	if s.selectMsg != nil {
+		return s.selectMsg, nil
+	}
 	return &contracts.Message{}, nil
 }
 func (s *stubStorageService) GetMessage(context.Context, string) (*contracts.Message, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
+	}
+	if s.selectMsg != nil {
+		return s.selectMsg, nil
 	}
 	return &contracts.Message{}, nil
 }
@@ -538,5 +548,51 @@ func TestDeleteExpiredUploadSessions_ReturnsRemovedSessions(t *testing.T) {
 	}
 	if resp.GetRemovedSessions()[0].GetSessionId() != "expired-1" {
 		t.Errorf("expected session_id=expired-1, got %q", resp.GetRemovedSessions()[0].GetSessionId())
+	}
+}
+
+func TestInsert_MapsClientEncryptedFlagIntoDomainContract(t *testing.T) {
+	t.Parallel()
+
+	svc := &stubStorageService{}
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+
+	req := &database.InsertRequest{
+		Uuid:              "abc-123",
+		Content:           "ciphertext",
+		MaxViewCount:      3,
+		IsClientEncrypted: true,
+	}
+
+	_, err := server.Insert(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Insert returned unexpected error: %v", err)
+	}
+	if svc.lastStored == nil {
+		t.Fatal("expected StoreMessage to be called")
+	}
+	if !svc.lastStored.IsClientEncrypted {
+		t.Fatal("expected IsClientEncrypted=true in stored message contract")
+	}
+}
+
+func TestSelect_MapsClientEncryptedFlagIntoProtoResponse(t *testing.T) {
+	t.Parallel()
+
+	svc := &stubStorageService{
+		selectMsg: &contracts.Message{
+			UniqueID:          "abc-123",
+			Content:           "ciphertext",
+			IsClientEncrypted: true,
+		},
+	}
+
+	server := NewGRPCServer(svc, "127.0.0.1:0", logtest.NewRecorder(), &stubValidator{})
+	resp, err := server.Select(context.Background(), &database.SelectRequest{Uuid: "abc-123"})
+	if err != nil {
+		t.Fatalf("Select returned unexpected error: %v", err)
+	}
+	if !resp.IsClientEncrypted {
+		t.Fatal("expected IsClientEncrypted=true in gRPC response")
 	}
 }

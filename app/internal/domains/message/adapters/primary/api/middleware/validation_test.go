@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
@@ -54,6 +56,35 @@ func TestValidateMessageSubmission(t *testing.T) {
 			request: &models.MessageSubmissionRequest{
 				Content:          string(make([]byte, 10001)), // Exceeds max length
 				SendNotification: false,
+			},
+			expectErrors:   true,
+			expectedFields: []string{"content"},
+		},
+		{
+			name: "valid client encrypted ciphertext",
+			request: &models.MessageSubmissionRequest{
+				Content:           validCiphertextForTest("hello world"),
+				IsClientEncrypted: true,
+				SendNotification:  false,
+			},
+			expectErrors: false,
+		},
+		{
+			name: "client encrypted ciphertext invalid format",
+			request: &models.MessageSubmissionRequest{
+				Content:           "not-a-valid-ciphertext",
+				IsClientEncrypted: true,
+				SendNotification:  false,
+			},
+			expectErrors:   true,
+			expectedFields: []string{"content"},
+		},
+		{
+			name: "client encrypted ciphertext too long",
+			request: &models.MessageSubmissionRequest{
+				Content:           strings.Repeat("a", 20001),
+				IsClientEncrypted: true,
+				SendNotification:  false,
 			},
 			expectErrors:   true,
 			expectedFields: []string{"content"},
@@ -500,4 +531,10 @@ func TestAntiSpamValidation(t *testing.T) {
 // Helper function to create int pointer
 func intPtr(i int) *int {
 	return &i
+}
+
+func validCiphertextForTest(plaintext string) string {
+	iv := base64.RawURLEncoding.EncodeToString([]byte("123456789012"))
+	cipher := base64.RawURLEncoding.EncodeToString([]byte(plaintext))
+	return iv + "." + cipher
 }

@@ -172,6 +172,10 @@
 <script>
 // Parse once — the hash never changes during the page's lifetime.
 const combinedFileParams = extractCombinedFileParams();
+let currentClientKey = '';
+let currentIsClientEncrypted = false;
+let currentMessageID = '';
+let currentLegacyKey = '';
 
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize tooltips
@@ -180,24 +184,20 @@ document.addEventListener('DOMContentLoaded', function() {
         new bootstrap.Tooltip(element);
     });
     
-    // Parse URL to extract messageId and key
-    const pathParts = window.location.pathname.split('/');
-    const messageId = pathParts[pathParts.length - 2]; // Second to last part
-    const key = pathParts[pathParts.length - 1]; // Last part
-    
-    if (!messageId || !key) {
+    const parsed = parseDecryptPath(window.location.pathname);
+    if (!parsed.messageId) {
         showError('Invalid URL format. Please check the link and try again.');
         return;
     }
-
-    // Try to decrypt message directly without passphrase first
-    decryptMessage(messageId, key, '');
+    currentMessageID = parsed.messageId;
+    currentLegacyKey = parsed.key;
+    initializeDecryption(currentMessageID, currentLegacyKey);
     
     // Handle "No Passphrase" button
     const noPassphraseButton = document.getElementById('nopassphrase');
     if (noPassphraseButton) {
         noPassphraseButton.addEventListener('click', function() {
-            decryptMessage(messageId, key, '');
+            decryptMessage(currentMessageID, currentLegacyKey, '');
         });
     }
     
@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (decryptBtn) {
         decryptBtn.addEventListener('click', function() {
             const passphrase = document.getElementById('passphrase').value;
-            decryptMessage(messageId, key, passphrase);
+            decryptMessage(currentMessageID, currentLegacyKey, passphrase);
         });
     }
     
@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
         passphraseField.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 const passphrase = this.value;
-                decryptMessage(messageId, key, passphrase);
+                decryptMessage(currentMessageID, currentLegacyKey, passphrase);
             }
         });
     }
@@ -261,6 +261,68 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // API Functions
 
+function parseDecryptPath(pathname) {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length < 2 || parts[0] !== 'decrypt') {
+        return { messageId: '', key: '' };
+    }
+    return {
+        messageId: parts[1] || '',
+        key: parts.length > 2 ? decodeURIComponent(parts.slice(2).join('/')) : ''
+    };
+}
+
+function getFragmentKey() {
+    const hash = window.location.hash || '';
+    if (!hash.startsWith('#')) return '';
+    const params = new URLSearchParams(hash.slice(1));
+    const key = params.get('key') || '';
+    if (key) {
+        clearFragmentFromURL();
+    }
+    return key;
+}
+
+function clearFragmentFromURL() {
+    if (!window.location.hash || !window.history || typeof window.history.replaceState !== 'function') {
+        return;
+    }
+    window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+}
+
+async function initializeDecryption(messageId, legacyKey) {
+    try {
+        const infoResponse = await fetch(`/api/v1/messages/${messageId}`);
+        if (!infoResponse.ok) {
+            if (infoResponse.status === 404) {
+                showError('Message not found or has expired.');
+                return;
+            }
+            showError('Failed to load message metadata.');
+            return;
+        }
+        const info = await infoResponse.json();
+        currentIsClientEncrypted = !!info.isClientEncrypted;
+        if (currentIsClientEncrypted) {
+            currentClientKey = getFragmentKey();
+            if (!currentClientKey) {
+                showError('Decryption key missing. This link may be incomplete.');
+                return;
+            }
+            decryptMessage(messageId, '', '');
+            return;
+        }
+        if (!legacyKey) {
+            showError('Invalid URL format. Please check the link and try again.');
+            return;
+        }
+        decryptMessage(messageId, legacyKey, '');
+    } catch (error) {
+        console.error('Error loading message metadata:', error);
+        showError('Network error. Please check your connection and try again.');
+    }
+}
+
 async function decryptMessage(messageId, key, passphrase) {
     showDecryptSpinner(true);
     hidePassphraseError();
@@ -272,13 +334,29 @@ async function decryptMessage(messageId, key, passphrase) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                decryptionKey: key,
+                decryptionKey: key || '',
                 passphrase: passphrase || undefined
             })
         });
         
         if (response.ok) {
             const data = await response.json();
+            if (data.isClientEncrypted || currentIsClientEncrypted) {
+                if (!currentClientKey) {
+                    showError('Decryption key missing. This link may be incomplete.');
+                    return;
+                }
+                if (!window.E2EEncrypt || !window.E2EEncrypt.isSupported || !window.E2EEncrypt.isSupported()) {
+                    showError('Decryption failed. The key may be incorrect or the message may be corrupted.');
+                    return;
+                }
+                try {
+                    data.content = await window.E2EEncrypt.decryptText(currentClientKey, data.content);
+                } catch (e) {
+                    showError('Decryption failed. The key may be incorrect or the message may be corrupted.');
+                    return;
+                }
+            }
             handleDecryptionSuccess(data);
         } else if (response.status === 401) {
             // If this is the initial load with empty passphrase, show access form

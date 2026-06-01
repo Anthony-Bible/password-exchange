@@ -92,7 +92,9 @@ func (s *WebServer) SetupRoutes() {
 
 	// Message operations
 	s.router.POST("/", s.messageHandler.SubmitMessage)
+	s.router.GET("/decrypt/:uuid", s.messageHandler.DisplayDecrypted)
 	s.router.GET("/decrypt/:uuid/*key", s.messageHandler.DisplayDecrypted)
+	s.router.POST("/decrypt/:uuid", s.messageHandler.DecryptMessage)
 	s.router.POST("/decrypt/:uuid/*key", s.messageHandler.DecryptMessage)
 
 	// 404 handler

@@ -27,3 +27,10 @@ func (u *URLBuilder) BuildDecryptURL(messageID string, encryptionKey []byte) str
 	logging.Debug().Str("messageId", messageID).Str("url", decryptURL).Msg("Built decrypt URL")
 	return decryptURL
 }
+
+// BuildE2EDecryptURL builds a URL for client-side end-to-end decryption.
+func (u *URLBuilder) BuildE2EDecryptURL(messageID string) string {
+	decryptURL := fmt.Sprintf("%sdecrypt/%s", u.baseURL, messageID)
+	logging.Debug().Str("messageId", messageID).Str("url", decryptURL).Msg("Built E2E decrypt URL")
+	return decryptURL
+}

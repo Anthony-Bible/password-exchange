@@ -100,12 +100,13 @@ func (s *GRPCServer) Insert(ctx context.Context, request *database.InsertRequest
 	}
 
 	message := &contracts.Message{
-		Content:        request.GetContent(),
-		UniqueID:       request.GetUuid(),
-		Passphrase:     request.GetPassphrase(),
-		RecipientEmail: request.GetRecipientEmail(),
-		MaxViewCount:   int(request.GetMaxViewCount()),
-		ExpiresAt:      expiresAt,
+		Content:           request.GetContent(),
+		UniqueID:          request.GetUuid(),
+		IsClientEncrypted: request.GetIsClientEncrypted(),
+		Passphrase:        request.GetPassphrase(),
+		RecipientEmail:    request.GetRecipientEmail(),
+		MaxViewCount:      int(request.GetMaxViewCount()),
+		ExpiresAt:         expiresAt,
 	}
 
 	err = s.storageService.StoreMessage(ctx, message)
@@ -153,11 +154,12 @@ func (s *GRPCServer) Select(ctx context.Context, request *database.SelectRequest
 	}
 
 	response := &database.SelectResponse{
-		Content:      message.Content,
-		Passphrase:   message.Passphrase,
-		ViewCount:    int32(message.ViewCount),
-		MaxViewCount: int32(message.MaxViewCount),
-		ExpiresAt:    formatTime(message.ExpiresAt),
+		Content:           message.Content,
+		Passphrase:        message.Passphrase,
+		ViewCount:         int32(message.ViewCount),
+		MaxViewCount:      int32(message.MaxViewCount),
+		ExpiresAt:         formatTime(message.ExpiresAt),
+		IsClientEncrypted: message.IsClientEncrypted,
 	}
 
 	s.logger.Info().
@@ -182,11 +184,12 @@ func (s *GRPCServer) GetMessage(
 	}
 
 	response := &database.SelectResponse{
-		Content:      message.Content,
-		Passphrase:   message.Passphrase,
-		ViewCount:    int32(message.ViewCount),
-		MaxViewCount: int32(message.MaxViewCount),
-		ExpiresAt:    formatTime(message.ExpiresAt),
+		Content:           message.Content,
+		Passphrase:        message.Passphrase,
+		ViewCount:         int32(message.ViewCount),
+		MaxViewCount:      int32(message.MaxViewCount),
+		ExpiresAt:         formatTime(message.ExpiresAt),
+		IsClientEncrypted: message.IsClientEncrypted,
 	}
 
 	s.logger.Info().
