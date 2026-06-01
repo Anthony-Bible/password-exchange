@@ -1,9 +1,11 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // stubQueue is a fixed-state QueueHealth used by the table tests.
@@ -68,5 +70,46 @@ func TestHealthzRejectsNonGET(t *testing.T) {
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status: got %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestHealthServerStartReturnsListenError(t *testing.T) {
+	t.Parallel()
+
+	srv := NewHealthServer("invalid-addr", stubQueue{alive: true})
+	err := srv.Start(context.Background())
+	if err == nil {
+		t.Fatal("expected listen error, got nil")
+	}
+}
+
+func TestHealthServerStartStopsOnContextCancel(t *testing.T) {
+	srv := NewHealthServer("127.0.0.1:0", stubQueue{alive: true})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Start(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for srv.srv == nil && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if srv.srv == nil {
+		t.Fatal("server did not initialize")
+	}
+
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Start returned error after context cancel: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start did not return after context cancel")
 	}
 }
