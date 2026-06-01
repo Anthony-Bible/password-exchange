@@ -2,8 +2,10 @@ package http
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -81,10 +83,16 @@ func TestHealthServerStartReturnsListenError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected listen error, got nil")
 	}
+	if !strings.Contains(err.Error(), "missing port in address") {
+		t.Fatalf("unexpected listen error: %v", err)
+	}
 }
 
 func TestHealthServerStartStopsOnContextCancel(t *testing.T) {
-	srv := NewHealthServer("127.0.0.1:0", stubQueue{alive: true})
+	t.Parallel()
+
+	addr := mustFreeTCPAddr(t)
+	srv := NewHealthServer(addr, stubQueue{alive: true})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -94,12 +102,18 @@ func TestHealthServerStartStopsOnContextCancel(t *testing.T) {
 		errCh <- srv.Start(ctx)
 	}()
 
-	deadline := time.Now().Add(2 * time.Second)
-	for srv.srv == nil && time.Now().Before(deadline) {
+	deadline := time.Now().Add(1 * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatal("server did not start in time")
+		}
+
+		resp, err := http.Get("http://" + addr + "/healthz")
+		if err == nil {
+			_ = resp.Body.Close()
+			break
+		}
 		time.Sleep(10 * time.Millisecond)
-	}
-	if srv.srv == nil {
-		t.Fatal("server did not initialize")
 	}
 
 	cancel()
@@ -109,7 +123,19 @@ func TestHealthServerStartStopsOnContextCancel(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Start returned error after context cancel: %v", err)
 		}
-	case <-time.After(2 * time.Second):
+	case <-time.After(1 * time.Second):
 		t.Fatal("Start did not return after context cancel")
 	}
+}
+
+func mustFreeTCPAddr(t *testing.T) string {
+	t.Helper()
+
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to allocate test address: %v", err)
+	}
+	defer l.Close()
+
+	return l.Addr().String()
 }
