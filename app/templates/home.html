@@ -961,12 +961,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                const shareURL = uploadResult
-                    ? buildCombinedShareURL(result.webUrl, uploadResult.fileID, uploadResult.encodedKey)
+                // A URL can carry only ONE #fragment, so the E2E key and the file
+                // download params must share it. Building them as separate fragments
+                // (…#key=… plus …#fid=…&fk=…) produces a double-hash URL where neither
+                // the message key nor the file is recoverable. Both values are read back
+                // on the decryption page via URLSearchParams (getFragmentKey +
+                // extractCombinedFileParams), so a single &-joined fragment works for both.
+                const fragmentParts = [];
+                if (result.isClientEncrypted && e2eKey) {
+                    fragmentParts.push(`key=${encodeURIComponent(e2eKey)}`);
+                }
+                if (uploadResult) {
+                    fragmentParts.push(`fid=${encodeURIComponent(uploadResult.fileID)}`);
+                    fragmentParts.push(`fk=${uploadResult.encodedKey}`);
+                }
+                const finalShareURL = fragmentParts.length
+                    ? `${result.webUrl}#${fragmentParts.join('&')}`
                     : result.webUrl;
-                const finalShareURL = (result.isClientEncrypted && e2eKey)
-                    ? `${shareURL}#key=${encodeURIComponent(e2eKey)}`
-                    : shareURL;
 
                 // Success - show the secure link
                 const successDiv = document.getElementById('success');

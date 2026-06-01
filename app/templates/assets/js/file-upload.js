@@ -243,22 +243,10 @@ function buildFileShareURL(fileID, encodedKey, origin) {
 }
 
 /**
- * buildCombinedShareURL appends file params to a message share URL so the
- * recipient can download the attached file from the same link.
- *
- * @param {string} messageWebUrl  The message share URL (e.g. result.webUrl)
- * @param {string} fileID
- * @param {string} encodedKey
- */
-function buildCombinedShareURL(messageWebUrl, fileID, encodedKey) {
-    const u = new URL(messageWebUrl, window.location.origin);
-    u.hash = 'fid=' + encodeURIComponent(fileID) + '&fk=' + encodedKey;
-    return u.toString();
-}
-
-/**
  * extractCombinedFileParams reads the fid/fk params embedded in the current
- * page's URL fragment by buildCombinedShareURL.
+ * page's URL fragment by the message submission flow. The fragment may also
+ * carry an E2E `key` param; both share a single fragment (…#key=…&fid=…&fk=…)
+ * because a URL can only have one fragment.
  *
  * Returns { fileID, encodedKey } or null if either value is absent.
  */
