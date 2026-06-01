@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ const readyzTimeout = 2 * time.Second
 // probe, so it can be a touch more lenient.
 const healthCheckTimeout = 5 * time.Second
 
-// MessageAPIHandler handles REST API requests for message operations
+// MessageAPIHandler handles REST API requests for message operations.
 type MessageAPIHandler struct {
 	messageService    primary.MessageServicePort
 	encryptionService secondary.EncryptionServicePort
@@ -59,7 +60,7 @@ func NewMessageAPIHandler(
 // @Failure 400 {object} models.StandardErrorResponse "Validation error"
 // @Failure 422 {object} models.StandardErrorResponse "Anti-spam verification failed"
 // @Failure 500 {object} models.StandardErrorResponse "Internal server error"
-// @Router /messages [post]
+// @Router /messages [post].
 func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
@@ -163,7 +164,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 // @Success 200 {object} models.MessageAccessInfoResponse "Message information retrieved"
 // @Failure 404 {object} models.StandardErrorResponse "Message not found or expired"
 // @Failure 500 {object} models.StandardErrorResponse "Internal server error"
-// @Router /messages/{id} [get]
+// @Router /messages/{id} [get].
 func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
@@ -230,7 +231,7 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 // @Failure 404 {object} models.StandardErrorResponse "Message not found or expired"
 // @Failure 410 {object} models.StandardErrorResponse "Message already consumed"
 // @Failure 500 {object} models.StandardErrorResponse "Internal server error"
-// @Router /messages/{id}/decrypt [post]
+// @Router /messages/{id}/decrypt [post].
 func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
@@ -286,7 +287,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 			Msg("Failed to retrieve message")
 
 		// Handle specific error types
-		if err == domain.ErrInvalidPassphrase {
+		if errors.Is(err, domain.ErrInvalidPassphrase) {
 			middleware.JSONErrorResponse(
 				c,
 				http.StatusUnauthorized,
@@ -327,6 +328,85 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, apiResponse)
 }
 
+// NotifyMessage handles POST /api/v1/messages/:id/notify
+// @Summary Send deferred email notification for an existing message
+// @Description Sends the email notification for a previously-created message using the caller-supplied ShareURL.
+// @Description Call this after any file upload completes so the URL already contains file-download fragment params.
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Param id path string true "Message ID" format(uuid)
+// @Param request body models.MessageNotifyRequest true "Notify request"
+// @Success 200 {object} models.MessageNotifyResponse "Notification sent"
+// @Failure 400 {object} models.StandardErrorResponse "Validation error"
+// @Failure 404 {object} models.StandardErrorResponse "Message not found"
+// @Failure 500 {object} models.StandardErrorResponse "Internal server error"
+// @Router /messages/{id}/notify [post].
+func (h *MessageAPIHandler) NotifyMessage(c *gin.Context) {
+	ctx := c.Request.Context()
+	messageID := c.Param("id")
+	correlationID, _ := c.Get(middleware.CorrelationIDKey)
+
+	logging.Info().
+		Str("messageId", messageID).
+		Interface("correlation_id", correlationID).
+		Msg("Processing deferred message notification request")
+
+	var req models.MessageNotifyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusBadRequest,
+			models.ErrorCodeValidationFailed,
+			"Invalid request format",
+			map[string]interface{}{"parse_error": err.Error()},
+		)
+		return
+	}
+
+	domainReq := domain.MessageNotifyRequest{
+		MessageID:      messageID,
+		ShareURL:       req.ShareURL,
+		TurnstileToken: req.TurnstileToken,
+		Captcha:        req.AntiSpamAnswer,
+	}
+	if req.Sender != nil {
+		domainReq.SenderName = req.Sender.Name
+		domainReq.SenderEmail = req.Sender.Email
+	}
+	if req.Recipient != nil {
+		domainReq.RecipientName = req.Recipient.Name
+		domainReq.RecipientEmail = req.Recipient.Email
+	}
+
+	remoteIP := c.ClientIP()
+	ctxWithIP := context.WithValue(ctx, "RemoteIP", remoteIP)
+
+	if err := h.messageService.NotifyMessage(ctxWithIP, domainReq); err != nil {
+		logging.Error().
+			Err(err).
+			Str("messageId", messageID).
+			Interface("correlation_id", correlationID).
+			Msg("Failed to send deferred notification")
+
+		middleware.JSONErrorResponse(
+			c,
+			http.StatusInternalServerError,
+			models.ErrorCodeInternalError,
+			"Failed to send notification",
+			nil,
+		)
+		return
+	}
+
+	logging.Info().
+		Str("messageId", messageID).
+		Interface("correlation_id", correlationID).
+		Msg("Deferred notification sent successfully")
+
+	c.JSON(http.StatusOK, models.MessageNotifyResponse{NotificationSent: true})
+}
+
 // HealthCheck handles GET /api/v1/health
 // @Summary Health check
 // @Description Returns the health status of the API and its dependencies
@@ -334,7 +414,7 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.HealthCheckResponse "Service health status"
-// @Router /health [get]
+// @Router /health [get].
 func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
@@ -461,7 +541,7 @@ func (h *MessageAPIHandler) Readyz(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.APIInfoResponse "API information"
-// @Router /info [get]
+// @Router /info [get].
 func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 

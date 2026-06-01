@@ -881,12 +881,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Build API request payload
+            // Notification is always deferred: we submit with sendNotification:false so
+            // we can build the complete finalShareURL (including file-download fragments)
+            // before calling /notify. Turnstile is validated at the notify step instead.
             const emailEnabled = emailToggle.checked;
             const originalContent = document.getElementById('form_message').value.trim();
             const payload = {
                 content: originalContent,
-                sendNotification: emailEnabled,
-                turnstileToken: turnstileToken
+                sendNotification: false
             };
             let e2eKey = null;
 
@@ -900,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('Client-side encryption failed. Your message was not sent. Please try again or use a different browser.');
                 }
             }
-            
+
             // Add max view count if provided
             const maxViewCount = document.getElementById('max_view_count').value.trim();
             if (maxViewCount) {
@@ -919,24 +921,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const passphrase = document.getElementById('other_lastname').value.trim();
             if (passphrase) {
                 payload.passphrase = passphrase;
-            }
-            
-            // Add sender and recipient info if email enabled
-            if (emailEnabled) {
-                payload.sender = {
-                    name: document.getElementById('firstname').value.trim(),
-                    email: document.getElementById('email').value.trim()
-                };
-                payload.recipient = {
-                    name: document.getElementById('other_firstname').value.trim(),
-                    email: document.getElementById('other_email').value.trim()
-                };
-                payload.antiSpamAnswer = document.getElementById('color').value.trim();
-                payload.questionId = parseInt(document.getElementById('question-id').value);
-                // Include the E2E key so the server can embed it in the email link fragment.
-                if (e2eKey) {
-                    payload.e2eKey = e2eKey;
-                }
             }
             
             // Make API call
@@ -983,6 +967,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     ? `${result.webUrl}#${fragmentParts.join('&')}`
                     : result.webUrl;
 
+                // Send deferred notification now that finalShareURL is complete
+                // (includes #fid=…&fk=… when a file was attached).
+                let notificationSent = false;
+                if (emailEnabled) {
+                    try {
+                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending notification…';
+                        const notifyBody = {
+                            shareUrl: finalShareURL,
+                            sender: {
+                                name: document.getElementById('firstname').value.trim(),
+                                email: document.getElementById('email').value.trim()
+                            },
+                            recipient: {
+                                name: document.getElementById('other_firstname').value.trim(),
+                                email: document.getElementById('other_email').value.trim()
+                            },
+                            turnstileToken: turnstileToken,
+                            antiSpamAnswer: document.getElementById('color').value.trim(),
+                            questionId: parseInt(document.getElementById('question-id').value)
+                        };
+                        const notifyResp = await fetch(`/api/v1/messages/${result.messageId}/notify`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(notifyBody)
+                        });
+                        if (notifyResp.ok) {
+                            const notifyResult = await notifyResp.json();
+                            notificationSent = notifyResult.notificationSent;
+                        }
+                    } catch (notifyErr) {
+                        console.warn('Notification send failed:', notifyErr);
+                    }
+                }
+
                 // Success - show the secure link
                 const successDiv = document.getElementById('success');
                 successDiv.innerHTML = `
@@ -1003,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        ${result.notificationSent ?
+                        ${notificationSent ?
                             '<p class="mb-0 text-success"><i class="fas fa-envelope-check me-1"></i>Email notification sent successfully!</p>' :
                             ''}
                         ${result.expiresAt ?

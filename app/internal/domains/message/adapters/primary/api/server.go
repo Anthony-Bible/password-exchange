@@ -17,7 +17,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// Server represents the API server
+// Server represents the API server.
 type Server struct {
 	handler           *MessageAPIHandler
 	fileHandler       *FileAPIHandler
@@ -69,12 +69,12 @@ func newServer(
 	}
 }
 
-// GetRouter returns the configured Gin router
+// GetRouter returns the configured Gin router.
 func (s *Server) GetRouter() *gin.Engine {
 	return s.router
 }
 
-// setupRouter configures the API routes and middleware
+// setupRouter configures the API routes and middleware.
 func setupRouter(
 	handler *MessageAPIHandler,
 	prometheusMetrics *middleware.PrometheusMetrics,
@@ -87,7 +87,7 @@ func setupRouter(
 	// mid-response. gin.Recovery() would otherwise swallow the sentinel and call
 	// AbortWithStatus(500) on an already-committed 200 response.
 	router.Use(gin.CustomRecoveryWithWriter(gin.DefaultErrorWriter, func(c *gin.Context, err any) {
-		if err == http.ErrAbortHandler {
+		if err == http.ErrAbortHandler { //nolint:errorlint // sentinel value identity check, not error chain
 			panic(err)
 		}
 		fmt.Fprintf(gin.DefaultErrorWriter, "panic recovered: %v\n%s\n", err, debug.Stack())
@@ -113,7 +113,7 @@ func setupRouter(
 			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID, X-File-Key",
 		)
 
-		if c.Request.Method == "OPTIONS" {
+		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(204)
 			return
 		}
@@ -139,6 +139,7 @@ func setupRouter(
 			messages.POST("", middleware.MessageSubmissionRateLimit(), handler.SubmitMessage)
 			messages.GET("/:id", middleware.MessageAccessRateLimit(), handler.GetMessageInfo)
 			messages.POST("/:id/decrypt", middleware.MessageDecryptRateLimit(), handler.DecryptMessage)
+			messages.POST("/:id/notify", middleware.MessageSubmissionRateLimit(), handler.NotifyMessage)
 		}
 
 		if fileHandler != nil {

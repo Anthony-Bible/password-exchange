@@ -80,6 +80,7 @@ func (m *mockNotificationService) SendMessageNotification(ctx context.Context, r
 // blockingNotificationService simulates a notification sender that blocks until released.
 type blockingNotificationService struct {
 	mock.Mock
+
 	release chan struct{}
 	called  chan struct{}
 }
@@ -204,8 +205,8 @@ func (m *mockValidation) SanitizeEmailForLogging(email string) string {
 	return args.String(0)
 }
 
-// setupLenientLoggerMock sets up lenient expectations for a logger mock that will match any log calls
-func setupLenientLoggerMock(l *mockLogger) *mockLogEvent {
+// setupLenientLoggerMock sets up lenient expectations for a logger mock that will match any log calls.
+func setupLenientLoggerMock(l *mockLogger) {
 	ev := &mockLogEvent{}
 	l.On("Debug").Return(ev).Maybe()
 	l.On("Info").Return(ev).Maybe()
@@ -219,18 +220,16 @@ func setupLenientLoggerMock(l *mockLogger) *mockLogEvent {
 	ev.On("Dur", mock.Anything, mock.Anything).Return(ev).Maybe()
 	ev.On("Float64", mock.Anything, mock.Anything).Return(ev).Maybe()
 	ev.On("Msg", mock.Anything).Return().Maybe()
-
-	return ev
 }
 
-// setupTestMocks sets up standard expectations for all mocks
+// setupTestMocks sets up standard expectations for all mocks.
 func setupTestMocks(
-	enc *mockEncryptionService,
-	stor *mockStorageService,
-	notif *mockNotificationService,
-	hasher *mockPasswordHasher,
-	urlb *mockURLBuilder,
-	turnstile *mockTurnstileValidator,
+	_ *mockEncryptionService,
+	_ *mockStorageService,
+	_ *mockNotificationService,
+	_ *mockPasswordHasher,
+	_ *mockURLBuilder,
+	_ *mockTurnstileValidator,
 	logger *mockLogger,
 	config *mockConfig,
 	validation *mockValidation,
@@ -371,8 +370,8 @@ func TestSubmitMessage_CustomExpirationHours(t *testing.T) {
 	// ExpiresAt should be approximately 48 hours from now
 	expectedMin := before.Add(48 * time.Hour)
 	expectedMax := after.Add(48 * time.Hour)
-	assert.True(t, !resp.ExpiresAt.Before(expectedMin), "ExpiresAt should be >= 48h from before")
-	assert.True(t, !resp.ExpiresAt.After(expectedMax), "ExpiresAt should be <= 48h from after")
+	assert.False(t, resp.ExpiresAt.Before(expectedMin), "ExpiresAt should be >= 48h from before")
+	assert.False(t, resp.ExpiresAt.After(expectedMax), "ExpiresAt should be <= 48h from after")
 
 	stor.AssertExpectations(t)
 }
@@ -539,7 +538,7 @@ func TestSubmitMessage_ClientEncrypted_UsesE2EURLAndSkipsServerEncryption(t *tes
 
 	resp, err := svc.SubmitMessage(context.Background(), req)
 	assert.NoError(t, err)
-	assert.Equal(t, "", resp.Key, "key must be empty for client-side encrypted messages")
+	assert.Empty(t, resp.Key, "key must be empty for client-side encrypted messages")
 	urlb.AssertCalled(t, "BuildE2EDecryptURL", "msg-client-e2e", "")
 	urlb.AssertNotCalled(t, "BuildDecryptURL", "msg-client-e2e", mock.Anything)
 	enc.AssertNotCalled(t, "GenerateKey", mock.Anything, int32(32))
@@ -574,4 +573,122 @@ func TestRetrieveMessage_ClientEncrypted_ReturnsCiphertextWithoutServerDecrypt(t
 	assert.NoError(t, err)
 	assert.Equal(t, "client-side-ciphertext", resp.Content)
 	enc.AssertNotCalled(t, "Decrypt", mock.Anything, []string{"client-side-ciphertext"}, mock.Anything)
+}
+
+func TestNotifyMessage_Success(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	storageResp := &MessageStorageResponse{MessageID: "msg-notify-1"}
+	stor.On("GetMessage", mock.Anything, MessageRetrievalStorageRequest{MessageID: "msg-notify-1"}).
+		Return(storageResp, nil)
+	turnstile.On("ValidateToken", mock.Anything, "valid-token", "").Return(true, nil)
+	notif.On("SendMessageNotification", mock.Anything, mock.MatchedBy(func(r MessageNotificationRequest) bool {
+		return r.MessageURL == "https://example.com/decrypt/msg-notify-1#key=abc&fid=f1&fk=k1" &&
+			r.RecipientEmail == "recipient@example.com"
+	})).Return(nil)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "msg-notify-1",
+		ShareURL:       "https://example.com/decrypt/msg-notify-1#key=abc&fid=f1&fk=k1",
+		SenderName:     "Alice",
+		SenderEmail:    "alice@example.com",
+		RecipientName:  "Bob",
+		RecipientEmail: "recipient@example.com",
+		TurnstileToken: "valid-token",
+	})
+
+	assert.NoError(t, err)
+	notif.AssertExpectations(t)
+	turnstile.AssertExpectations(t)
+}
+
+func TestNotifyMessage_MissingShareURL(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "msg-notify-2",
+		RecipientEmail: "recipient@example.com",
+		TurnstileToken: "valid-token",
+	})
+
+	assert.ErrorIs(t, err, ErrInvalidMessageRequest)
+	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
+}
+
+func TestNotifyMessage_MissingRecipientEmail(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "msg-notify-3",
+		ShareURL:       "https://example.com/decrypt/msg-notify-3",
+		TurnstileToken: "valid-token",
+	})
+
+	assert.ErrorIs(t, err, ErrInvalidMessageRequest)
+	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
+}
+
+func TestNotifyMessage_MissingTurnstileToken(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "msg-notify-4",
+		ShareURL:       "https://example.com/decrypt/msg-notify-4",
+		RecipientEmail: "recipient@example.com",
+	})
+
+	assert.ErrorIs(t, err, ErrInvalidMessageRequest)
+	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
+}
+
+func TestNotifyMessage_InvalidTurnstileToken(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	turnstile.On("ValidateToken", mock.Anything, "bad-token", "").Return(false, nil)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "msg-notify-5",
+		ShareURL:       "https://example.com/decrypt/msg-notify-5",
+		RecipientEmail: "recipient@example.com",
+		TurnstileToken: "bad-token",
+	})
+
+	assert.ErrorIs(t, err, ErrInvalidMessageRequest)
+	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
+}
+
+func TestNotifyMessage_MessageNotFound(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	turnstile.On("ValidateToken", mock.Anything, "valid-token", "").Return(true, nil)
+	stor.On("GetMessage", mock.Anything, MessageRetrievalStorageRequest{MessageID: "missing-msg"}).
+		Return((*MessageStorageResponse)(nil), ErrMessageNotFound)
+
+	err := svc.NotifyMessage(context.Background(), MessageNotifyRequest{
+		MessageID:      "missing-msg",
+		ShareURL:       "https://example.com/decrypt/missing-msg",
+		RecipientEmail: "recipient@example.com",
+		TurnstileToken: "valid-token",
+	})
+
+	assert.ErrorIs(t, err, ErrMessageNotFound)
+	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
 }
