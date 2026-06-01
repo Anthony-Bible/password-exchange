@@ -163,11 +163,20 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.GET("/info", apiHandler.APIInfo)
 
 		// Documentation endpoints — gin-swagger v1.6+ requires a specific filename in
-		// the URL (index.html, doc.json, etc.); a bare /docs/ doesn't match its regex
-		// and returns 404, so redirect the root docs URL to index.html.
+		// the URL; a bare /docs/ doesn't match its internal regex and returns 404.
+		// /docs (no trailing slash) redirects explicitly. /docs/*any handles everything
+		// else: when any=="/" (bare trailing slash) it also redirects, otherwise it
+		// delegates to ginSwagger. Registering /docs/ as a separate route would panic
+		// because gin disallows a static trailing-slash route alongside a wildcard.
 		v1.GET("/docs", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
-		v1.GET("/docs/", func(c *gin.Context) { c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html") })
-		v1.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)
+		v1.GET("/docs/*any", func(c *gin.Context) {
+			if c.Param("any") == "/" {
+				c.Redirect(http.StatusMovedPermanently, "/api/v1/docs/index.html")
+				return
+			}
+			swaggerHandler(c)
+		})
 	}
 
 	logging.Info().Msg("API routes configured directly on main router")

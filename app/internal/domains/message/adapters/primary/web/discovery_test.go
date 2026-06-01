@@ -69,7 +69,7 @@ func TestSitemapXML(t *testing.T) {
 	assert.Contains(t, body, `xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"`)
 	assert.Contains(t, body, "<loc>http://example.test/</loc>")
 	assert.Contains(t, body, "<loc>http://example.test/about</loc>")
-	assert.Contains(t, body, "<loc>http://example.test/api/v1/docs/</loc>")
+	assert.Contains(t, body, "<loc>http://example.test/api/v1/docs/index.html</loc>")
 	assert.NotContains(t, body, "/decrypt/")
 }
 
@@ -95,7 +95,7 @@ func TestAPICatalog(t *testing.T) {
 	assert.Equal(t, "http://example.test/api/v1/docs/doc.json", entry.ServiceDesc[0].Href)
 	assert.Equal(t, "application/json", entry.ServiceDesc[0].Type)
 	assert.Len(t, entry.ServiceDoc, 1)
-	assert.Equal(t, "http://example.test/api/v1/docs/", entry.ServiceDoc[0].Href)
+	assert.Equal(t, "http://example.test/api/v1/docs/index.html", entry.ServiceDoc[0].Href)
 	assert.Len(t, entry.Status, 1)
 	assert.Equal(t, "http://example.test/api/v1/health", entry.Status[0].Href)
 }
@@ -114,5 +114,5 @@ func TestHome_LinkHeaders(t *testing.T) {
 
 	joined := strings.Join(links, " | ")
 	assert.Contains(t, joined, `</.well-known/api-catalog>; rel="api-catalog"`)
-	assert.Contains(t, joined, `</api/v1/docs/>; rel="service-doc"`)
+	assert.Contains(t, joined, `</api/v1/docs/index.html>; rel="service-doc"`)
 }

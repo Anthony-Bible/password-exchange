@@ -232,7 +232,7 @@ func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 // Static page handlers
 func (h *MessageHandler) Home(c *gin.Context) {
 	c.Writer.Header().Add("Link", `</.well-known/api-catalog>; rel="api-catalog"`)
-	c.Writer.Header().Add("Link", `</api/v1/docs/>; rel="service-doc"`)
+	c.Writer.Header().Add("Link", `</api/v1/docs/index.html>; rel="service-doc"`)
 	data := gin.H{
 		"Title": "Password Exchange",
 	}
