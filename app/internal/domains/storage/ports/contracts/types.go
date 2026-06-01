@@ -14,15 +14,16 @@ import (
 // It is the canonical contract type used by the storage domain, its ports,
 // and any adapters that need to exchange message records.
 type Message struct {
-	ID             int64      `json:"id"`
-	Content        string     `json:"content"`         // Base64 encoded encrypted message
-	UniqueID       string     `json:"unique_id"`       // UUID for message retrieval
-	Passphrase     string     `json:"passphrase"`      // Additional security passphrase
-	RecipientEmail string     `json:"recipient_email"` // Email address of the recipient
-	ViewCount      int        `json:"view_count"`      // Number of times the message has been viewed
-	MaxViewCount   int        `json:"max_view_count"`  // Maximum number of views allowed
-	CreatedAt      time.Time  `json:"created_at"`
-	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
+	ID                int64      `json:"id"`
+	Content           string     `json:"content"`   // Base64 encoded encrypted message
+	UniqueID          string     `json:"unique_id"` // UUID for message retrieval
+	IsClientEncrypted bool       `json:"is_client_encrypted"`
+	Passphrase        string     `json:"passphrase"`      // Additional security passphrase
+	RecipientEmail    string     `json:"recipient_email"` // Email address of the recipient
+	ViewCount         int        `json:"view_count"`      // Number of times the message has been viewed
+	MaxViewCount      int        `json:"max_view_count"`  // Maximum number of views allowed
+	CreatedAt         time.Time  `json:"created_at"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
 }
 
 // UnviewedMessage represents a message that is still unviewed and eligible to

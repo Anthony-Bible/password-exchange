@@ -196,6 +196,39 @@ func TestSubmitMessage_Success(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestSubmitMessage_ClientEncrypted_PassesFlagAndHidesKey(t *testing.T) {
+	mockService := new(MockMessageService)
+	router := setupTestRouter(mockService)
+
+	mockService.On("SubmitMessage", mock.Anything, mock.MatchedBy(func(req domain.MessageSubmissionRequest) bool {
+		return req.IsClientEncrypted
+	})).Return(&domain.MessageSubmissionResponse{
+		MessageID:         "msg-client-e2e",
+		DecryptURL:        "https://example.com/decrypt/msg-client-e2e",
+		Key:               "",
+		IsClientEncrypted: true,
+		Success:           true,
+	}, nil)
+
+	req, _ := http.NewRequest(
+		"POST",
+		"/api/v1/messages",
+		bytes.NewBufferString(`{"content":"MTIzNDU2Nzg5MDEy.Y2lwaGVydGV4dA","isClientEncrypted":true}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "", response["key"], "key must be empty when isClientEncrypted=true")
+	assert.Equal(t, true, response["isClientEncrypted"], "response must include isClientEncrypted=true")
+	mockService.AssertExpectations(t)
+}
+
 func TestSubmitMessage_ValidationError(t *testing.T) {
 	mockService := new(MockMessageService)
 	router := setupTestRouter(mockService)

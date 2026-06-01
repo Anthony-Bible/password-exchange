@@ -20,4 +20,5 @@ type URLBuilderPort interface {
 	// Example:
 	//   https://example.com/decrypt/abc123#key=base64encodedkey
 	BuildDecryptURL(messageID string, encryptionKey []byte) string
+	BuildE2EDecryptURL(messageID string) string
 }

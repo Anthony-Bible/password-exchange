@@ -6,16 +6,17 @@ import (
 
 // MessageSubmissionRequest represents a REST API request to submit a new message
 type MessageSubmissionRequest struct {
-	Content          string     `json:"content"                  validate:"required,min=1,max=10000"`
-	Sender           *Sender    `json:"sender,omitempty"`
-	Recipient        *Recipient `json:"recipient,omitempty"`
-	Passphrase       string     `json:"passphrase,omitempty"     validate:"max=500"`
-	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
-	SendNotification bool       `json:"sendNotification"`
-	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
-	QuestionID       *int       `json:"questionId,omitempty"`
-	MaxViewCount     int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
-	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
+	Content           string     `json:"content"                  validate:"required,min=1"`
+	IsClientEncrypted bool       `json:"isClientEncrypted,omitempty"`
+	Sender            *Sender    `json:"sender,omitempty"`
+	Recipient         *Recipient `json:"recipient,omitempty"`
+	Passphrase        string     `json:"passphrase,omitempty"     validate:"max=500"`
+	AdditionalInfo    string     `json:"additionalInfo,omitempty"`
+	SendNotification  bool       `json:"sendNotification"`
+	AntiSpamAnswer    string     `json:"antiSpamAnswer,omitempty"`
+	QuestionID        *int       `json:"questionId,omitempty"`
+	MaxViewCount      int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
+	TurnstileToken    string     `json:"turnstileToken,omitempty" validate:"max=2048"`
 	// ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.
 	// Valid range: 1–2160 (1 hour to 90 days).
 	ExpirationHours int `json:"expirationHours,omitempty" validate:"min=0,max=2160"`
@@ -35,10 +36,11 @@ type Recipient struct {
 
 // MessageSubmissionResponse represents the response to a message submission
 type MessageSubmissionResponse struct {
-	MessageID  string `json:"messageId"`
-	DecryptURL string `json:"decryptUrl"`
-	Key        string `json:"key"`
-	WebURL     string `json:"webUrl"`
+	MessageID         string `json:"messageId"`
+	DecryptURL        string `json:"decryptUrl"`
+	Key               string `json:"key"`
+	IsClientEncrypted bool   `json:"isClientEncrypted"`
+	WebURL            string `json:"webUrl"`
 	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
 	ExpiresAt        *time.Time `json:"expiresAt"`
 	NotificationSent bool       `json:"notificationSent"`
@@ -49,24 +51,27 @@ type MessageAccessInfoResponse struct {
 	MessageID          string `json:"messageId"`
 	Exists             bool   `json:"exists"`
 	RequiresPassphrase bool   `json:"requiresPassphrase"`
+	IsClientEncrypted  bool   `json:"isClientEncrypted"`
 	HasBeenAccessed    bool   `json:"hasBeenAccessed"`
 	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
 	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
-// MessageDecryptRequest represents a request to decrypt a message
+// MessageDecryptRequest represents a request to decrypt a message.
+// DecryptionKey is empty for client-encrypted (E2E) messages, where decryption happens client-side.
 type MessageDecryptRequest struct {
-	DecryptionKey string `json:"decryptionKey"        validate:"required"`
+	DecryptionKey string `json:"decryptionKey,omitempty" validate:"max=4096"`
 	Passphrase    string `json:"passphrase,omitempty"`
 }
 
 // MessageDecryptResponse represents the response to a message decryption
 type MessageDecryptResponse struct {
-	MessageID    string    `json:"messageId"`
-	Content      string    `json:"content"`
-	ViewCount    int       `json:"viewCount"`
-	MaxViewCount int       `json:"maxViewCount"`
-	DecryptedAt  time.Time `json:"decryptedAt"`
+	MessageID         string    `json:"messageId"`
+	Content           string    `json:"content"`
+	IsClientEncrypted bool      `json:"isClientEncrypted"`
+	ViewCount         int       `json:"viewCount"`
+	MaxViewCount      int       `json:"maxViewCount"`
+	DecryptedAt       time.Time `json:"decryptedAt"`
 	// ExpiresAt is the time the message will expire. Null for legacy messages that predate expiry tracking.
 	ExpiresAt *time.Time `json:"expiresAt"`
 }

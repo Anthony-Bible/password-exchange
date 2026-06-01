@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -14,6 +15,11 @@ import (
 )
 
 var validate *validator.Validate
+
+const (
+	maxPlaintextContentLength        = 10000
+	maxClientCiphertextContentLength = 20000
+)
 
 func init() {
 	validate = validator.New()
@@ -72,6 +78,17 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		}
 	}
 
+	contentLength := len(req.Content)
+	if req.IsClientEncrypted {
+		if contentLength > maxClientCiphertextContentLength {
+			errors["content"] = fmt.Sprintf("Must be no more than %d characters", maxClientCiphertextContentLength)
+		} else if strings.TrimSpace(req.Content) != "" && !isValidClientCiphertext(req.Content) {
+			errors["content"] = "Must be in format: base64url(iv).base64url(ciphertext)"
+		}
+	} else if contentLength > maxPlaintextContentLength {
+		errors["content"] = fmt.Sprintf("Must be no more than %d characters", maxPlaintextContentLength)
+	}
+
 	// Conditional validation for notifications
 	if req.SendNotification {
 		if req.Sender == nil {
@@ -80,6 +97,7 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 			if req.Sender.Name == "" {
 				errors["sender.name"] = "Sender name is required when notifications are enabled"
 			}
+
 			if req.Sender.Email == "" {
 				errors["sender.email"] = "Sender email is required when notifications are enabled"
 			} else if senderErrors := ValidateStruct(req.Sender); senderErrors != nil {
@@ -117,6 +135,24 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 	}
 
 	return errors
+}
+
+func isValidClientCiphertext(content string) bool {
+	parts := strings.Split(content, ".")
+	if len(parts) != 2 {
+		return false
+	}
+
+	if parts[0] == "" || parts[1] == "" {
+		return false
+	}
+
+	for _, part := range parts {
+		if _, err := base64.RawURLEncoding.DecodeString(part); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // RequestTimeoutMiddleware adds request timeout handling

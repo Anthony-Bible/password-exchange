@@ -113,6 +113,11 @@ func (m *mockURLBuilder) BuildDecryptURL(messageID string, encryptionKey []byte)
 	return args.String(0)
 }
 
+func (m *mockURLBuilder) BuildE2EDecryptURL(messageID string) string {
+	args := m.Called(messageID)
+	return args.String(0)
+}
+
 type mockTurnstileValidator struct{ mock.Mock }
 
 func (m *mockTurnstileValidator) ValidateToken(ctx context.Context, token string, remoteIP string) (bool, error) {
@@ -511,4 +516,62 @@ func TestSubmitMessage_DoesNotWaitForNotificationPublish(t *testing.T) {
 	enc.AssertExpectations(t)
 	stor.AssertExpectations(t)
 	notif.AssertExpectations(t)
+}
+
+func TestSubmitMessage_ClientEncrypted_UsesE2EURLAndSkipsServerEncryption(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	req := MessageSubmissionRequest{
+		Content:           "client-side-ciphertext",
+		IsClientEncrypted: true,
+	}
+
+	enc.On("GenerateID", mock.Anything).Return("msg-client-e2e", nil)
+
+	stor.On("StoreMessage", mock.Anything, mock.MatchedBy(func(storeReq MessageStorageRequest) bool {
+		return storeReq.IsClientEncrypted && storeReq.Content == "client-side-ciphertext"
+	})).Return(nil)
+
+	urlb.On("BuildE2EDecryptURL", "msg-client-e2e").Return("https://example.com/decrypt/msg-client-e2e").Maybe()
+
+	resp, err := svc.SubmitMessage(context.Background(), req)
+	assert.NoError(t, err)
+	assert.Equal(t, "", resp.Key, "key must be empty for client-side encrypted messages")
+	urlb.AssertCalled(t, "BuildE2EDecryptURL", "msg-client-e2e")
+	urlb.AssertNotCalled(t, "BuildDecryptURL", "msg-client-e2e", mock.Anything)
+	enc.AssertNotCalled(t, "GenerateKey", mock.Anything, int32(32))
+	enc.AssertNotCalled(t, "Encrypt", mock.Anything, []string{"client-side-ciphertext"}, mock.Anything)
+}
+
+func TestRetrieveMessage_ClientEncrypted_ReturnsCiphertextWithoutServerDecrypt(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	storageResp := &MessageStorageResponse{
+		MessageID:         "msg-client-cipher",
+		EncryptedContent:  "client-side-ciphertext",
+		IsClientEncrypted: true,
+		HasPassphrase:     false,
+		ViewCount:         1,
+		MaxViewCount:      5,
+	}
+
+	stor.On("GetMessage", mock.Anything, MessageRetrievalStorageRequest{MessageID: "msg-client-cipher"}).
+		Return(storageResp, nil)
+	stor.On("RetrieveMessage", mock.Anything, MessageRetrievalStorageRequest{MessageID: "msg-client-cipher"}).
+		Return(storageResp, nil)
+	enc.On("Decrypt", mock.Anything, []string{"client-side-ciphertext"}, mock.Anything).
+		Return([]string{"unexpected-server-decrypt"}, nil)
+
+	resp, err := svc.RetrieveMessage(context.Background(), MessageRetrievalRequest{
+		MessageID: "msg-client-cipher",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "client-side-ciphertext", resp.Content)
+	enc.AssertNotCalled(t, "Decrypt", mock.Anything, []string{"client-side-ciphertext"}, mock.Anything)
 }

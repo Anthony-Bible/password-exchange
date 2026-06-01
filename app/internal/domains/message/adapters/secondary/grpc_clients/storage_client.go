@@ -37,11 +37,12 @@ func NewStorageClient(endpoint string) (*StorageClient, error) {
 // StoreMessage stores an encrypted message
 func (c *StorageClient) StoreMessage(ctx context.Context, req domain.MessageStorageRequest) error {
 	grpcReq := &db.InsertRequest{
-		Uuid:           req.MessageID,
-		Content:        req.Content,
-		Passphrase:     req.Passphrase,
-		MaxViewCount:   int32(req.MaxViewCount),
-		RecipientEmail: req.RecipientEmail,
+		Uuid:              req.MessageID,
+		Content:           req.Content,
+		Passphrase:        req.Passphrase,
+		MaxViewCount:      int32(req.MaxViewCount),
+		RecipientEmail:    req.RecipientEmail,
+		IsClientEncrypted: req.IsClientEncrypted,
 	}
 	if req.ExpiresAt != nil {
 		grpcReq.ExpiresAt = req.ExpiresAt.UTC().Format(time.RFC3339)
@@ -91,13 +92,14 @@ func (c *StorageClient) RetrieveMessage(
 	hasPassphrase := resp.GetPassphrase() != ""
 
 	response := &domain.MessageStorageResponse{
-		MessageID:        req.MessageID,
-		EncryptedContent: resp.GetContent(),
-		HashedPassphrase: resp.GetPassphrase(),
-		HasPassphrase:    hasPassphrase,
-		ViewCount:        int(resp.GetViewCount()),
-		MaxViewCount:     int(resp.GetMaxViewCount()),
-		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
+		MessageID:         req.MessageID,
+		EncryptedContent:  resp.GetContent(),
+		IsClientEncrypted: resp.GetIsClientEncrypted(),
+		HashedPassphrase:  resp.GetPassphrase(),
+		HasPassphrase:     hasPassphrase,
+		ViewCount:         int(resp.GetViewCount()),
+		MaxViewCount:      int(resp.GetMaxViewCount()),
+		ExpiresAt:         parseExpiresAt(resp.GetExpiresAt()),
 	}
 
 	logging.Debug().
@@ -128,13 +130,14 @@ func (c *StorageClient) GetMessage(
 	hasPassphrase := resp.GetPassphrase() != ""
 
 	response := &domain.MessageStorageResponse{
-		MessageID:        req.MessageID,
-		EncryptedContent: resp.GetContent(),
-		HashedPassphrase: resp.GetPassphrase(),
-		HasPassphrase:    hasPassphrase,
-		ViewCount:        int(resp.GetViewCount()),
-		MaxViewCount:     int(resp.GetMaxViewCount()),
-		ExpiresAt:        parseExpiresAt(resp.GetExpiresAt()),
+		MessageID:         req.MessageID,
+		EncryptedContent:  resp.GetContent(),
+		IsClientEncrypted: resp.GetIsClientEncrypted(),
+		HashedPassphrase:  resp.GetPassphrase(),
+		HasPassphrase:     hasPassphrase,
+		ViewCount:         int(resp.GetViewCount()),
+		MaxViewCount:      int(resp.GetMaxViewCount()),
+		ExpiresAt:         parseExpiresAt(resp.GetExpiresAt()),
 	}
 
 	logging.Debug().

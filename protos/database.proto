@@ -15,6 +15,7 @@ message SelectResponse
     int32 view_count = 4;
     int32 max_view_count = 5;
     string expires_at = 6;  // RFC3339 timestamp
+    bool is_client_encrypted = 7;
 }
 message InsertRequest
 {
@@ -24,6 +25,7 @@ message InsertRequest
     int32 max_view_count = 4;
     string recipient_email = 5;
     string expires_at = 6;  // RFC3339 timestamp; empty means use server default TTL
+    bool is_client_encrypted = 7;
 }
 
 message GetUnviewedMessagesRequest {
