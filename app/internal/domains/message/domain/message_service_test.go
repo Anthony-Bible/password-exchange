@@ -113,8 +113,8 @@ func (m *mockURLBuilder) BuildDecryptURL(messageID string, encryptionKey []byte)
 	return args.String(0)
 }
 
-func (m *mockURLBuilder) BuildE2EDecryptURL(messageID string) string {
-	args := m.Called(messageID)
+func (m *mockURLBuilder) BuildE2EDecryptURL(messageID string, e2eKeyBase64Url string) string {
+	args := m.Called(messageID, e2eKeyBase64Url)
 	return args.String(0)
 }
 
@@ -535,12 +535,12 @@ func TestSubmitMessage_ClientEncrypted_UsesE2EURLAndSkipsServerEncryption(t *tes
 		return storeReq.IsClientEncrypted && storeReq.Content == "client-side-ciphertext"
 	})).Return(nil)
 
-	urlb.On("BuildE2EDecryptURL", "msg-client-e2e").Return("https://example.com/decrypt/msg-client-e2e").Maybe()
+	urlb.On("BuildE2EDecryptURL", "msg-client-e2e", "").Return("https://example.com/decrypt/msg-client-e2e").Maybe()
 
 	resp, err := svc.SubmitMessage(context.Background(), req)
 	assert.NoError(t, err)
 	assert.Equal(t, "", resp.Key, "key must be empty for client-side encrypted messages")
-	urlb.AssertCalled(t, "BuildE2EDecryptURL", "msg-client-e2e")
+	urlb.AssertCalled(t, "BuildE2EDecryptURL", "msg-client-e2e", "")
 	urlb.AssertNotCalled(t, "BuildDecryptURL", "msg-client-e2e", mock.Anything)
 	enc.AssertNotCalled(t, "GenerateKey", mock.Anything, int32(32))
 	enc.AssertNotCalled(t, "Encrypt", mock.Anything, []string{"client-side-ciphertext"}, mock.Anything)

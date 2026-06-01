@@ -99,6 +99,7 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 	domainReq := domain.MessageSubmissionRequest{
 		Content:           req.Content,
 		IsClientEncrypted: req.IsClientEncrypted,
+		E2EKey:            req.E2EKey,
 		Passphrase:        req.Passphrase,
 		AdditionalInfo:    req.AdditionalInfo,
 		Captcha:           req.AntiSpamAnswer,

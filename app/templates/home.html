@@ -933,6 +933,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
                 payload.antiSpamAnswer = document.getElementById('color').value.trim();
                 payload.questionId = parseInt(document.getElementById('question-id').value);
+                // Include the E2E key so the server can embed it in the email link fragment.
+                if (e2eKey) {
+                    payload.e2eKey = e2eKey;
+                }
             }
             
             // Make API call
