@@ -20,5 +20,8 @@ type URLBuilderPort interface {
 	// Example:
 	//   https://example.com/decrypt/abc123#key=base64encodedkey
 	BuildDecryptURL(messageID string, encryptionKey []byte) string
-	BuildE2EDecryptURL(messageID string) string
+	// BuildE2EDecryptURL constructs the URL for a client-side encrypted message.
+	// When e2eKeyBase64Url is non-empty the key is appended as a URL fragment
+	// (#key=<e2eKeyBase64Url>) so that email recipients can decrypt the message.
+	BuildE2EDecryptURL(messageID string, e2eKeyBase64Url string) string
 }

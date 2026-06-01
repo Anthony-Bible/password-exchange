@@ -116,7 +116,7 @@ func (s *MessageService) SubmitMessage(
 	}
 
 	// Build the decryption URL
-	decryptURL := s.buildDecryptURL(messageID, req.IsClientEncrypted, encryptionKey)
+	decryptURL := s.buildDecryptURL(messageID, req.IsClientEncrypted, encryptionKey, req.E2EKey)
 
 	// Determine max view count (use request value or default from config)
 	maxViewCount := req.MaxViewCount
@@ -315,9 +315,9 @@ func (s *MessageService) prepareStoredContent(
 	return strings.Join(encryptedContent, ""), encryptionKey, nil
 }
 
-func (s *MessageService) buildDecryptURL(messageID string, isClientEncrypted bool, encryptionKey []byte) string {
+func (s *MessageService) buildDecryptURL(messageID string, isClientEncrypted bool, encryptionKey []byte, e2eKey string) string {
 	if isClientEncrypted {
-		return s.urlBuilder.BuildE2EDecryptURL(messageID)
+		return s.urlBuilder.BuildE2EDecryptURL(messageID, e2eKey)
 	}
 	return s.urlBuilder.BuildDecryptURL(messageID, encryptionKey)
 }

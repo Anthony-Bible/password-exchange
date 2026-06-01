@@ -19,17 +19,21 @@ type LogEvent = logport.LogEvent
 type MessageSubmissionRequest struct {
 	Content           string
 	IsClientEncrypted bool
-	SenderName        string
-	SenderEmail       string
-	RecipientName     string
-	RecipientEmail    string
-	Passphrase        string
-	AdditionalInfo    string
-	Captcha           string
-	TurnstileToken    string
-	SendNotification  bool
-	MaxViewCount      int
-	ExpirationHours   int
+	// E2EKey is the base64url-encoded client-generated AES key for E2E encrypted messages.
+	// When non-empty it is embedded in the email notification URL as #key=<E2EKey> so
+	// that recipients receive a complete, self-contained link. The key is not stored.
+	E2EKey           string
+	SenderName       string
+	SenderEmail      string
+	RecipientName    string
+	RecipientEmail   string
+	Passphrase       string
+	AdditionalInfo   string
+	Captcha          string
+	TurnstileToken   string
+	SendNotification bool
+	MaxViewCount     int
+	ExpirationHours  int
 }
 
 // MessageSubmissionResponse represents the response to a message submission

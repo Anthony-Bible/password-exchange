@@ -6,17 +6,21 @@ import (
 
 // MessageSubmissionRequest represents a REST API request to submit a new message
 type MessageSubmissionRequest struct {
-	Content           string     `json:"content"                  validate:"required,min=1"`
-	IsClientEncrypted bool       `json:"isClientEncrypted,omitempty"`
-	Sender            *Sender    `json:"sender,omitempty"`
-	Recipient         *Recipient `json:"recipient,omitempty"`
-	Passphrase        string     `json:"passphrase,omitempty"     validate:"max=500"`
-	AdditionalInfo    string     `json:"additionalInfo,omitempty"`
-	SendNotification  bool       `json:"sendNotification"`
-	AntiSpamAnswer    string     `json:"antiSpamAnswer,omitempty"`
-	QuestionID        *int       `json:"questionId,omitempty"`
-	MaxViewCount      int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
-	TurnstileToken    string     `json:"turnstileToken,omitempty" validate:"max=2048"`
+	Content           string `json:"content"                  validate:"required,min=1"`
+	IsClientEncrypted bool   `json:"isClientEncrypted,omitempty"`
+	// E2EKey is the base64url-encoded client-generated AES key for E2E encrypted messages.
+	// Required when isClientEncrypted is true and sendNotification is true so the
+	// email link includes the #key fragment. Not stored server-side.
+	E2EKey           string     `json:"e2eKey,omitempty"         validate:"max=512"`
+	Sender           *Sender    `json:"sender,omitempty"`
+	Recipient        *Recipient `json:"recipient,omitempty"`
+	Passphrase       string     `json:"passphrase,omitempty"     validate:"max=500"`
+	AdditionalInfo   string     `json:"additionalInfo,omitempty"`
+	SendNotification bool       `json:"sendNotification"`
+	AntiSpamAnswer   string     `json:"antiSpamAnswer,omitempty"`
+	QuestionID       *int       `json:"questionId,omitempty"`
+	MaxViewCount     int        `json:"maxViewCount,omitempty"   validate:"min=0,max=100"`
+	TurnstileToken   string     `json:"turnstileToken,omitempty" validate:"max=2048"`
 	// ExpirationHours specifies a custom expiration in hours. When 0 or omitted, the server default (7 days / 168 hours) applies.
 	// Valid range: 1–2160 (1 hour to 90 days).
 	ExpirationHours int `json:"expirationHours,omitempty" validate:"min=0,max=2160"`

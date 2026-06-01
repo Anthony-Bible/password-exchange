@@ -29,8 +29,13 @@ func (u *URLBuilder) BuildDecryptURL(messageID string, encryptionKey []byte) str
 }
 
 // BuildE2EDecryptURL builds a URL for client-side end-to-end decryption.
-func (u *URLBuilder) BuildE2EDecryptURL(messageID string) string {
+// When e2eKeyBase64Url is non-empty it is appended as #key=<e2eKeyBase64Url>
+// so that email recipients receive a complete, self-contained link.
+func (u *URLBuilder) BuildE2EDecryptURL(messageID string, e2eKeyBase64Url string) string {
 	decryptURL := fmt.Sprintf("%sdecrypt/%s", u.baseURL, messageID)
+	if e2eKeyBase64Url != "" {
+		decryptURL = fmt.Sprintf("%s#key=%s", decryptURL, e2eKeyBase64Url)
+	}
 	logging.Debug().Str("messageId", messageID).Str("url", decryptURL).Msg("Built E2E decrypt URL")
 	return decryptURL
 }
