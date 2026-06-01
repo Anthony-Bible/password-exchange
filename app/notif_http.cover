@@ -1,0 +1,13 @@
+mode: set
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:33.68,38.2 1 1
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:43.47,47.2 3 1
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:51.72,52.34 1 1
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:52.34,56.3 3 1
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:57.2,58.30 2 1
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:64.57,73.12 3 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:73.12,74.89 1 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:74.89,77.4 2 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:78.3,78.15 1 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:81.2,81.9 1 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:82.20,86.13 4 0
+github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/primary/http/health.go:87.22,88.13 1 0
