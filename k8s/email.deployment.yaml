@@ -2,9 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: email 
+    app: email
   name: email-%{PHASE}-deployment
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   replicas: 2
   selector:

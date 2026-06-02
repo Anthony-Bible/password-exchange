@@ -5,6 +5,8 @@ metadata:
     app: database
   name: database-%{PHASE}-deployment
   namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   replicas: 2
   selector:
