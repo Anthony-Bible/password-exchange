@@ -39,16 +39,16 @@ test.describe('Submit secure password form', () => {
   test('shows optional security fields on load', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('textbox', { name: 'Passphrase (Optional)' })).toBeVisible();
-    await expect(page.getByRole('spinbutton', { name: 'Max View Count (Optional)' })).toBeVisible();
-    await expect(page.getByRole('spinbutton', { name: 'Expiration (Optional)' })).toBeVisible();
+    await expect(page.locator('#other_lastname')).toBeVisible();
+    await expect(page.locator('#max_view_count')).toBeVisible();
+    await expect(page.locator('#expiration_value')).toBeVisible();
   });
 
   test('submits form with passphrase and custom view count', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('textbox', { name: 'Passphrase (Optional)' }).fill('mypassphrase');
-    await page.getByRole('spinbutton', { name: 'Max View Count (Optional)' }).fill('3');
+    await page.locator('#other_lastname').fill('mypassphrase');
+    await page.locator('#max_view_count').fill('3');
     await page.getByRole('textbox', { name: 'Password or Secret Message *' }).fill('SecretWithOptions!');
 
     await page.getByRole('button', { name: ' Create Secure Link' }).click();

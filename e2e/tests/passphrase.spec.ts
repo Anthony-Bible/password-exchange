@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function createMessage(page: any, secret: string, passphrase?: string): Promise<string> {
   await page.goto('/');
   if (passphrase !== undefined) {
-    await page.getByRole('textbox', { name: 'Passphrase (Optional)' }).fill(passphrase);
+    await page.locator('#other_lastname').fill(passphrase);
   }
   await page.getByRole('textbox', { name: 'Password or Secret Message *' }).fill(secret);
   await page.getByRole('button', { name: ' Create Secure Link' }).click();
