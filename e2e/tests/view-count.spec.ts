@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function createMessage(page: any, secret: string, maxViewCount?: number): Promise<string> {
   await page.goto('/');
   if (maxViewCount !== undefined) {
-    await page.getByRole('spinbutton', { name: 'Max View Count (Optional)' }).fill(String(maxViewCount));
+    await page.locator('#max_view_count').fill(String(maxViewCount));
   }
   await page.getByRole('textbox', { name: 'Password or Secret Message *' }).fill(secret);
   await page.getByRole('button', { name: ' Create Secure Link' }).click();
