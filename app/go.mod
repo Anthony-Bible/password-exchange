@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/Anthony-Bible/Logging v0.0.0-20260525150021-f765f71559a8
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
+	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-kit/kit v0.13.0
 	github.com/go-playground/validator/v10 v10.26.0
@@ -88,7 +88,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
