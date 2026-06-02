@@ -14,6 +14,9 @@ export default defineConfig({
     launchOptions: {
       slowMo: parseInt(process.env.SLOWMO || '0'),
     },
+    ...(process.env.E2E_BYPASS_HEADER_NAME && process.env.E2E_BYPASS_HEADER_VALUE
+      ? { extraHTTPHeaders: { [process.env.E2E_BYPASS_HEADER_NAME]: process.env.E2E_BYPASS_HEADER_VALUE } }
+      : {}),
   },
   projects: [
     {
