@@ -16,7 +16,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// WebServer handles HTTP requests for the message service
+// WebServer handles HTTP requests for the message service.
 type WebServer struct {
 	messageHandler    *MessageHandler
 	messageService    primary.MessageServicePort
@@ -71,7 +71,7 @@ func (s *WebServer) WithFileHandler(fileHandler *api.FileAPIHandler) *WebServer 
 	return s
 }
 
-// SetupRoutes configures the HTTP routes
+// SetupRoutes configures the HTTP routes.
 func (s *WebServer) SetupRoutes() {
 	// Setup API routes directly on the main router
 	s.setupAPIRoutes()
@@ -104,7 +104,7 @@ func (s *WebServer) SetupRoutes() {
 	logging.Info().Msg("Web routes and API routes configured")
 }
 
-// setupAPIRoutes adds API routes to the main router
+// setupAPIRoutes adds API routes to the main router.
 func (s *WebServer) setupAPIRoutes() {
 	// Create API handler directly with the message service plus the two
 	// secondary ports that /readyz needs to probe.
@@ -132,7 +132,7 @@ func (s *WebServer) setupAPIRoutes() {
 			"Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Correlation-ID, X-File-Key",
 		)
 
-		if c.Request.Method == "OPTIONS" {
+		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(204)
 			return
 		}
@@ -150,6 +150,7 @@ func (s *WebServer) setupAPIRoutes() {
 		v1.POST("/messages", apiHandler.SubmitMessage)
 		v1.GET("/messages/:id", apiHandler.GetMessageInfo)
 		v1.POST("/messages/:id/decrypt", apiHandler.DecryptMessage)
+		v1.POST("/messages/:id/notify", middleware.MessageSubmissionRateLimit(), apiHandler.NotifyMessage)
 
 		if s.fileHandler != nil {
 			files := v1.Group("/files")
@@ -182,7 +183,7 @@ func (s *WebServer) setupAPIRoutes() {
 	logging.Info().Msg("API routes configured directly on main router")
 }
 
-// Start starts the web server
+// Start starts the web server.
 func (s *WebServer) Start() error {
 	s.SetupRoutes()
 
@@ -190,7 +191,7 @@ func (s *WebServer) Start() error {
 	return s.router.Run() // Default port :8080
 }
 
-// GetRouter returns the Gin router for testing
+// GetRouter returns the Gin router for testing.
 func (s *WebServer) GetRouter() *gin.Engine {
 	return s.router
 }
