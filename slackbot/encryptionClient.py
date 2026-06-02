@@ -27,7 +27,7 @@ class EncryptionServiceClient(object):
             None.
         """
         self.channel = grpc.insecure_channel(f'{SERVER_ADDRESS}:{PORT}')
-        self.stub = encryption_pb2_grpc.messageServiceStub(self.channel)
+        self.stub = encryption_pb2_grpc.MessageServiceStub(self.channel)
     def generate_random_strng(self, length):
         """Generates a cryptographically random string from the given length
 
