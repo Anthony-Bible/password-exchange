@@ -18,6 +18,16 @@ spec:
           env:
             - name: BASE_URL
               value: "%{BASE_URL}"
+            - name: E2E_BYPASS_HEADER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: test-secret
+                  key: E2E_BYPASS_HEADER_NAME
+            - name: E2E_BYPASS_HEADER_VALUE
+              valueFrom:
+                secretKeyRef:
+                  name: test-secret
+                  key: E2E_BYPASS_HEADER_VALUE
           resources:
             requests:
               memory: "512Mi"
