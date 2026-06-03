@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+async function waitForBootstrap(page: any): Promise<void> {
+  await page.waitForFunction(() => typeof (window as any).bootstrap !== 'undefined');
+}
+
 async function createMessage(page: any, secret: string, passphrase?: string): Promise<string> {
   await page.goto('/');
+  await waitForBootstrap(page);
   if (passphrase !== undefined) {
     await page.locator('#other_lastname').fill(passphrase);
   }
@@ -23,6 +28,7 @@ test.describe('Passphrase flow', () => {
     const shareUrl = await createMessage(page, 'PassphraseSecret2', 'correctpassphrase');
     await page.goto(shareUrl);
     await expect(page.locator('#access-form')).toBeVisible({ timeout: 10000 });
+    await waitForBootstrap(page);
     await page.locator('[data-bs-target="#loginModal"]').click();
     await expect(page.locator('#loginModal')).toBeVisible();
     await page.locator('#passphrase').fill('wrongpassphrase');
@@ -36,6 +42,7 @@ test.describe('Passphrase flow', () => {
     const shareUrl = await createMessage(page, secret, passphrase);
     await page.goto(shareUrl);
     await expect(page.locator('#access-form')).toBeVisible({ timeout: 10000 });
+    await waitForBootstrap(page);
     await page.locator('[data-bs-target="#loginModal"]').click();
     await expect(page.locator('#loginModal')).toBeVisible();
     await page.locator('#passphrase').fill(passphrase);

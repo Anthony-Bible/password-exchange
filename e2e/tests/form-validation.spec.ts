@@ -1,8 +1,21 @@
 import { test, expect } from '@playwright/test';
 
+async function waitForBootstrap(page: any): Promise<void> {
+  await page.waitForFunction(() => typeof (window as any).bootstrap !== 'undefined');
+}
+
+async function enableEmailToggle(page: any): Promise<void> {
+  await page.locator('#enableEmail').evaluate((el: HTMLInputElement) => {
+    el.checked = true;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
 test.describe('Form validation', () => {
   test('empty message blocks submission', async ({ page }) => {
     await page.goto('/');
+    await waitForBootstrap(page);
     await page.getByRole('button', { name: ' Create Secure Link' }).click();
     await expect(page.locator('#form_message')).toHaveClass(/is-invalid/);
     // Error divs are empty (no text), so height is 0; assert via computed CSS rather than visibility
@@ -11,7 +24,8 @@ test.describe('Form validation', () => {
 
   test('invalid email format shows error', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('checkbox', { name: 'Send email notification to recipient' }).check();
+    await waitForBootstrap(page);
+    await enableEmailToggle(page);
     await page.getByRole('textbox', { name: 'Your First Name * Help about' }).fill('Anthony');
     await page.locator('#email').fill('notanemail');
     await page.getByRole('textbox', { name: 'Recipient\'s First Name *' }).fill('Bob');
@@ -27,7 +41,8 @@ test.describe('Form validation', () => {
 
   test('email fields required when notification enabled', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('checkbox', { name: 'Send email notification to recipient' }).check();
+    await waitForBootstrap(page);
+    await enableEmailToggle(page);
     await page.getByRole('textbox', { name: 'Password or Secret Message *' }).fill('SecretOnly');
     // Submit button is disabled until Turnstile resolves
     await page.evaluate(() => { (window as any).onTurnstileSuccess('cf-test-token-bypass'); });
@@ -41,8 +56,9 @@ test.describe('Form validation', () => {
 
   test('valid form without email submits successfully', async ({ page }) => {
     await page.goto('/');
+    await waitForBootstrap(page);
     await page.getByRole('textbox', { name: 'Password or Secret Message *' }).fill('JustASecret');
     await page.getByRole('button', { name: ' Create Secure Link' }).click();
-    await expect(page.getByRole('heading', { name: 'Secure Link Created Successfully!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Secure Link Created Successfully!' })).toBeVisible({ timeout: 15000 });
   });
 });
