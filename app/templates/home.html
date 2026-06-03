@@ -401,7 +401,7 @@
             <div class="row">
                 <div class="col-12">
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-success btn-lg" id="submit-button" disabled>
+                        <button type="submit" class="btn btn-success btn-lg" id="submit-button">
                             <i class="fas fa-lock me-2"></i>
                             Create Secure Link
                         </button>
@@ -744,11 +744,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const turnstileSection = document.getElementById('turnstile-section');
     const emailDependentElements = [senderSection, recipientSection, verificationSection, turnstileSection];
     
-    // Initialize tooltips
-    const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipElements.forEach(element => {
-        new bootstrap.Tooltip(element);
-    });
+    // Initialize tooltips (Bootstrap may not be available if CDN is unreachable)
+    try {
+        const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipElements.forEach(element => {
+            new bootstrap.Tooltip(element);
+        });
+    } catch (e) {
+        console.warn('Bootstrap tooltip init failed:', e);
+    }
     
     // Handle email toggle
     function updateEmailDependentFields() {
