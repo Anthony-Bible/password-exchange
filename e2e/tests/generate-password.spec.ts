@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+async function waitForBootstrap(page: any): Promise<void> {
+  await page.waitForFunction(() => typeof (window as any).bootstrap !== 'undefined');
+}
+
 async function openModalAndGenerate(page: any): Promise<void> {
+  await waitForBootstrap(page);
   await page.locator('button[data-bs-target="#passwordGeneratorModal"]').click();
   await expect(page.locator('#passwordGeneratorModal')).toBeVisible();
   // The generated-password section is hidden until the user clicks "Generate Password"
@@ -28,6 +33,7 @@ test.describe('Generate password modal', () => {
 
   test('generated password length matches slider value', async ({ page }) => {
     await page.goto('/');
+    await waitForBootstrap(page);
     await page.locator('button[data-bs-target="#passwordGeneratorModal"]').click();
     await expect(page.locator('#passwordGeneratorModal')).toBeVisible();
     // Set slider to 20 before generating
@@ -36,6 +42,7 @@ test.describe('Generate password modal', () => {
       el.dispatchEvent(new Event('input', { bubbles: true }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
     });
+    await expect(page.locator('#modalLengthValue')).toHaveText('20');
     await page.locator('#modal-generate-password').click();
     await expect(page.locator('#generated-password-section')).toBeVisible();
     const generated = await page.locator('#generated-password').inputValue();
