@@ -1,7 +1,20 @@
 import { test, expect } from '@playwright/test';
 
 async function waitForBootstrap(page: any): Promise<void> {
-  await page.waitForFunction(() => typeof (window as any).bootstrap !== 'undefined');
+  page.on('response', (r: any) => {
+    if (r.url().includes('bootstrap')) console.log('[BST]', r.status(), r.url());
+  });
+  page.on('requestfailed', (r: any) => {
+    if (r.url().includes('bootstrap')) console.error('[BST FAIL]', r.url(), r.failure()?.errorText);
+  });
+  await page.waitForFunction(() => {
+    console.log('[BST CHECK] bootstrap type:', typeof (window as any).bootstrap);
+    return typeof (window as any).bootstrap !== 'undefined';
+  }).catch(async (e: any) => {
+    const title = await page.title();
+    console.error('[BST TIMEOUT] page title was:', title);
+    throw e;
+  });
 }
 
 async function openModalAndGenerate(page: any): Promise<void> {
