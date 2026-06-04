@@ -119,7 +119,8 @@ func TestIntegration_ReminderPipeline_EndToEnd(t *testing.T) {
 	reminderCfg := notificationDomain.ReminderConfig{Enabled: true, CheckAfterHours: 24, MaxReminders: 3, Interval: 24}
 
 	// First run: eligible message reminded, too-recent skipped.
-	require.NoError(t, svc.ProcessReminders(context.Background(), reminderCfg))
+	_, err := svc.ProcessReminders(context.Background(), reminderCfg)
+	require.NoError(t, err)
 
 	recipients := publisher.recipients()
 	assert.True(t, recipients["wanted@example.com"], "eligible recipient should receive a reminder")
@@ -143,18 +144,20 @@ func TestIntegration_ReminderPipeline_IncrementsOnSecondRun(t *testing.T) {
 	svc, _ := newPipeline(dbCfg)
 	reminderCfg := notificationDomain.ReminderConfig{Enabled: true, CheckAfterHours: 24, MaxReminders: 3, Interval: 1}
 
-	require.NoError(t, svc.ProcessReminders(context.Background(), reminderCfg))
+	_, err := svc.ProcessReminders(context.Background(), reminderCfg)
+	require.NoError(t, err)
 	count, _ := reminderRow(t, db, "pipeline-repeat")
 	require.Equal(t, 1, count)
 
 	// Age the existing reminder so the interval has elapsed for the second run.
-	_, err := db.Exec(`UPDATE email_reminders er
+	_, err = db.Exec(`UPDATE email_reminders er
 		JOIN messages m ON m.messageid = er.message_id
 		SET er.last_reminder_sent = NOW() - INTERVAL 5 HOUR
 		WHERE m.uniqueid = ?`, "pipeline-repeat")
 	require.NoError(t, err)
 
-	require.NoError(t, svc.ProcessReminders(context.Background(), reminderCfg))
+	_, err = svc.ProcessReminders(context.Background(), reminderCfg)
+	require.NoError(t, err)
 	count, _ = reminderRow(t, db, "pipeline-repeat")
 	assert.Equal(t, 2, count, "second eligible run should increment the reminder count")
 }

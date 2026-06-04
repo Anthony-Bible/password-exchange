@@ -2,8 +2,9 @@ package primary
 
 import (
 	"context"
-	
+
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/batch"
 )
 
 // NotificationServicePort defines the primary port for notification operations
@@ -20,8 +21,10 @@ type NotificationServicePort interface {
 
 // ReminderServicePort defines the primary port for reminder operations
 type ReminderServicePort interface {
-	// ProcessReminders finds and processes messages eligible for reminder emails
-	ProcessReminders(ctx context.Context, config domain.ReminderConfig) error
+	// ProcessReminders finds and processes messages eligible for reminder emails.
+	// Returns a BatchResult describing per-item outcomes plus a top-level error
+	// for fail-fast conditions (validation, fetch failure, total failure).
+	ProcessReminders(ctx context.Context, config domain.ReminderConfig) (*batch.BatchResult, error)
 	
 	// ProcessMessageReminder sends a reminder email for a specific message
 	ProcessMessageReminder(ctx context.Context, req domain.ReminderRequest) error

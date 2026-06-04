@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/batch"
 )
 
 // NotificationService provides notification operations
@@ -175,7 +176,7 @@ func (s *NotificationService) validateNotificationRequest(req NotificationReques
 }
 
 // ProcessReminders finds and processes messages eligible for reminder emails
-func (s *NotificationService) ProcessReminders(ctx context.Context, config ReminderConfig) error {
+func (s *NotificationService) ProcessReminders(ctx context.Context, config ReminderConfig) (*batch.BatchResult, error) {
 	return s.reminderService.ProcessReminders(ctx, config)
 }
 
