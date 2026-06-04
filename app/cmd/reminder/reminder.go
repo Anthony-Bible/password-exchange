@@ -190,7 +190,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 				Err(err).
 				Int("processedCount", result.SuccessCount).
 				Int("errorCount", result.FailureCount).
-				Bool("operationalFailures", result.HasOperationalFailures()).
+				Bool("infraFailures", result.HasInfraFailures()).
 				Str("operation", "process_reminders").
 				Msg("Failed to process reminders")
 			return

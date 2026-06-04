@@ -910,8 +910,8 @@ func TestProcessReminders_OperationalError_RetriesAndRecords(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, 1, result.FailureCount)
 	assert.Len(t, result.Errors, 1)
-	assert.True(t, result.HasOperationalFailures(),
-		"persistent retryable publisher failure should surface as an operational batch failure")
+	assert.True(t, result.HasInfraFailures(),
+		"persistent retryable publisher failure should surface as an infra batch failure")
 	// Publisher should have been invoked MaxRetries times (full retry exhaustion).
 	mockNotificationPublisher.AssertNumberOfCalls(t, "PublishNotification", MaxRetries)
 	// Silence unused-import warning if errors pkg is otherwise unused.

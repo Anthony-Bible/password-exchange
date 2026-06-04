@@ -8,23 +8,15 @@ import (
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
-	"github.com/Anthony-Bible/password-exchange/app/internal/shared/batch"
-	sherr "github.com/Anthony-Bible/password-exchange/app/internal/shared/errors"
 )
 
 // Error constants for reminder processing
 var (
-	ErrInvalidCheckAfterHours = sherr.WithCategory(
-		errors.New("checkAfterHours must be between 1 and 8760 hours"), sherr.CategoryBusiness)
-	ErrInvalidMaxReminders = sherr.WithCategory(
-		errors.New("maxReminders must be between 1 and 10"), sherr.CategoryBusiness)
-	ErrInvalidReminderInterval = sherr.WithCategory(
-		errors.New("reminderInterval must be between 1 and 720 hours"), sherr.CategoryBusiness)
-	// ErrCircuitBreakerOpen is operational: the breaker will close again once
-	// downstream recovers, and retrying the same item is pointless until then.
-	ErrCircuitBreakerOpen = sherr.WithCategory(
-		errors.New("circuit breaker is open"), sherr.CategoryOperational)
-	ErrMaxRetriesExceeded = errors.New("maximum retries exceeded")
+	ErrInvalidCheckAfterHours  = errors.New("checkAfterHours must be between 1 and 8760 hours")
+	ErrInvalidMaxReminders     = errors.New("maxReminders must be between 1 and 10")
+	ErrInvalidReminderInterval = errors.New("reminderInterval must be between 1 and 720 hours")
+	ErrCircuitBreakerOpen      = errors.New("circuit breaker is open")
+	ErrMaxRetriesExceeded      = errors.New("maximum retries exceeded")
 )
 
 // Validation constants for reminder configuration
@@ -114,8 +106,8 @@ func NewReminderService(
 // top-level error (config validation, fetch failure). When at least one
 // message was processed successfully the error is nil even if other items
 // failed — callers inspect the BatchResult to report partial success.
-func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig ReminderConfig) (*batch.BatchResult, error) {
-	result := batch.NewBatchResult()
+func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig ReminderConfig) (*BatchResult, error) {
+	result := NewBatchResult()
 
 	// Check context cancellation early
 	if err := ctx.Err(); err != nil {
@@ -195,7 +187,6 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 				Int("messageID", message.MessageID).
 				Str("email", message.RecipientEmail).
 				Int("daysOld", message.DaysOld).
-				Str("category", sherr.CategoryOf(err).String()).
 				Str("operation", "process_reminder").
 				Msg("Failed to process reminder for message after all retry attempts")
 			continue // Continue processing other messages
@@ -358,14 +349,13 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 
 		lastErr = err
 
-		// Fail fast on non-retryable errors (Business/Fatal/Unknown). The
-		// circuit breaker only tracks transient infrastructure problems, so
-		// don't penalize it for a user-supplied invalid input.
-		if !sherr.IsRetryable(err) && sherr.CategoryOf(err) != sherr.CategoryUnknown {
+		// Fail fast on validation / missing-config errors. Retrying them is
+		// guaranteed to keep failing, and we don't want to trip the circuit
+		// breaker on user-supplied invalid input.
+		if !isRetryable(err) {
 			r.logger.Debug().
 				Err(err).
 				Str("operation", operationName).
-				Str("category", sherr.CategoryOf(err).String()).
 				Msg("Operation failed with non-retryable error; skipping retry")
 			return err
 		}
