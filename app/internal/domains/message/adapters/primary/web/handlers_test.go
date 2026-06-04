@@ -58,6 +58,149 @@ func (m *MockMessageService) NotifyMessage(
 	return args.Error(0)
 }
 
+func (m *MockMessageService) GetDefaultMaxViewCount() int {
+	args := m.Called()
+	return args.Int(0)
+}
+
+// TestHome_PassesDefaultMaxViewCountToTemplate verifies that the Home handler
+// includes the DefaultMaxViewCount value from the service in the template data
+// so the placeholder is dynamic rather than hardcoded.
+func TestHome_PassesDefaultMaxViewCountToTemplate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("GetDefaultMaxViewCount").Return(7)
+
+	// Use a template that explicitly renders DefaultMaxViewCount so we can assert
+	// the value is present in the output.
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("home.html").Parse(
+		`<html><body><span id="default-view-count">{{.DefaultMaxViewCount}}</span></body></html>`,
+	)
+
+	router := gin.New()
+	router.SetHTMLTemplate(tmpl)
+	router.GET("/", handler.Home)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "7",
+		"Home handler must pass DefaultMaxViewCount from service into template data")
+	mockService.AssertCalled(t, "GetDefaultMaxViewCount")
+	mockService.AssertExpectations(t)
+}
+
+// TestHome_ErrorPath_PassesDefaultMaxViewCountToTemplate verifies that
+// renderError (called on SubmitMessage failure) also includes DefaultMaxViewCount
+// in the data map so the home template re-render after an error stays dynamic.
+func TestHome_ErrorPath_PassesDefaultMaxViewCountToTemplate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("GetDefaultMaxViewCount").Return(3)
+	mockService.On("SubmitMessage", mock.Anything, mock.Anything).
+		Return((*domain.MessageSubmissionResponse)(nil), domain.ErrInvalidMessageRequest)
+
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("home.html").Parse(
+		`<html><body><span id="default-view-count">{{.DefaultMaxViewCount}}</span></body></html>`,
+	)
+
+	router := gin.New()
+	router.SetHTMLTemplate(tmpl)
+	router.POST("/submit", handler.SubmitMessage)
+
+	formData := url.Values{}
+	formData.Set("content", "test message")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/submit", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	router.ServeHTTP(w, req)
+
+	assert.Contains(t, w.Body.String(), "3",
+		"renderError must pass DefaultMaxViewCount from service into home.html template data")
+	mockService.AssertCalled(t, "GetDefaultMaxViewCount")
+	mockService.AssertExpectations(t)
+}
+
+// TestHome_ValidationErrorPath_PassesDefaultMaxViewCountToTemplate verifies
+// that renderErrorWithField (called on form validation failure) includes
+// DefaultMaxViewCount so the home template re-render stays dynamic.
+func TestHome_ValidationErrorPath_PassesDefaultMaxViewCountToTemplate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("GetDefaultMaxViewCount").Return(10)
+
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("home.html").Parse(
+		`<html><body><span id="default-view-count">{{.DefaultMaxViewCount}}</span></body></html>`,
+	)
+
+	engine := gin.New()
+	engine.SetHTMLTemplate(tmpl)
+
+	// Submit a non-numeric max_view_count to trigger renderErrorWithField
+	formData := url.Values{}
+	formData.Set("content", "test message")
+	formData.Set("max_view_count", "not-a-number")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/submit", strings.NewReader(formData.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	c := gin.CreateTestContextOnly(w, engine)
+	c.Request = req
+
+	handler.SubmitMessage(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "10",
+		"renderErrorWithField must pass DefaultMaxViewCount from service into home.html template data")
+	mockService.AssertCalled(t, "GetDefaultMaxViewCount")
+	mockService.AssertExpectations(t)
+}
+
+// TestConfirmation_PassesDefaultMaxViewCountToTemplate verifies that the
+// Confirmation handler includes DefaultMaxViewCount in template data so any
+// hardcoded view count references in confirmation.html can be made dynamic.
+func TestConfirmation_PassesDefaultMaxViewCountToTemplate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockMessageService)
+	handler := NewMessageHandler(mockService)
+
+	mockService.On("GetDefaultMaxViewCount").Return(5)
+
+	tmpl := template.New("templates")
+	tmpl, _ = tmpl.New("confirmation.html").Parse(
+		`<html><body><span id="default-view-count">{{.DefaultMaxViewCount}}</span></body></html>`,
+	)
+
+	router := gin.New()
+	router.SetHTMLTemplate(tmpl)
+	router.GET("/confirmation", handler.Confirmation)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/confirmation?content=https://password.exchange/test", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "5",
+		"Confirmation handler must pass DefaultMaxViewCount from service into template data")
+	mockService.AssertCalled(t, "GetDefaultMaxViewCount")
+	mockService.AssertExpectations(t)
+}
+
 func TestDisplayDecrypted_ShouldNotCallRetrieveMessage(t *testing.T) {
 	// This test verifies the fix: DisplayDecrypted should NOT call RetrieveMessage
 	// regardless of whether a passphrase is required or not
