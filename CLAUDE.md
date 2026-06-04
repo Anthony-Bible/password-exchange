@@ -147,8 +147,26 @@ protoc --proto_path=protos \
 - `config/`: Viper-based config loading
 - `logging/`: Slog logger setup
 - `validation/`: Input validation utilities
+- `errors/`: Error categorization primitives (`Category`, `WithCategory`, `CategoryOf`, `IsRetryable`)
+- `batch/`: `BatchResult` for reporting partial success/failure across items
 
 `app/pkg/clients/` contains the email notification client (separate from gRPC secondary adapters in domain layer).
+
+### Error Handling Patterns
+
+The shared `errors` package defines three categories that propagate through standard `fmt.Errorf %w` chains via `errors.As`:
+- `CategoryFatal`: misconfiguration / missing dependency — do not retry
+- `CategoryOperational`: transient infra (network, queue, SMTP) — retryable
+- `CategoryBusiness`: validation / domain rule — do not retry, not a system failure
+
+Categorize domain sentinels at declaration so retry helpers and callers share one vocabulary:
+```go
+ErrEmailSendFailed = sherr.WithCategory(
+    errors.New("failed to send email"), sherr.CategoryOperational)
+```
+`WithCategory` implements `Unwrap` so existing `errors.Is` checks keep working. Always wrap with `%w` (not `%v`) so the category survives the chain.
+
+For batch operations, use `batch.BatchResult` (`RecordSuccess` / `RecordFailure` / `HasOperationalFailures`) instead of ad-hoc counters. The reminder pipeline (`internal/domains/notification/domain/reminder_service.go::ProcessReminders`) is the reference implementation. Retry loops should gate on `sherr.IsRetryable(err)` to fail fast on Business/Fatal errors.
 
 ## Hexagonal Architecture Patterns
 
