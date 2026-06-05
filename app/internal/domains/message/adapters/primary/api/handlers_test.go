@@ -14,6 +14,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/buildinfo"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -348,7 +349,7 @@ func TestHealthCheck(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Equal(t, "healthy", response.Status)
-	assert.Equal(t, "1.0.0", response.Version)
+	assert.Equal(t, buildinfo.Version, response.Version)
 	assert.Equal(t, "healthy", response.Services["database"])
 	assert.Equal(t, "healthy", response.Services["encryption"])
 	assert.NotContains(t, response.Services, "email")
@@ -462,7 +463,7 @@ func TestAPIInfo(t *testing.T) {
 	var response models.APIInfoResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, "1.0.0", response.Version)
+	assert.Equal(t, buildinfo.Version, response.Version)
 	assert.Contains(t, response.Endpoints, "submit")
 	assert.Contains(t, response.Endpoints, "access")
 	assert.Contains(t, response.Endpoints, "decrypt")

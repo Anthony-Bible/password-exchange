@@ -38,7 +38,8 @@ echo "Protobuf generation successful!"
 echo "Testing Go build..."
 cd app
 go mod tidy
-go build -o app
+VERSION=$(git describe --tags --always 2>/dev/null || echo dev)
+go build -ldflags "-X github.com/Anthony-Bible/password-exchange/app/internal/shared/buildinfo.Version=${VERSION}" -o app
 if [ $? -eq 0 ]; then
   echo "Go build successful!"
 else

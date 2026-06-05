@@ -18,8 +18,10 @@ RUN go mod download
 # Copy the source code
 COPY app/ ./
 
+ARG VERSION=dev
+
 # Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -o app
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags "-X github.com/Anthony-Bible/password-exchange/app/internal/shared/buildinfo.Version=${VERSION}" -o app
 
 # Final stage
 FROM ubuntu:24.04
