@@ -13,6 +13,7 @@ import (
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/primary"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/ports/secondary"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/buildinfo"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/gin-gonic/gin"
 )
@@ -473,7 +474,7 @@ func (h *MessageAPIHandler) HealthCheck(c *gin.Context) {
 
 	response := models.HealthCheckResponse{
 		Status:    overall,
-		Version:   "1.0.0", // TODO: Get from build info
+		Version:   buildinfo.Version,
 		Timestamp: time.Now(),
 		Services:  services,
 	}
@@ -550,7 +551,7 @@ func (h *MessageAPIHandler) APIInfo(c *gin.Context) {
 		Msg("API info requested")
 
 	response := models.APIInfoResponse{
-		Version:       "1.0.0",
+		Version:       buildinfo.Version,
 		Documentation: "/api/v1/docs", // TODO: Implement swagger docs
 		Endpoints: map[string]string{
 			"submit":  "POST /api/v1/messages",
