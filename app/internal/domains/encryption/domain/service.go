@@ -38,13 +38,13 @@ func (s *EncryptionService) Encrypt(ctx context.Context, req contracts.Encryptio
 	block, err := aes.NewCipher(req.Key)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create AES cipher")
-		return nil, fmt.Errorf("%w: %v", ErrCipherCreationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrCipherCreationFailed, err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create GCM")
-		return nil, fmt.Errorf("%w: %v", ErrGCMCreationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrGCMCreationFailed, err)
 	}
 
 	response := &contracts.EncryptionResponse{
@@ -55,7 +55,7 @@ func (s *EncryptionService) Encrypt(ctx context.Context, req contracts.Encryptio
 		nonce := make([]byte, gcm.NonceSize())
 		if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 			s.logger.Error().Err(err).Msg("Failed to generate nonce")
-			return nil, fmt.Errorf("%w: %v", ErrInsufficientRandomness, err)
+			return nil, fmt.Errorf("%w: %w", ErrInsufficientRandomness, err)
 		}
 
 		ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
@@ -77,13 +77,13 @@ func (s *EncryptionService) Decrypt(ctx context.Context, req contracts.Decryptio
 	block, err := aes.NewCipher(req.Key)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create AES cipher")
-		return nil, fmt.Errorf("%w: %v", ErrCipherCreationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrCipherCreationFailed, err)
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Failed to create GCM")
-		return nil, fmt.Errorf("%w: %v", ErrGCMCreationFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrGCMCreationFailed, err)
 	}
 
 	response := &contracts.DecryptionResponse{
@@ -94,7 +94,7 @@ func (s *EncryptionService) Decrypt(ctx context.Context, req contracts.Decryptio
 		ciphertext, err := base64.URLEncoding.DecodeString(encodedCiphertext)
 		if err != nil {
 			s.logger.Error().Err(err).Str("ciphertext", encodedCiphertext).Msg("Failed to decode base64 ciphertext")
-			return nil, fmt.Errorf("%w: %v", ErrBase64DecodingFailed, err)
+			return nil, fmt.Errorf("%w: %w", ErrBase64DecodingFailed, err)
 		}
 
 		if len(ciphertext) < gcm.NonceSize() {
@@ -108,7 +108,7 @@ func (s *EncryptionService) Decrypt(ctx context.Context, req contracts.Decryptio
 		plaintext, err := gcm.Open(nil, nonce, encryptedData, nil)
 		if err != nil {
 			s.logger.Error().Err(err).Msg("Failed to decrypt message")
-			return nil, fmt.Errorf("%w: %v", ErrDecryptionFailed, err)
+			return nil, fmt.Errorf("%w: %w", ErrDecryptionFailed, err)
 		}
 
 		encodedPlaintext := base64.URLEncoding.EncodeToString(plaintext)
