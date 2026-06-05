@@ -234,7 +234,8 @@ func (h *MessageHandler) Home(c *gin.Context) {
 	c.Writer.Header().Add("Link", `</.well-known/api-catalog>; rel="api-catalog"`)
 	c.Writer.Header().Add("Link", `</api/v1/docs/index.html>; rel="service-doc"`)
 	data := gin.H{
-		"Title": "Password Exchange",
+		"Title":               "Password Exchange",
+		"DefaultMaxViewCount": h.messageService.GetDefaultMaxViewCount(),
 	}
 	h.renderHTMLOrMarkdown(c, http.StatusOK, "home.html", data, nil)
 }
@@ -249,8 +250,9 @@ func (h *MessageHandler) About(c *gin.Context) {
 func (h *MessageHandler) Confirmation(c *gin.Context) {
 	content := c.Query("content")
 	data := gin.H{
-		"Title": "passwordExchange",
-		"Url":   content,
+		"Title":               "passwordExchange",
+		"Url":                 content,
+		"DefaultMaxViewCount": h.messageService.GetDefaultMaxViewCount(),
 	}
 	h.renderHTMLOrMarkdown(c, http.StatusOK, "confirmation.html", data, nil)
 }
@@ -274,8 +276,9 @@ func (h *MessageHandler) renderError(c *gin.Context, message string, err error) 
 	logging.Error().Err(err).Str("message", message).Msg("Rendering error page")
 
 	data := gin.H{
-		"Title":  "Error - Password Exchange",
-		"Errors": map[string]string{"general": message},
+		"Title":               "Error - Password Exchange",
+		"Errors":              map[string]string{"general": message},
+		"DefaultMaxViewCount": h.messageService.GetDefaultMaxViewCount(),
 	}
 
 	h.renderHTMLOrMarkdown(c, http.StatusInternalServerError, "home.html", data, nil)
@@ -285,8 +288,9 @@ func (h *MessageHandler) renderErrorWithField(c *gin.Context, message string, fi
 	logging.Error().Str("message", message).Str("field", field).Msg("Rendering validation error page")
 
 	data := gin.H{
-		"Title":  "Password Exchange",
-		"Errors": map[string]string{field: message},
+		"Title":               "Password Exchange",
+		"Errors":              map[string]string{field: message},
+		"DefaultMaxViewCount": h.messageService.GetDefaultMaxViewCount(),
 	}
 
 	h.renderHTMLOrMarkdown(c, http.StatusBadRequest, "home.html", data, nil)

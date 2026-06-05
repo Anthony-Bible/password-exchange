@@ -58,6 +58,11 @@ func (m *MockMessageService) NotifyMessage(
 	return args.Error(0)
 }
 
+func (m *MockMessageService) GetDefaultMaxViewCount() int {
+	args := m.Called()
+	return args.Int(0)
+}
+
 // healthCheckFn is a tiny test-only function-typed implementation of the
 // HealthCheck contract for both secondary ports. Tests inject a closure that
 // returns the desired error/timing behaviour without standing up a full mock.

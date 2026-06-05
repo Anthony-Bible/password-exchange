@@ -672,6 +672,53 @@ func TestNotifyMessage_InvalidTurnstileToken(t *testing.T) {
 	notif.AssertNotCalled(t, "SendMessageNotification", mock.Anything, mock.Anything)
 }
 
+// TestGetDefaultMaxViewCount_ReturnsConfigValue verifies that the service
+// delegates to the config port and returns whatever value it provides.
+func TestGetDefaultMaxViewCount_ReturnsConfigValue(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupLenientLoggerMock(logger)
+	validation.On("SanitizeEmailForLogging", mock.Anything).Return("sanitized-email@example.com").Maybe()
+	config.On("GetDefaultMaxViewCount").Return(12)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	got := svc.GetDefaultMaxViewCount()
+	assert.Equal(t, 12, got, "GetDefaultMaxViewCount must return the value from the config port")
+	config.AssertCalled(t, "GetDefaultMaxViewCount")
+}
+
+// TestGetDefaultMaxViewCount_FallsBackToConstantWhenConfigReturnsZero verifies
+// that when the config port returns a non-positive value the service falls back
+// to the DefaultMaxViewCount domain constant (5) rather than propagating an
+// invalid zero or negative value to callers.
+func TestGetDefaultMaxViewCount_FallsBackToConstantWhenConfigReturnsZero(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupLenientLoggerMock(logger)
+	validation.On("SanitizeEmailForLogging", mock.Anything).Return("sanitized-email@example.com").Maybe()
+	config.On("GetDefaultMaxViewCount").Return(0)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	got := svc.GetDefaultMaxViewCount()
+	assert.Equal(t, DefaultMaxViewCount, got,
+		"GetDefaultMaxViewCount must fall back to DefaultMaxViewCount constant when config returns 0")
+}
+
+// TestGetDefaultMaxViewCount_FallsBackToConstantWhenConfigReturnsNegative
+// is the negative-input variant of the fallback contract.
+func TestGetDefaultMaxViewCount_FallsBackToConstantWhenConfigReturnsNegative(t *testing.T) {
+	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
+	setupLenientLoggerMock(logger)
+	validation.On("SanitizeEmailForLogging", mock.Anything).Return("sanitized-email@example.com").Maybe()
+	config.On("GetDefaultMaxViewCount").Return(-3)
+
+	svc := NewMessageService(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)
+
+	got := svc.GetDefaultMaxViewCount()
+	assert.Equal(t, DefaultMaxViewCount, got,
+		"GetDefaultMaxViewCount must fall back to DefaultMaxViewCount constant when config returns a negative value")
+}
+
 func TestNotifyMessage_MessageNotFound(t *testing.T) {
 	enc, stor, notif, hasher, urlb, turnstile, logger, config, validation := createTestMocks()
 	setupTestMocks(enc, stor, notif, hasher, urlb, turnstile, logger, config, validation)

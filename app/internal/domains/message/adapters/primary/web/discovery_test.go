@@ -14,6 +14,7 @@ import (
 func newDiscoveryEngine() (*gin.Engine, *MessageHandler) {
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockMessageService)
+	mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
 	handler := NewMessageHandler(mockService)
 	engine := gin.New()
 	engine.SetHTMLTemplate(createMockTemplate())

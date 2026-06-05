@@ -425,6 +425,14 @@ func (s *MessageService) NotifyMessage(ctx context.Context, req MessageNotifyReq
 	return nil
 }
 
+// GetDefaultMaxViewCount returns the configured default maximum view count for new messages.
+func (s *MessageService) GetDefaultMaxViewCount() int {
+	if v := s.config.GetDefaultMaxViewCount(); v > 0 {
+		return v
+	}
+	return DefaultMaxViewCount
+}
+
 // validateSubmissionRequest validates the message submission request.
 func (s *MessageService) validateSubmissionRequest(req MessageSubmissionRequest) error {
 	if strings.TrimSpace(req.Content) == "" {

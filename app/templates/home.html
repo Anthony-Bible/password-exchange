@@ -148,12 +148,12 @@
                                    type="number" 
                                    name="max_view_count" 
                                    class="form-control" 
-                                   placeholder="5"
+                                   placeholder="{{.DefaultMaxViewCount}}"
                                    min="1"
                                    max="100"
                                    aria-describedby="maxViewCountHelp maxViewCountError">
                             <div id="maxViewCountHelp" class="form-text">
-                                Leave empty to use default (5 views)
+                                Leave empty to use default ({{.DefaultMaxViewCount}} views)
                             </div>
                             <div id="maxViewCountError" class="invalid-feedback"></div>
                         </div>
