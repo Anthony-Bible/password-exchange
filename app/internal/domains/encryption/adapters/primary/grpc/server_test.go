@@ -6,13 +6,16 @@ import (
 	"net"
 	"testing"
 
+	encryptiondomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging/logtest"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -164,4 +167,67 @@ func TestGenerateRandomString_Error(t *testing.T) {
 
 	_, err := client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 16})
 	assert.Error(t, err)
+}
+
+func TestRPCs_MapDomainErrorsToStatus(t *testing.T) {
+	cases := []struct {
+		name      string
+		domainErr error
+		wantCode  codes.Code
+	}{
+		{"InvalidKeyLength", encryptiondomain.ErrInvalidKeyLength, codes.InvalidArgument},
+		{"InvalidCiphertext", encryptiondomain.ErrInvalidCiphertext, codes.InvalidArgument},
+		{"Base64DecodingFailed", encryptiondomain.ErrBase64DecodingFailed, codes.InvalidArgument},
+		{"InsufficientRandomness", encryptiondomain.ErrInsufficientRandomness, codes.Internal},
+		{"CipherCreationFailed", encryptiondomain.ErrCipherCreationFailed, codes.Internal},
+		{"GCMCreationFailed", encryptiondomain.ErrGCMCreationFailed, codes.Internal},
+		{"EncryptionFailed", encryptiondomain.ErrEncryptionFailed, codes.Internal},
+		{"DecryptionFailed", encryptiondomain.ErrDecryptionFailed, codes.Internal},
+	}
+
+	rpcs := []struct {
+		name string
+		call func(client pb.MessageServiceClient, svc *stubService, e error) error
+	}{
+		{
+			name: "EncryptMessage",
+			call: func(client pb.MessageServiceClient, svc *stubService, e error) error {
+				svc.encryptErr = e
+				_, err := client.EncryptMessage(context.Background(), &pb.EncryptedMessageRequest{PlainText: []string{"x"}})
+				return err
+			},
+		},
+		{
+			name: "DecryptMessage",
+			call: func(client pb.MessageServiceClient, svc *stubService, e error) error {
+				svc.decryptErr = e
+				_, err := client.DecryptMessage(context.Background(), &pb.DecryptedMessageRequest{Ciphertext: []string{"x"}})
+				return err
+			},
+		},
+		{
+			name: "GenerateRandomString",
+			call: func(client pb.MessageServiceClient, svc *stubService, e error) error {
+				svc.randomErr = e
+				_, err := client.GenerateRandomString(context.Background(), &pb.Randomrequest{RandomLength: 32})
+				return err
+			},
+		},
+	}
+
+	for _, rpc := range rpcs {
+		for _, tc := range cases {
+			t.Run(rpc.name+"_"+tc.name, func(t *testing.T) {
+				svc := &stubService{}
+				client, cleanup := startTestServer(t, svc)
+				defer cleanup()
+
+				err := rpc.call(client, svc, tc.domainErr)
+				require.Error(t, err)
+				st, ok := status.FromError(err)
+				require.True(t, ok, "expected gRPC status error, got %T: %v", err, err)
+				assert.Equal(t, tc.wantCode, st.Code(), "domain err %v should map to %v", tc.domainErr, tc.wantCode)
+			})
+		}
+	}
 }

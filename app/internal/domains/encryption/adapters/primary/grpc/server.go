@@ -2,17 +2,44 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"net"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/primary"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/encryption/ports/secondary"
 	pb "github.com/Anthony-Bible/password-exchange/app/pkg/pb/encryption"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
+
+// domainErrorToStatus maps encryption-domain sentinel errors to typed gRPC
+// status codes. Without this, every failure surfaces as codes.Unknown and
+// clients that retry on Unknown will loop on deterministic input errors
+// (e.g., a wrong-length key).
+func domainErrorToStatus(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, domain.ErrInvalidKeyLength),
+		errors.Is(err, domain.ErrInvalidCiphertext),
+		errors.Is(err, domain.ErrBase64DecodingFailed):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, domain.ErrInsufficientRandomness),
+		errors.Is(err, domain.ErrCipherCreationFailed),
+		errors.Is(err, domain.ErrGCMCreationFailed),
+		errors.Is(err, domain.ErrEncryptionFailed),
+		errors.Is(err, domain.ErrDecryptionFailed):
+		return status.Error(codes.Internal, err.Error())
+	}
+	return err
+}
 
 // GRPCServer implements the gRPC encryption service
 type GRPCServer struct {
@@ -76,7 +103,7 @@ func (s *GRPCServer) EncryptMessage(ctx context.Context, request *pb.EncryptedMe
 	response, err := s.encryptionService.Encrypt(ctx, domainRequest)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Encryption failed")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	pbResponse := &pb.EncryptedMessageResponse{
@@ -99,7 +126,7 @@ func (s *GRPCServer) DecryptMessage(ctx context.Context, request *pb.DecryptedMe
 	response, err := s.encryptionService.Decrypt(ctx, domainRequest)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Decryption failed")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	pbResponse := &pb.DecryptedMessageResponse{
@@ -121,7 +148,7 @@ func (s *GRPCServer) GenerateRandomString(ctx context.Context, request *pb.Rando
 	response, err := s.encryptionService.GenerateRandomKey(ctx, domainRequest)
 	if err != nil {
 		s.logger.Error().Err(err).Msg("Random key generation failed")
-		return nil, err
+		return nil, domainErrorToStatus(err)
 	}
 
 	pbResponse := &pb.Randomresponse{
