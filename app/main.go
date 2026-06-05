@@ -9,6 +9,7 @@ import (
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/email"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/encryption"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/reminder"
+	_ "github.com/Anthony-Bible/password-exchange/app/cmd/version"
 	_ "github.com/Anthony-Bible/password-exchange/app/cmd/web"
 )
 
