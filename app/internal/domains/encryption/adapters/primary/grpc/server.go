@@ -38,7 +38,10 @@ func domainErrorToStatus(err error) error {
 		errors.Is(err, domain.ErrDecryptionFailed):
 		return status.Error(codes.Internal, err.Error())
 	}
-	return err
+	// Unclassified errors are server-side faults from the caller's
+	// perspective — surface as Internal rather than letting them leak
+	// out as codes.Unknown, which encourages blind client retries.
+	return status.Error(codes.Internal, err.Error())
 }
 
 // GRPCServer implements the gRPC encryption service

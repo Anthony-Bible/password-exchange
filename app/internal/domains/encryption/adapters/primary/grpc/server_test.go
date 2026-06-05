@@ -169,6 +169,18 @@ func TestGenerateRandomString_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRPCs_UnclassifiedErrorMapsToInternal(t *testing.T) {
+	svc := &stubService{encryptErr: errors.New("boom")}
+	client, cleanup := startTestServer(t, svc)
+	defer cleanup()
+
+	_, err := client.EncryptMessage(context.Background(), &pb.EncryptedMessageRequest{PlainText: []string{"x"}})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Internal, st.Code())
+}
+
 func TestRPCs_MapDomainErrorsToStatus(t *testing.T) {
 	cases := []struct {
 		name      string
