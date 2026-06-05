@@ -15,10 +15,23 @@ import (
 
 const notificationPublishTimeout = 2 * time.Second
 
+// amqpChannel is the subset of *amqp.Channel methods used by NotificationPublisher.
+// Defined here so tests can inject a stub without a live broker.
+type amqpChannel interface {
+	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
+	PublishWithContext(ctx context.Context, exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+	Close() error
+}
+
+// amqpConnection is the subset of *amqp.Connection methods used by NotificationPublisher.
+type amqpConnection interface {
+	Close() error
+}
+
 // NotificationPublisher implements the NotificationServicePort using RabbitMQ
 type NotificationPublisher struct {
-	connection *amqp.Connection
-	channel    *amqp.Channel
+	connection amqpConnection
+	channel    amqpChannel
 	queueName  string
 }
 
@@ -113,14 +126,13 @@ func (p *NotificationPublisher) SendMessageNotification(ctx context.Context, req
 	err = p.channel.PublishWithContext(publishCtx,
 		"",          // exchange
 		p.queueName, // routing key
-		false,  // mandatory
-		false,  // immediate
+		false,       // mandatory
+		false,       // immediate
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/protobuf",
 			Body:         data,
 		})
-
 	if err != nil {
 		logging.Error().Err(err).Str("recipientEmail", validation.SanitizeEmailForLogging(req.RecipientEmail)).Msg("Failed to publish notification message")
 		return fmt.Errorf("failed to publish notification message: %w", err)
