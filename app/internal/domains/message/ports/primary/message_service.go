@@ -21,4 +21,7 @@ type MessageServicePort interface {
 	// caller-supplied ShareURL so that file-download fragments (#fid=, #fk=) built
 	// after the initial message creation are included in the notification link.
 	NotifyMessage(ctx context.Context, req domain.MessageNotifyRequest) error
+
+	// GetDefaultMaxViewCount returns the configured default maximum view count for new messages.
+	GetDefaultMaxViewCount() int
 }

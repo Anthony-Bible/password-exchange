@@ -363,6 +363,8 @@ func TestSubmitMessage_MaxViewCountValidation(t *testing.T) {
 			mockService := new(MockMessageService)
 			handler := NewMessageHandler(mockService)
 
+			mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
+
 			if tc.expectServiceCall {
 				expectedMaxViewCount := 0
 				if tc.maxViewCountValue != "" {
@@ -436,6 +438,7 @@ func TestHTMLEndpoints_DefaultBrowserBehaviorReturnsHTML(t *testing.T) {
 		Exists:             true,
 		RequiresPassphrase: false,
 	}, nil)
+	mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
 
 	router := gin.New()
 	router.SetHTMLTemplate(createMockTemplate())
@@ -482,6 +485,7 @@ func TestHTMLEndpoints_AcceptNegotiationContracts(t *testing.T) {
 		Exists:             true,
 		RequiresPassphrase: false,
 	}, nil)
+	mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
 
 	router := gin.New()
 	router.SetHTMLTemplate(createMockTemplate())
@@ -738,6 +742,7 @@ func TestMarkdownPath_StripsScriptsAndStyles(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockMessageService)
 	handler := NewMessageHandler(mockService)
+	mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
 
 	tmpl := template.New("templates")
 	tmpl, _ = tmpl.New("home.html").Parse(
@@ -772,6 +777,7 @@ func TestMarkdownPath_VaryHeaderMergesWithUpstream(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockService := new(MockMessageService)
 	handler := NewMessageHandler(mockService)
+	mockService.On("GetDefaultMaxViewCount").Return(5).Maybe()
 
 	router := gin.New()
 	router.SetHTMLTemplate(createMockTemplate())
