@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"\x83\x01\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\x12\x16\n\x0emax_view_count\x18\x05 \x01(\x05\x12\x12\n\nexpires_at\x18\x06 \x01(\t\"\x87\x01\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x16\n\x0emax_view_count\x18\x04 \x01(\x05\x12\x17\n\x0frecipient_email\x18\x05 \x01(\t\x12\x12\n\nexpires_at\x18\x06 \x01(\t\"n\n\x1aGetUnviewedMessagesRequest\x12\x18\n\x10older_than_hours\x18\x01 \x01(\x05\x12\x15\n\rmax_reminders\x18\x02 \x01(\x05\x12\x1f\n\x17reminder_interval_hours\x18\x03 \x01(\x05\"t\n\x0fUnviewedMessage\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x11\n\tunique_id\x18\x02 \x01(\t\x12\x17\n\x0frecipient_email\x18\x03 \x01(\t\x12\x0f\n\x07\x63reated\x18\x04 \x01(\t\x12\x10\n\x08\x64\x61ys_old\x18\x05 \x01(\x05\"L\n\x1bGetUnviewedMessagesResponse\x12-\n\x08messages\x18\x01 \x03(\x0b\x32\x1b.databasepb.UnviewedMessage\"?\n\x12LogReminderRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\"/\n\x19GetReminderHistoryRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\"q\n\x10ReminderLogEntry\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\x12\x16\n\x0ereminder_count\x18\x03 \x01(\x05\x12\x1a\n\x12last_reminder_sent\x18\x04 \x01(\t\"K\n\x1aGetReminderHistoryResponse\x12-\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.databasepb.ReminderLogEntry\"6\n\x11UploadSessionPart\x12\x13\n\x0bpart_number\x18\x01 \x01(\x05\x12\x0c\n\x04\x65tag\x18\x02 \x01(\t\"\xb5\x02\n\rUploadSession\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07\x66ile_id\x18\x02 \x01(\t\x12\x12\n\nmessage_id\x18\x03 \x01(\t\x12\x11\n\tupload_id\x18\x04 \x01(\t\x12\x10\n\x08\x66ilename\x18\x05 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x06 \x01(\t\x12\x12\n\ntotal_size\x18\x07 \x01(\x03\x12\x14\n\x0ctotal_chunks\x18\x08 \x01(\x05\x12\x0e\n\x06status\x18\t \x01(\t\x12\x16\n\x0e\x65ncryption_key\x18\n \x01(\x0c\x12\x36\n\x0f\x63ompleted_parts\x18\x0b \x03(\x0b\x32\x1d.databasepb.UploadSessionPart\x12\x12\n\ncreated_at\x18\x0c \x01(\t\x12\x12\n\nexpires_at\x18\r \x01(\t\"H\n\x1a\x43reateUploadSessionRequest\x12*\n\x07session\x18\x01 \x01(\x0b\x32\x19.databasepb.UploadSession\">\n\x17GetUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07\x66ile_id\x18\x02 \x01(\t\"F\n\x18GetUploadSessionResponse\x12*\n\x07session\x18\x01 \x01(\x0b\x32\x19.databasepb.UploadSession\"Z\n\x17\x41\x64\x64\x43ompletedPartRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12+\n\x04part\x18\x02 \x01(\x0b\x32\x1d.databasepb.UploadSessionPart\"2\n\x1c\x43ompleteUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"0\n\x1a\x44\x65leteUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"3\n\"DeleteExpiredUploadSessionsRequest\x12\r\n\x05\x61s_of\x18\x01 \x01(\t\"Z\n#DeleteExpiredUploadSessionsResponse\x12\x33\n\x10removed_sessions\x18\x01 \x03(\x0b\x32\x19.databasepb.UploadSession2\xc4\x08\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12t\n\x1fGetUnviewedMessagesForReminders\x12&.databasepb.GetUnviewedMessagesRequest\x1a\'.databasepb.GetUnviewedMessagesResponse\"\x00\x12K\n\x0fLogReminderSent\x12\x1e.databasepb.LogReminderRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x65\n\x12GetReminderHistory\x12%.databasepb.GetReminderHistoryRequest\x1a&.databasepb.GetReminderHistoryResponse\"\x00\x12W\n\x13\x43reateUploadSession\x12&.databasepb.CreateUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12_\n\x10GetUploadSession\x12#.databasepb.GetUploadSessionRequest\x1a$.databasepb.GetUploadSessionResponse\"\x00\x12Q\n\x10\x41\x64\x64\x43ompletedPart\x12#.databasepb.AddCompletedPartRequest\x1a\x16.google.protobuf.Empty\"\x00\x12[\n\x15\x43ompleteUploadSession\x12(.databasepb.CompleteUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12W\n\x13\x44\x65leteUploadSession\x12&.databasepb.DeleteUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x80\x01\n\x1b\x44\x65leteExpiredUploadSessions\x12..databasepb.DeleteExpiredUploadSessionsRequest\x1a/.databasepb.DeleteExpiredUploadSessionsResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0e\x64\x61tabase.proto\x12\ndatabasepb\x1a\x1bgoogle/protobuf/empty.proto\"\x1d\n\rSelectRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\"\xa0\x01\n\x0eSelectResponse\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x12\n\nview_count\x18\x04 \x01(\x05\x12\x16\n\x0emax_view_count\x18\x05 \x01(\x05\x12\x12\n\nexpires_at\x18\x06 \x01(\t\x12\x1b\n\x13is_client_encrypted\x18\x07 \x01(\x08\"\xa4\x01\n\rInsertRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x12\n\npassphrase\x18\x03 \x01(\t\x12\x16\n\x0emax_view_count\x18\x04 \x01(\x05\x12\x17\n\x0frecipient_email\x18\x05 \x01(\t\x12\x12\n\nexpires_at\x18\x06 \x01(\t\x12\x1b\n\x13is_client_encrypted\x18\x07 \x01(\x08\"n\n\x1aGetUnviewedMessagesRequest\x12\x18\n\x10older_than_hours\x18\x01 \x01(\x05\x12\x15\n\rmax_reminders\x18\x02 \x01(\x05\x12\x1f\n\x17reminder_interval_hours\x18\x03 \x01(\x05\"t\n\x0fUnviewedMessage\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x11\n\tunique_id\x18\x02 \x01(\t\x12\x17\n\x0frecipient_email\x18\x03 \x01(\t\x12\x0f\n\x07\x63reated\x18\x04 \x01(\t\x12\x10\n\x08\x64\x61ys_old\x18\x05 \x01(\x05\"L\n\x1bGetUnviewedMessagesResponse\x12-\n\x08messages\x18\x01 \x03(\x0b\x32\x1b.databasepb.UnviewedMessage\"?\n\x12LogReminderRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\"/\n\x19GetReminderHistoryRequest\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\"q\n\x10ReminderLogEntry\x12\x12\n\nmessage_id\x18\x01 \x01(\x05\x12\x15\n\remail_address\x18\x02 \x01(\t\x12\x16\n\x0ereminder_count\x18\x03 \x01(\x05\x12\x1a\n\x12last_reminder_sent\x18\x04 \x01(\t\"K\n\x1aGetReminderHistoryResponse\x12-\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.databasepb.ReminderLogEntry\"6\n\x11UploadSessionPart\x12\x13\n\x0bpart_number\x18\x01 \x01(\x05\x12\x0c\n\x04\x65tag\x18\x02 \x01(\t\"\xb5\x02\n\rUploadSession\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07\x66ile_id\x18\x02 \x01(\t\x12\x12\n\nmessage_id\x18\x03 \x01(\t\x12\x11\n\tupload_id\x18\x04 \x01(\t\x12\x10\n\x08\x66ilename\x18\x05 \x01(\t\x12\x14\n\x0c\x63ontent_type\x18\x06 \x01(\t\x12\x12\n\ntotal_size\x18\x07 \x01(\x03\x12\x14\n\x0ctotal_chunks\x18\x08 \x01(\x05\x12\x0e\n\x06status\x18\t \x01(\t\x12\x16\n\x0e\x65ncryption_key\x18\n \x01(\x0c\x12\x36\n\x0f\x63ompleted_parts\x18\x0b \x03(\x0b\x32\x1d.databasepb.UploadSessionPart\x12\x12\n\ncreated_at\x18\x0c \x01(\t\x12\x12\n\nexpires_at\x18\r \x01(\t\"H\n\x1a\x43reateUploadSessionRequest\x12*\n\x07session\x18\x01 \x01(\x0b\x32\x19.databasepb.UploadSession\">\n\x17GetUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x0f\n\x07\x66ile_id\x18\x02 \x01(\t\"F\n\x18GetUploadSessionResponse\x12*\n\x07session\x18\x01 \x01(\x0b\x32\x19.databasepb.UploadSession\"Z\n\x17\x41\x64\x64\x43ompletedPartRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12+\n\x04part\x18\x02 \x01(\x0b\x32\x1d.databasepb.UploadSessionPart\"2\n\x1c\x43ompleteUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"0\n\x1a\x44\x65leteUploadSessionRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"3\n\"DeleteExpiredUploadSessionsRequest\x12\r\n\x05\x61s_of\x18\x01 \x01(\t\"Z\n#DeleteExpiredUploadSessionsResponse\x12\x33\n\x10removed_sessions\x18\x01 \x03(\x0b\x32\x19.databasepb.UploadSession2\xc4\x08\n\tdbService\x12\x41\n\x06Select\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12=\n\x06Insert\x12\x19.databasepb.InsertRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x45\n\nGetMessage\x12\x19.databasepb.SelectRequest\x1a\x1a.databasepb.SelectResponse\"\x00\x12t\n\x1fGetUnviewedMessagesForReminders\x12&.databasepb.GetUnviewedMessagesRequest\x1a\'.databasepb.GetUnviewedMessagesResponse\"\x00\x12K\n\x0fLogReminderSent\x12\x1e.databasepb.LogReminderRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x65\n\x12GetReminderHistory\x12%.databasepb.GetReminderHistoryRequest\x1a&.databasepb.GetReminderHistoryResponse\"\x00\x12W\n\x13\x43reateUploadSession\x12&.databasepb.CreateUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12_\n\x10GetUploadSession\x12#.databasepb.GetUploadSessionRequest\x1a$.databasepb.GetUploadSessionResponse\"\x00\x12Q\n\x10\x41\x64\x64\x43ompletedPart\x12#.databasepb.AddCompletedPartRequest\x1a\x16.google.protobuf.Empty\"\x00\x12[\n\x15\x43ompleteUploadSession\x12(.databasepb.CompleteUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12W\n\x13\x44\x65leteUploadSession\x12&.databasepb.DeleteUploadSessionRequest\x1a\x16.google.protobuf.Empty\"\x00\x12\x80\x01\n\x1b\x44\x65leteExpiredUploadSessions\x12..databasepb.DeleteExpiredUploadSessionsRequest\x1a/.databasepb.DeleteExpiredUploadSessionsResponse\"\x00\x42;Z9github.com/Anthony-Bible/password-exchange/app/databasepbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,43 +36,43 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SELECTREQUEST']._serialized_start=59
   _globals['_SELECTREQUEST']._serialized_end=88
   _globals['_SELECTRESPONSE']._serialized_start=91
-  _globals['_SELECTRESPONSE']._serialized_end=222
-  _globals['_INSERTREQUEST']._serialized_start=225
-  _globals['_INSERTREQUEST']._serialized_end=360
-  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_start=362
-  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_end=472
-  _globals['_UNVIEWEDMESSAGE']._serialized_start=474
-  _globals['_UNVIEWEDMESSAGE']._serialized_end=590
-  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_start=592
-  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_end=668
-  _globals['_LOGREMINDERREQUEST']._serialized_start=670
-  _globals['_LOGREMINDERREQUEST']._serialized_end=733
-  _globals['_GETREMINDERHISTORYREQUEST']._serialized_start=735
-  _globals['_GETREMINDERHISTORYREQUEST']._serialized_end=782
-  _globals['_REMINDERLOGENTRY']._serialized_start=784
-  _globals['_REMINDERLOGENTRY']._serialized_end=897
-  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_start=899
-  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_end=974
-  _globals['_UPLOADSESSIONPART']._serialized_start=976
-  _globals['_UPLOADSESSIONPART']._serialized_end=1030
-  _globals['_UPLOADSESSION']._serialized_start=1033
-  _globals['_UPLOADSESSION']._serialized_end=1342
-  _globals['_CREATEUPLOADSESSIONREQUEST']._serialized_start=1344
-  _globals['_CREATEUPLOADSESSIONREQUEST']._serialized_end=1416
-  _globals['_GETUPLOADSESSIONREQUEST']._serialized_start=1418
-  _globals['_GETUPLOADSESSIONREQUEST']._serialized_end=1480
-  _globals['_GETUPLOADSESSIONRESPONSE']._serialized_start=1482
-  _globals['_GETUPLOADSESSIONRESPONSE']._serialized_end=1552
-  _globals['_ADDCOMPLETEDPARTREQUEST']._serialized_start=1554
-  _globals['_ADDCOMPLETEDPARTREQUEST']._serialized_end=1644
-  _globals['_COMPLETEUPLOADSESSIONREQUEST']._serialized_start=1646
-  _globals['_COMPLETEUPLOADSESSIONREQUEST']._serialized_end=1696
-  _globals['_DELETEUPLOADSESSIONREQUEST']._serialized_start=1698
-  _globals['_DELETEUPLOADSESSIONREQUEST']._serialized_end=1746
-  _globals['_DELETEEXPIREDUPLOADSESSIONSREQUEST']._serialized_start=1748
-  _globals['_DELETEEXPIREDUPLOADSESSIONSREQUEST']._serialized_end=1799
-  _globals['_DELETEEXPIREDUPLOADSESSIONSRESPONSE']._serialized_start=1801
-  _globals['_DELETEEXPIREDUPLOADSESSIONSRESPONSE']._serialized_end=1891
-  _globals['_DBSERVICE']._serialized_start=1894
-  _globals['_DBSERVICE']._serialized_end=2986
+  _globals['_SELECTRESPONSE']._serialized_end=251
+  _globals['_INSERTREQUEST']._serialized_start=254
+  _globals['_INSERTREQUEST']._serialized_end=418
+  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_start=420
+  _globals['_GETUNVIEWEDMESSAGESREQUEST']._serialized_end=530
+  _globals['_UNVIEWEDMESSAGE']._serialized_start=532
+  _globals['_UNVIEWEDMESSAGE']._serialized_end=648
+  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_start=650
+  _globals['_GETUNVIEWEDMESSAGESRESPONSE']._serialized_end=726
+  _globals['_LOGREMINDERREQUEST']._serialized_start=728
+  _globals['_LOGREMINDERREQUEST']._serialized_end=791
+  _globals['_GETREMINDERHISTORYREQUEST']._serialized_start=793
+  _globals['_GETREMINDERHISTORYREQUEST']._serialized_end=840
+  _globals['_REMINDERLOGENTRY']._serialized_start=842
+  _globals['_REMINDERLOGENTRY']._serialized_end=955
+  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_start=957
+  _globals['_GETREMINDERHISTORYRESPONSE']._serialized_end=1032
+  _globals['_UPLOADSESSIONPART']._serialized_start=1034
+  _globals['_UPLOADSESSIONPART']._serialized_end=1088
+  _globals['_UPLOADSESSION']._serialized_start=1091
+  _globals['_UPLOADSESSION']._serialized_end=1400
+  _globals['_CREATEUPLOADSESSIONREQUEST']._serialized_start=1402
+  _globals['_CREATEUPLOADSESSIONREQUEST']._serialized_end=1474
+  _globals['_GETUPLOADSESSIONREQUEST']._serialized_start=1476
+  _globals['_GETUPLOADSESSIONREQUEST']._serialized_end=1538
+  _globals['_GETUPLOADSESSIONRESPONSE']._serialized_start=1540
+  _globals['_GETUPLOADSESSIONRESPONSE']._serialized_end=1610
+  _globals['_ADDCOMPLETEDPARTREQUEST']._serialized_start=1612
+  _globals['_ADDCOMPLETEDPARTREQUEST']._serialized_end=1702
+  _globals['_COMPLETEUPLOADSESSIONREQUEST']._serialized_start=1704
+  _globals['_COMPLETEUPLOADSESSIONREQUEST']._serialized_end=1754
+  _globals['_DELETEUPLOADSESSIONREQUEST']._serialized_start=1756
+  _globals['_DELETEUPLOADSESSIONREQUEST']._serialized_end=1804
+  _globals['_DELETEEXPIREDUPLOADSESSIONSREQUEST']._serialized_start=1806
+  _globals['_DELETEEXPIREDUPLOADSESSIONSREQUEST']._serialized_end=1857
+  _globals['_DELETEEXPIREDUPLOADSESSIONSRESPONSE']._serialized_start=1859
+  _globals['_DELETEEXPIREDUPLOADSESSIONSRESPONSE']._serialized_end=1949
+  _globals['_DBSERVICE']._serialized_start=1952
+  _globals['_DBSERVICE']._serialized_end=3044
 # @@protoc_insertion_point(module_scope)

@@ -426,6 +426,66 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/messages/{id}/notify": {
+            "post": {
+                "description": "Sends the email notification for a previously-created message using the caller-supplied ShareURL.\nCall this after any file upload completes so the URL already contains file-download fragment params.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Send deferred email notification for an existing message",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Message ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Notify request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.MessageNotifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notification sent",
+                        "schema": {
+                            "$ref": "#/definitions/models.MessageNotifyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Message not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.StandardErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -565,6 +625,46 @@ const docTemplate = `{
                 "viewCount": {
                     "description": "Number of times this message has been viewed.",
                     "type": "integer"
+                }
+            }
+        },
+        "models.MessageNotifyRequest": {
+            "type": "object",
+            "required": [
+                "recipient",
+                "sender",
+                "shareUrl"
+            ],
+            "properties": {
+                "additionalInfo": {
+                    "type": "string"
+                },
+                "antiSpamAnswer": {
+                    "type": "string"
+                },
+                "questionId": {
+                    "type": "integer"
+                },
+                "recipient": {
+                    "$ref": "#/definitions/models.Recipient"
+                },
+                "sender": {
+                    "$ref": "#/definitions/models.Sender"
+                },
+                "shareUrl": {
+                    "type": "string"
+                },
+                "turnstileToken": {
+                    "type": "string",
+                    "maxLength": 2048
+                }
+            }
+        },
+        "models.MessageNotifyResponse": {
+            "type": "object",
+            "properties": {
+                "notificationSent": {
+                    "type": "boolean"
                 }
             }
         },

@@ -103,6 +103,33 @@ definitions:
         description: Number of times this message has been viewed.
         type: integer
     type: object
+  models.MessageNotifyRequest:
+    properties:
+      additionalInfo:
+        type: string
+      antiSpamAnswer:
+        type: string
+      questionId:
+        type: integer
+      recipient:
+        $ref: '#/definitions/models.Recipient'
+      sender:
+        $ref: '#/definitions/models.Sender'
+      shareUrl:
+        type: string
+      turnstileToken:
+        maxLength: 2048
+        type: string
+    required:
+    - recipient
+    - sender
+    - shareUrl
+    type: object
+  models.MessageNotifyResponse:
+    properties:
+      notificationSent:
+        type: boolean
+    type: object
   models.MessageSubmissionRequest:
     properties:
       additionalInfo:
@@ -542,6 +569,48 @@ paths:
           schema:
             $ref: '#/definitions/models.StandardErrorResponse'
       summary: Decrypt a message
+      tags:
+      - Messages
+  /messages/{id}/notify:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Sends the email notification for a previously-created message using the caller-supplied ShareURL.
+        Call this after any file upload completes so the URL already contains file-download fragment params.
+      parameters:
+      - description: Message ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Notify request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.MessageNotifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Notification sent
+          schema:
+            $ref: '#/definitions/models.MessageNotifyResponse'
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "404":
+          description: Message not found
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.StandardErrorResponse'
+      summary: Send deferred email notification for an existing message
       tags:
       - Messages
 schemes:
