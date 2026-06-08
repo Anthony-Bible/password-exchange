@@ -63,7 +63,7 @@ Password Exchange uses a **microservices architecture** with **hexagonal (ports 
 - **Slackbot**: Python Flask app with Slack integration
 
 ### Key Technologies
-- **Go 1.23+**: Main application with Cobra CLI, Gin web framework, gRPC services
+- **Go 1.25+**: Main application with Cobra CLI, Gin web framework, gRPC services
 - **Python**: Slackbot using Flask, Slack Bolt, SQLAlchemy
 - **Protocol Buffers**: Service definitions generate Go and Python clients
 - **RabbitMQ**: Message queue for email notifications
@@ -100,7 +100,7 @@ _If you have a tool or extension that interacts with Password Exchange please ma
 ### ✅ Current Features
 - **Secure message sharing**: Server-side encrypted password and text sharing
 - **Automatic expiration**: Messages expire after 7 days by default
-- **Configurable view limits**: Set maximum number of times a message can be viewed
+- **Configurable view limits**: Set maximum number of times a message can be viewed; default is driven by server config
 - **Multiple interfaces**: Web UI, REST API, and Slack bot
 - **Email notifications**: Optional email alerts when messages are sent
 - **Passphrase protection**: Additional security layer with optional passphrases
@@ -126,11 +126,9 @@ The web interface includes a comprehensive, client-side password generator to he
 
 ### 🚧 Planned Features
 1. Send message to both users
-2. ✅ **Email reminders**: Automated reminders for unviewed messages (configurable intervals)
-3. Email/page visit notifications
-4. Configurable expiration times
-5. User-generated passwords
-6. **Client-side encryption**: End-to-end encryption option (would limit bot integrations)
+2. Email/page visit notifications
+3. Configurable expiration times
+4. **Client-side encryption**: End-to-end encryption option (would limit bot integrations)
 
 ### 🔮 Future Integrations
 - Bitwarden integration
@@ -145,7 +143,7 @@ The web interface includes a comprehensive, client-side password generator to he
 ## Building from Source
 
 ### Prerequisites
-- **Go 1.23+**: Main application language
+- **Go 1.25+**: Main application language
 - **Python 3.8+**: For slackbot and protobuf generation
 - **Docker**: For containerized builds
 - **protoc**: Protocol buffer compiler
@@ -157,17 +155,35 @@ The web interface includes a comprehensive, client-side password generator to he
 ./test-build.sh
 ```
 
-This script will:
+`./test-build.sh` will:
 - Generate protobuf files for Go and Python
-- Build the Go application
+- Build the Go application (version injected via ldflags)
 - Generate Swagger documentation
 - Build Docker images for main app and slackbot
 - Generate Kubernetes manifests with proper variable substitution
 
+### E2E Testing
+
+End-to-end tests live in the `e2e/` directory and use [Playwright](https://playwright.dev/). They run against a live environment (default: `https://dev.password.exchange`).
+
+```bash
+cd e2e
+npm install
+
+# Run all tests (Chromium + Firefox)
+npx playwright test
+
+# Run against a custom URL
+BASE_URL=https://localhost:8080 npx playwright test
+
+# Open the HTML report after a run
+npx playwright show-report
+```
+
 ### Manual Build Steps
 ```bash
-# Build Go application only
-cd app && go mod tidy && go build -o app
+# Build Go application only (version injected via ldflags)
+cd app && go mod tidy && go build -ldflags "-X github.com/Anthony-Bible/password-exchange/app/internal/shared/buildinfo.Version=$(git describe --tags --always --dirty)" -o app
 
 # Generate protobuf files
 protoc --proto_path=protos \
@@ -205,6 +221,9 @@ docker build -t slackbot -f slackbot/Dockerfile .
 
 # Send email reminders for unviewed messages
 ./app reminder --config=config.yaml --older-than-hours=24 --max-reminders=3
+
+# Print the current application version
+./app version
 ```
 
 
