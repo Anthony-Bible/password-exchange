@@ -40,12 +40,54 @@ curl "https://password.exchange/api/v1/messages/{id}?key={key}"
 curl -X POST https://password.exchange/api/v1/messages/{id}/decrypt \
   -H "Content-Type: application/json" \
   -d '{"decryptionKey": "{key}"}'
+
+# Trigger a deferred email notification for an existing message
+curl -X POST https://password.exchange/api/v1/messages/{id}/notify \
+  -H "Content-Type: application/json" \
+  -d '{"senderName": "Alice", "recipientName": "Bob", "recipientEmail": "bob@example.com"}'
+
+# Query API capabilities and current version
+curl https://password.exchange/api/v1/info
 ```
+
+**Health probes** (used by Kubernetes; not rate-limited):
+```bash
+curl https://password.exchange/livez   # process alive
+curl https://password.exchange/readyz  # upstream gRPC services reachable
+```
+
+#### File Upload API
+
+Files can be attached to messages using a chunked, client-side-encrypted upload protocol. Files are encrypted with AES-256 before leaving the browser; the server never sees the plaintext key.
+
+```bash
+# 1. Initiate an upload session (returns fileID, sessionID, and a base64url AES-256 key)
+curl -X POST https://password.exchange/api/v1/files/initiate \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "secret.txt", "contentType": "text/plain", "totalSize": 1024, "chunkSize": 512, "messageID": "{messageID}"}'
+
+# 2. Upload each chunk as multipart/form-data (repeat for each chunk, chunkIndex is 1-based)
+curl -X POST https://password.exchange/api/v1/files/{fileID}/chunks \
+  -F "sessionID={sessionID}" \
+  -F "chunkIndex=1" \
+  -F "totalChunks=2" \
+  -F "data=@chunk1.bin"
+
+# 3. Download — decryption key must be in the X-File-Key header (not a query param,
+#    to keep it out of server access logs)
+curl https://password.exchange/api/v1/files/{fileID} \
+  -H "X-File-Key: {base64url-encoded-key}" \
+  --output secret.txt
+```
+
+The back-end stores encrypted chunks in S3-compatible object storage (AWS S3, MinIO, etc.). See [configuration options](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables) for the required `objectstorage*` keys.
 
 ### Slackbot
 To install our Slackbot go to [https://api.password.exchange/slack/install](https://api.password.exchange/slack/install). If you have set up your own version of this app, you can go to `https://yoursite.com/slack/install`.
 
-Once installed to your organization, you can use the `/encrypt` command which will send the text to the bot and the bot will send a link to access the unencrypted text. 
+Once installed to your organization, you can use the `/encrypt` command which will send the text to the bot and the bot will send a link to access the unencrypted text.
+
+The bot also monitors messages for unencrypted passwords — if it detects a plain-text `password: ...` pattern in a channel it will nudge the user to use `/encrypt` instead.
 
 **NOTE:** Slackbot relies on the database and encryption services and deployments. You can remove the website deployment/service from the yaml if you only intend to deploy the slackbot.
 
@@ -68,6 +110,7 @@ Password Exchange uses a **microservices architecture** with **hexagonal (ports 
 - **Protocol Buffers**: Service definitions generate Go and Python clients
 - **RabbitMQ**: Message queue for email notifications
 - **MySQL/MariaDB**: Primary database for encrypted content and OAuth tokens
+- **S3-compatible object storage**: Encrypted file attachments (AWS S3, MinIO, etc.)
 - **Kubernetes**: Container orchestration
 
 ### Communication Flow
@@ -99,16 +142,19 @@ _If you have a tool or extension that interacts with Password Exchange please ma
 
 ### ✅ Current Features
 - **Secure message sharing**: Server-side encrypted password and text sharing
+- **Encrypted file attachments**: AES-256 chunked file upload with S3-compatible storage backend
 - **Automatic expiration**: Messages expire after 7 days by default
 - **Configurable view limits**: Set maximum number of times a message can be viewed; default is driven by server config
 - **Multiple interfaces**: Web UI, REST API, and Slack bot
 - **Email notifications**: Optional email alerts when messages are sent
+- **Email reminders**: Automated reminders for unviewed messages with configurable timing
 - **Passphrase protection**: Additional security layer with optional passphrases
-- **Password generator**: Generate strong, secure passwords and passphrases directly in the web UI.
-- **Rate limiting**: Built-in protection against abuse
+- **Password generator**: Generate strong, secure passwords and passphrases directly in the web UI
+- **Cloudflare Turnstile**: Optional bot-protection CAPTCHA on form submissions and API requests
+- **Rate limiting**: Built-in per-endpoint protection against abuse
 - **Prometheus metrics**: Monitoring and observability support
 - **Swagger documentation**: Complete API documentation at `/api/v1/docs`
-- **Email reminders**: Automated reminders for unviewed messages with configurable timing
+- **Slack pattern detection**: Bot warns users when unencrypted passwords are posted in channels
 
 #### Password Generator
 The web interface includes a comprehensive, client-side password generator to help users create strong, secure passwords and passphrases.
@@ -220,7 +266,11 @@ docker build -t slackbot -f slackbot/Dockerfile .
 ./app email --config=config.yaml
 
 # Send email reminders for unviewed messages
-./app reminder --config=config.yaml --older-than-hours=24 --max-reminders=3
+# All flags are optional; values shown are the defaults
+./app reminder --config=config.yaml \
+  --older-than-hours=24 \
+  --max-reminders=3 \
+  --interval-hours=24
 
 # Print the current application version
 ./app version
@@ -244,8 +294,12 @@ Currently we only support Kubernetes. If you don't have a Kubernetes cluster, yo
 2. **Configuration**
    - Edit `kubernetes/secrets.yaml` with your information
    - [View available options](https://github.com/Anthony-Bible/password-exchange/wiki/Environment-Variables)
+   - To enable file attachments, supply the `objectstorage*` config keys pointing at an S3-compatible bucket
+   - To enable Cloudflare Turnstile bot protection, set `turnstile_secret` in your config
 
 3. **Deploy**
    - Download the latest manifest from releases
    - Apply to cluster: `kubectl apply -f password-exchange.yaml`
-   - Or use the generated `combined.yaml` from `./test-build.sh` 
+   - Or use the generated `combined.yaml` from `./test-build.sh`
+
+The Kubernetes manifests include a daily CronJob that purges expired messages, gRPC-native liveness/readiness probes, and ArgoCD sync-wave annotations for ordered rollout.
