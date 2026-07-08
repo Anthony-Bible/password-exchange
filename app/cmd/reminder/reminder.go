@@ -184,15 +184,22 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Process reminders
 		ctx := context.Background()
-		if err := reminderService.ProcessReminders(ctx, reminderConfig); err != nil {
+		result, err := reminderService.ProcessReminders(ctx, reminderConfig)
+		if err != nil {
 			logging.Error().
 				Err(err).
+				Int("processedCount", result.SuccessCount).
+				Int("errorCount", result.FailureCount).
+				Bool("infraFailures", result.HasInfraFailures()).
 				Str("operation", "process_reminders").
 				Msg("Failed to process reminders")
 			return
 		}
 
 		logging.Info().
+			Int("processedCount", result.SuccessCount).
+			Int("errorCount", result.FailureCount).
+			Int("totalProcessed", result.TotalProcessed).
 			Str("operation", "processing_completed").
 			Msg("Reminder email processing completed")
 

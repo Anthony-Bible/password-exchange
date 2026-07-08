@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/ports/secondary"
@@ -100,11 +101,17 @@ func NewReminderService(
 	}
 }
 
-// ProcessReminders finds and processes messages eligible for reminder emails
-func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig ReminderConfig) error {
+// ProcessReminders finds and processes messages eligible for reminder emails.
+// It returns a BatchResult describing per-item outcomes alongside any
+// top-level error (config validation, fetch failure). When at least one
+// message was processed successfully the error is nil even if other items
+// failed — callers inspect the BatchResult to report partial success.
+func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig ReminderConfig) (*BatchResult, error) {
+	result := NewBatchResult()
+
 	// Check context cancellation early
 	if err := ctx.Err(); err != nil {
-		return err
+		return result, err
 	}
 
 	// Validate configuration
@@ -116,12 +123,12 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 			Int("maxReminders", reminderConfig.MaxReminders).
 			Int("reminderInterval", reminderConfig.Interval).
 			Msg("Invalid reminder configuration")
-		return err
+		return result, err
 	}
 
 	if !reminderConfig.Enabled {
 		r.logger.Info().Bool("enabled", false).Msg("Reminder system is disabled")
-		return nil
+		return result, nil
 	}
 
 	r.logger.Info().
@@ -145,21 +152,21 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 		return err
 	}, "get_unviewed_messages")
 	if err != nil {
-		return fmt.Errorf("failed to get unviewed messages: %w", err)
+		return result, fmt.Errorf("failed to get unviewed messages: %w", err)
 	}
 
 	r.logger.Info().Int("count", len(messages)).Msg("Found messages eligible for reminders")
 
 	if len(messages) == 0 {
 		r.logger.Info().Msg("No messages found requiring reminders")
-		return nil
+		return result, nil
 	}
 
 	// Process each message with individual error recovery
 	// Strategy: Continue processing other messages even if some fail (graceful degradation)
-	processedCount := 0
-	errorCount := 0
 	for _, message := range messages {
+		itemID := strconv.Itoa(message.MessageID)
+
 		// Create reminder request
 		reminderReq := ReminderRequest{
 			MessageID:      message.MessageID,
@@ -174,7 +181,7 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 			return r.ProcessMessageReminder(ctx, reminderReq)
 		}, fmt.Sprintf("process_message_%d", message.MessageID))
 		if err != nil {
-			errorCount++
+			result.RecordFailure(itemID, err)
 			r.logger.Error().
 				Err(err).
 				Int("messageID", message.MessageID).
@@ -184,36 +191,36 @@ func (r *ReminderService) ProcessReminders(ctx context.Context, reminderConfig R
 				Msg("Failed to process reminder for message after all retry attempts")
 			continue // Continue processing other messages
 		}
-		processedCount++
+		result.RecordSuccess(itemID)
 	}
 
 	r.logger.Info().
 		Int("totalMessages", len(messages)).
-		Int("processedCount", processedCount).
-		Int("errorCount", errorCount).
+		Int("processedCount", result.SuccessCount).
+		Int("errorCount", result.FailureCount).
 		Msg("Reminder processing completed")
 
 	// Implement graceful degradation: return success if at least some messages were processed
 	// This allows partial success rather than all-or-nothing failure
-	if processedCount > 0 {
+	if result.SuccessCount > 0 {
 		r.logger.Info().
-			Int("processedCount", processedCount).
-			Int("errorCount", errorCount).
-			Float64("successRate", float64(processedCount)/float64(len(messages))*100).
+			Int("processedCount", result.SuccessCount).
+			Int("errorCount", result.FailureCount).
+			Float64("successRate", float64(result.SuccessCount)/float64(len(messages))*100).
 			Msg("Reminder processing completed with partial success")
-		return nil
+		return result, nil
 	}
 
 	// If no messages were processed and we had errors, this indicates a more serious issue
-	if errorCount > 0 {
+	if result.FailureCount > 0 {
 		r.logger.Error().
-			Int("errorCount", errorCount).
+			Int("errorCount", result.FailureCount).
 			Int("totalMessages", len(messages)).
 			Msg("Failed to process any reminder messages")
-		return fmt.Errorf("failed to process any of %d reminder messages", len(messages))
+		return result, fmt.Errorf("failed to process any of %d reminder messages", len(messages))
 	}
 
-	return nil
+	return result, nil
 }
 
 // ProcessMessageReminder sends a reminder email for a specific message
@@ -341,6 +348,18 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 		}
 
 		lastErr = err
+
+		// Fail fast on validation / missing-config errors. Retrying them is
+		// guaranteed to keep failing, and we don't want to trip the circuit
+		// breaker on user-supplied invalid input.
+		if !isRetryable(err) {
+			r.logger.Debug().
+				Err(err).
+				Str("operation", operationName).
+				Msg("Operation failed with non-retryable error; skipping retry")
+			return err
+		}
+
 		r.circuitBreaker.RecordFailure()
 
 		// Don't retry on last attempt
@@ -375,7 +394,7 @@ func (r *ReminderService) retryWithBackoff(ctx context.Context, operation func()
 		Int("maxRetries", MaxRetries).
 		Msg("Operation failed after all retry attempts")
 
-	return fmt.Errorf("%w: %s failed after %d attempts: %v", ErrMaxRetriesExceeded, operationName, MaxRetries, lastErr)
+	return fmt.Errorf("%w: %s failed after %d attempts: %w", ErrMaxRetriesExceeded, operationName, MaxRetries, lastErr)
 }
 
 // validateReminderConfig validates all reminder configuration parameters

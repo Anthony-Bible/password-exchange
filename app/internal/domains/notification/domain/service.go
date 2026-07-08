@@ -175,7 +175,7 @@ func (s *NotificationService) validateNotificationRequest(req NotificationReques
 }
 
 // ProcessReminders finds and processes messages eligible for reminder emails
-func (s *NotificationService) ProcessReminders(ctx context.Context, config ReminderConfig) error {
+func (s *NotificationService) ProcessReminders(ctx context.Context, config ReminderConfig) (*BatchResult, error) {
 	return s.reminderService.ProcessReminders(ctx, config)
 }
 

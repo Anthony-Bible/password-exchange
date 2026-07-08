@@ -253,7 +253,7 @@ func TestProcessReminders_DisabledConfig_ReturnsEarly(t *testing.T) {
 	}
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.NoError(t, err)
@@ -277,7 +277,7 @@ func TestProcessReminders_InvalidConfig_ReturnsError(t *testing.T) {
 	}
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.Error(t, err)
@@ -303,7 +303,7 @@ func TestProcessReminders_NoMessages_ReturnsSuccess(t *testing.T) {
 	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return([]*UnviewedMessage{}, nil)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.NoError(t, err)
@@ -329,7 +329,7 @@ func TestProcessReminders_StorageError_ReturnsError(t *testing.T) {
 	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(nil, storageError)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.Error(t, err)
@@ -371,7 +371,7 @@ func TestProcessReminders_SuccessfulProcessing_ReturnsSuccess(t *testing.T) {
 	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.NoError(t, err)
@@ -396,7 +396,7 @@ func TestProcessReminders_ContextCancelled_ReturnsError(t *testing.T) {
 	}
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.Error(t, err)
@@ -423,7 +423,7 @@ func TestProcessReminders_StorageTimeout_HandledGracefully(t *testing.T) {
 	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(nil, context.DeadlineExceeded)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.Error(t, err)
@@ -559,7 +559,7 @@ func TestProcessReminders_LoggingFailure_ContinuesProcessing(t *testing.T) {
 	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	// Should succeed because at least one message was processed successfully
@@ -587,7 +587,7 @@ func TestProcessReminders_CircuitBreakerOpen_StopsProcessing(t *testing.T) {
 	service.circuitBreaker.lastFailureTime = time.Now()
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.Error(t, err)
@@ -659,7 +659,7 @@ func TestProcessReminders_MixedResults_ContinuesProcessing(t *testing.T) {
 	})).Return(nil)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	// Should succeed overall despite individual failures
@@ -783,7 +783,7 @@ func TestProcessReminders_ReminderInterval_RespectedCorrectly(t *testing.T) {
 	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
 
 	// Act
-	err := service.ProcessReminders(ctx, config)
+	_, err := service.ProcessReminders(ctx, config)
 
 	// Assert
 	assert.NoError(t, err)
@@ -823,4 +823,97 @@ func TestProcessMessageReminder_ValidRequest_Success(t *testing.T) {
 	assert.NoError(t, err)
 	mockStorageRepo.AssertExpectations(t)
 	mockNotificationPublisher.AssertExpectations(t)
+}
+
+// TestProcessReminders_ReturnsBatchResultWithCounts verifies the BatchResult
+// contains accurate per-item counters after a mixed-success batch.
+func TestProcessReminders_ReturnsBatchResultWithCounts(t *testing.T) {
+	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
+
+	ctx := context.Background()
+	config := ReminderConfig{Enabled: true, CheckAfterHours: 24, MaxReminders: 3, Interval: 24}
+
+	messages := []*UnviewedMessage{
+		{MessageID: 1, UniqueID: "u1", RecipientEmail: "a@example.com", DaysOld: 2, Created: time.Now().Add(-48 * time.Hour)},
+		{MessageID: 2, UniqueID: "u2", RecipientEmail: "b@example.com", DaysOld: 2, Created: time.Now().Add(-48 * time.Hour)},
+	}
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
+	mockStorageRepo.On("GetReminderHistory", ctx, 1).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("GetReminderHistory", ctx, 2).Return([]*ReminderLogEntry{}, nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 1, "a@example.com").Return(nil)
+	mockStorageRepo.On("LogReminderSent", ctx, 2, "b@example.com").Return(nil)
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).Return(nil)
+
+	result, err := service.ProcessReminders(ctx, config)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 2, result.TotalProcessed)
+	assert.Equal(t, 2, result.SuccessCount)
+	assert.Equal(t, 0, result.FailureCount)
+	assert.False(t, result.HasFailures())
+}
+
+// TestProcessReminders_NonRetryableError_FailsFast verifies that a Business
+// error from the publisher is NOT retried — publisher should be called once.
+func TestProcessReminders_NonRetryableError_FailsFast(t *testing.T) {
+	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
+
+	ctx := context.Background()
+	config := ReminderConfig{Enabled: true, CheckAfterHours: 24, MaxReminders: 3, Interval: 24}
+
+	messages := []*UnviewedMessage{
+		{MessageID: 1, UniqueID: "u1", RecipientEmail: "a@example.com", DaysOld: 2, Created: time.Now().Add(-48 * time.Hour)},
+	}
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
+	mockStorageRepo.On("GetReminderHistory", ctx, 1).Return([]*ReminderLogEntry{}, nil)
+	// ErrInvalidNotificationRequest is categorized Business — must not retry.
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).
+		Return(ErrInvalidNotificationRequest).Once()
+
+	result, err := service.ProcessReminders(ctx, config)
+
+	// All messages failed → top-level error returned.
+	assert.Error(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, result.FailureCount)
+	assert.Equal(t, 0, result.SuccessCount)
+	mockNotificationPublisher.AssertExpectations(t)
+	// Critical assertion: publisher invoked exactly once, no retry.
+	mockNotificationPublisher.AssertNumberOfCalls(t, "PublishNotification", 1)
+}
+
+// TestProcessReminders_OperationalError_RetriesAndRecords verifies that a
+// retryable error is retried, and on persistent failure the BatchError
+// carries the Operational category derived from the wrapped sentinel.
+func TestProcessReminders_OperationalError_RetriesAndRecords(t *testing.T) {
+	mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation := createTestMocks()
+	service := NewReminderService(mockStorageRepo, mockNotificationPublisher, mockLogger, mockConfig, mockValidation)
+
+	ctx := context.Background()
+	config := ReminderConfig{Enabled: true, CheckAfterHours: 24, MaxReminders: 3, Interval: 24}
+
+	messages := []*UnviewedMessage{
+		{MessageID: 1, UniqueID: "u1", RecipientEmail: "a@example.com", DaysOld: 2, Created: time.Now().Add(-48 * time.Hour)},
+	}
+	mockStorageRepo.On("GetUnviewedMessagesForReminders", ctx, 24, 3, 24).Return(messages, nil)
+	mockStorageRepo.On("GetReminderHistory", ctx, 1).Return([]*ReminderLogEntry{}, nil)
+	// ErrEmailSendFailed is categorized Operational — should be retried.
+	mockNotificationPublisher.On("PublishNotification", ctx, mock.AnythingOfType("NotificationRequest")).
+		Return(ErrEmailSendFailed)
+
+	result, err := service.ProcessReminders(ctx, config)
+
+	assert.Error(t, err) // all attempts failed
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, result.FailureCount)
+	assert.Len(t, result.Errors, 1)
+	assert.True(t, result.HasInfraFailures(),
+		"persistent retryable publisher failure should surface as an infra batch failure")
+	// Publisher should have been invoked MaxRetries times (full retry exhaustion).
+	mockNotificationPublisher.AssertNumberOfCalls(t, "PublishNotification", MaxRetries)
+	// Silence unused-import warning if errors pkg is otherwise unused.
+	_ = errors.New
 }

@@ -150,6 +150,10 @@ protoc --proto_path=protos \
 
 `app/pkg/clients/` contains the email notification client (separate from gRPC secondary adapters in domain layer).
 
+### Reminder Batch Reporting
+
+The reminder pipeline is the only batch processor in the app. `ProcessReminders` (`internal/domains/notification/domain/reminder_service.go`) returns a `*BatchResult` describing per-item outcomes; the cronjob uses `HasInfraFailures()` to distinguish transient infrastructure problems from invalid-input failures for alerting. The retry loop short-circuits on a small list of non-retryable sentinels (validation errors, missing template) so retries aren't wasted on errors guaranteed to keep failing. Both lists live in `batch_result.go`; promote to a shared package only when a second consumer needs the same pattern.
+
 ## Hexagonal Architecture Patterns
 
 ### Domain Layer (`domain/`)
