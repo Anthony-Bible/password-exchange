@@ -53,7 +53,7 @@ try:
     installation_store.metadata.create_all(engine)
     oauth_state_store.metadata.create_all(engine)
 except Exception as e:
-    logger.error("Something went wrong creating intial dbs" + e)
+    logger.error("Something went wrong creating intial dbs: %s", e)
 
 bolt_app = App(
     logger=logger,
