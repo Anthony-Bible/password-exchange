@@ -13,11 +13,39 @@ import (
 
 var _ secondary.ObjectStoragePort = (*S3Adapter)(nil)
 
+// multipartCore is satisfied by *minio.Core and allows unit tests to inject a fake.
+type multipartCore interface {
+	NewMultipartUpload(ctx context.Context, bucket, object string, opts minio.PutObjectOptions) (string, error)
+	PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, data io.Reader, size int64, opts minio.PutObjectPartOptions) (minio.ObjectPart, error)
+	CompleteMultipartUpload(ctx context.Context, bucket, object, uploadID string, parts []minio.CompletePart, opts minio.PutObjectOptions) (minio.UploadInfo, error)
+	AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string) error
+}
+
+// readerStat is satisfied by *minio.Object; it combines io.ReadCloser with the
+// Stat method needed to retrieve object metadata before streaming.
+type readerStat interface {
+	io.ReadCloser
+	Stat() (minio.ObjectInfo, error)
+}
+
+// objectGetter abstracts *minio.Client.GetObject so tests can inject a fake.
+type objectGetter interface {
+	GetObject(ctx context.Context, bucket, object string, opts minio.GetObjectOptions) (readerStat, error)
+}
+
+// minioObjectGetter wraps *minio.Client so its GetObject return type satisfies
+// objectGetter (which returns readerStat instead of *minio.Object).
+type minioObjectGetter struct{ client *minio.Client }
+
+func (g *minioObjectGetter) GetObject(ctx context.Context, bucket, object string, opts minio.GetObjectOptions) (readerStat, error) {
+	return g.client.GetObject(ctx, bucket, object, opts)
+}
+
 // S3Adapter implements ObjectStoragePort with an S3-compatible backend.
 type S3Adapter struct {
-	s3Client *minio.Client
-	core     *minio.Core
-	bucket   string
+	getter objectGetter
+	core   multipartCore
+	bucket string
 }
 
 // NewS3Adapter creates a new S3-compatible object storage adapter.
@@ -38,9 +66,9 @@ func NewS3Adapter(endpoint, accessKeyID, secretAccessKey, bucket string, useSSL 
 	}
 
 	return &S3Adapter{
-		s3Client: s3Client,
-		core:     coreClient,
-		bucket:   bucket,
+		getter: &minioObjectGetter{client: s3Client},
+		core:   coreClient,
+		bucket: bucket,
 	}, nil
 }
 
@@ -76,7 +104,7 @@ func (a *S3Adapter) AbortMultipartUpload(ctx context.Context, fileID, uploadID s
 
 // GetObject retrieves the stored object and returns its size.
 func (a *S3Adapter) GetObject(ctx context.Context, fileID string) (io.ReadCloser, int64, error) {
-	obj, err := a.s3Client.GetObject(ctx, a.bucket, fileID, minio.GetObjectOptions{})
+	obj, err := a.getter.GetObject(ctx, a.bucket, fileID, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, 0, err
 	}
