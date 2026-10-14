@@ -44,52 +44,6 @@ spec:
   selector:
     app: database
 ---
-apiVersion: batch/v1beta1
-kind: CronJob
-metadata:
-  name: hello
-  namespace: default
-spec:
-  jobTemplate:
-    spec:
-      template:
-        metadata:
-          labels:
-            cronjob: deleteMessages
-        spec:
-          containers:
-          - command:
-            - /bin/bash
-            - -c
-            - mysql -h $PASSWORDEXCHANGE_DBHOST -u $DELETEMESSAGES_USER -p$DELETEMESSAGES_PASS  -E
-              -e "delete from messages where created < now() - interval 7 DAY;" $PASSWORDEXCHANGE_DBNAME
-            env:
-            - name: DELETEMESSAGES_PASS
-              valueFrom:
-                secretKeyRef:
-                  key: DELETEMESSAGES_PASS
-                  name: test-secret
-            - name: DELETEMESSAGES_USER
-              valueFrom:
-                secretKeyRef:
-                  key: DELETEMESSAGES_USER
-                  name: test-secret
-            - name: PASSWORDEXCHANGE_DBHOST
-              valueFrom:
-                secretKeyRef:
-                  key: PASSWORDEXCHANGE_DBHOST
-                  name: test-secret
-            - name: PASSWORDEXCHANGE_DBNAME
-              valueFrom:
-                secretKeyRef:
-                  key: PASSWORDEXCHANGE_DBNAME
-                  name: test-secret
-            image: mariadb
-            imagePullPolicy: IfNotPresent
-            name: delete-messages
-          restartPolicy: OnFailure
-  schedule: 0 0 * * *
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
