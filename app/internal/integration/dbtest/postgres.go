@@ -72,12 +72,14 @@ func StartPostgres(t *testing.T, migrationsFS fs.FS) (*sql.DB, contracts.Databas
 		tcpostgres.WithPassword(testDBPass),
 		tcpostgres.BasicWaitStrategies(),
 	)
-	require.NoError(t, err, "start postgres container")
+	// Run can return a container alongside a startup error, so register
+	// teardown before asserting; TerminateContainer is a no-op on nil.
 	t.Cleanup(func() {
 		if err := testcontainers.TerminateContainer(container); err != nil {
 			t.Logf("failed to terminate postgres container: %v", err)
 		}
 	})
+	require.NoError(t, err, "start postgres container")
 
 	host, err := container.Host(ctx)
 	require.NoError(t, err)
