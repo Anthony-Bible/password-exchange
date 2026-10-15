@@ -49,7 +49,12 @@ type ReminderLogEntry struct {
 // DatabaseConfig contains the connection settings required to reach the
 // underlying relational database used by the storage domain.
 type DatabaseConfig struct {
-	Host     string
+	// Host is the database host. The MySQL adapter expects "host:port" here and
+	// ignores Port; the Postgres adapter expects a bare host and reads Port.
+	Host string
+	// Port is the database TCP port, used by the Postgres adapter. Zero means
+	// the driver default.
+	Port     int
 	User     string
 	Password string
 	Name     string
