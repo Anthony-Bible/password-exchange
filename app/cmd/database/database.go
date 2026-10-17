@@ -40,12 +40,16 @@ var databaseCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	// Returning the error makes cmd.Execute exit non-zero, so Kubernetes
+	// restarts the pod and surfaces a failed auto-migration.
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := runAutoMigrations(); err != nil {
 			logging.Error().Err(err).Msg("Failed to run auto-migrations")
-			return
+			return err
 		}
 		runDatabaseServer()
+		return nil
 	},
 }
 
@@ -147,19 +151,16 @@ func initConfigAndMigrator() error {
 	}
 
 	// Initialize migrator
-	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
-		cfg.PassConfig.DbUser,
-		cfg.PassConfig.DbPass,
-		cfg.PassConfig.DbHost,
-		cfg.PassConfig.DbPort,
-		cfg.PassConfig.DbName,
-	)
-	db, err := sql.Open("mysql", connString)
+	target, err := resolveMigrationTarget(cfg.PassConfig)
+	if err != nil {
+		return err
+	}
+	db, err := sql.Open(target.sqlDriver, target.dsn)
 	if err != nil {
 		return fmt.Errorf("error opening database: %w", err)
 	}
 
-	m, err := NewMigrator(db, "migrations")
+	m, err := NewMigrator(db, target.dialect, target.source, target.createDir)
 	if err != nil {
 		return fmt.Errorf("error initializing migrator: %w", err)
 	}
