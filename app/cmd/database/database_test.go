@@ -144,7 +144,7 @@ func TestDatabaseCmdRun_RunsMigrationsOnStartup(t *testing.T) {
 	defer func() { runDatabaseServer = oldRunDatabaseServer }()
 
 	// Execute the command
-	databaseCmd.Run(databaseCmd, []string{})
+	require.NoError(t, databaseCmd.RunE(databaseCmd, []string{}))
 
 	// Verify Up() was called
 	mockMigrator.AssertExpectations(t)
@@ -174,7 +174,7 @@ func TestDatabaseCmdRun_NoMigrationsWhenDisabled(t *testing.T) {
 	defer func() { runDatabaseServer = oldRunDatabaseServer }()
 
 	// Execute
-	databaseCmd.Run(databaseCmd, []string{})
+	require.NoError(t, databaseCmd.RunE(databaseCmd, []string{}))
 
 	// Verify Up() was NOT called
 	mockMigrator.AssertNotCalled(t, "Up")
@@ -208,7 +208,7 @@ func TestDatabaseCmdRun_MigrationsBeforeServerStart(t *testing.T) {
 	defer func() { runDatabaseServer = oldRunDatabaseServer }()
 
 	// Execute
-	databaseCmd.Run(databaseCmd, []string{})
+	require.NoError(t, databaseCmd.RunE(databaseCmd, []string{}))
 
 	// Verify order
 	require.Len(t, callOrder, 2, "Both migrations and server should be called")
@@ -238,8 +238,11 @@ func TestDatabaseCmdRun_NoServerOnMigrationFailure(t *testing.T) {
 	}
 	defer func() { runDatabaseServer = oldRunDatabaseServer }()
 
-	// Execute
-	databaseCmd.Run(databaseCmd, []string{})
+	// Execute: the error must propagate so cmd.Execute exits non-zero and
+	// Kubernetes restarts the pod instead of it exiting cleanly.
+	err := databaseCmd.RunE(databaseCmd, []string{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "migration error")
 
 	// Verify server NOT started on failure
 	assert.False(t, serverStarted, "Server should NOT have been started if migration failed")
