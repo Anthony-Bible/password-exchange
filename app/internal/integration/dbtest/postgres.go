@@ -17,13 +17,12 @@ import (
 	"database/sql"
 	"errors"
 	"io/fs"
-	"net"
-	"net/url"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/database/dsn"
+	appmigrations "github.com/Anthony-Bible/password-exchange/app/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	pgxmigrate "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -93,16 +92,16 @@ func StartPostgres(t *testing.T, migrationsFS fs.FS) (*sql.DB, contracts.Databas
 		Password: testDBPass,
 		Name:     testDBName,
 	}
-	dsn := PostgresDSN(cfg)
+	connURL := PostgresDSN(cfg)
 
 	// Run migrations on a dedicated connection: the pgx/v5 migrate driver's
 	// Close() closes the *sql.DB it was given.
-	migrationDB, err := sql.Open("pgx", dsn)
+	migrationDB, err := sql.Open("pgx", connURL)
 	require.NoError(t, err)
 	waitForPing(t, migrationDB)
 	applyPostgresMigrations(t, migrationDB, migrationsFS)
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := sql.Open("pgx", connURL)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	waitForPing(t, db)
@@ -110,17 +109,27 @@ func StartPostgres(t *testing.T, migrationsFS fs.FS) (*sql.DB, contracts.Databas
 	return db, cfg
 }
 
+// StartPostgresBaseline is StartPostgres with the production Postgres
+// migrations embedded in the binary (app/migrations/postgres).
+func StartPostgresBaseline(t *testing.T) (*sql.DB, contracts.DatabaseConfig) {
+	t.Helper()
+
+	sub, err := fs.Sub(appmigrations.PostgresFS, "postgres")
+	require.NoError(t, err, "open embedded postgres migrations")
+	return StartPostgres(t, sub)
+}
+
 // PostgresDSN builds a pgx connection URL from cfg's separate Host and Port.
 // TLS is disabled because it only targets the local test container.
 func PostgresDSN(cfg contracts.DatabaseConfig) string {
-	u := url.URL{
-		Scheme:   "postgres",
-		User:     url.UserPassword(cfg.User, cfg.Password),
-		Host:     net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
-		Path:     "/" + cfg.Name,
-		RawQuery: "sslmode=disable",
-	}
-	return u.String()
+	return dsn.Postgres(dsn.Config{
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		User:     cfg.User,
+		Password: cfg.Password,
+		Name:     cfg.Name,
+		SSLMode:  "disable",
+	})
 }
 
 // applyPostgresMigrations runs every up migration at the root of fsys against

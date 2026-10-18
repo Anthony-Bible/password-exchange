@@ -105,6 +105,7 @@ type PassConfig struct {
 	DbUser                 string `mapstructure:"dbuser"`
 	DbPass                 string `mapstructure:"dbpass"`
 	DbName                 string `mapstructure:"dbname"`
+	DbDriver               string `mapstructure:"dbdriver"` // mysql (default) | postgres
 	ProdHost               string `mapstructure:"prodhost"`
 	DevHost                string `mapstructure:"devhost"`
 	EncryptionProdService  string `mapstructure:"encryptionprodservice"`
