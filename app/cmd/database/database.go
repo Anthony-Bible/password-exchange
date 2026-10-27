@@ -7,18 +7,27 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 
 	"github.com/Anthony-Bible/password-exchange/app/cmd"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/database/dsn"
+	"github.com/Anthony-Bible/password-exchange/app/internal/shared/database/migrations"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// migrationsDir is the on-disk directory for MySQL migrations (Postgres uses embedded ones).
+const migrationsDir = "migrations"
+
 var (
 	migrator Migrator
 	cfg      Config
+	// exitProcess is a variable to allow mocking in tests.
+	exitProcess = os.Exit
 	// runDatabaseServer is a variable to allow mocking in tests.
 	runDatabaseServer = func() {
 		logging.Info().Msg("Starting database server...")
@@ -43,6 +52,7 @@ var databaseCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runAutoMigrations(); err != nil {
 			logging.Error().Err(err).Msg("Failed to run auto-migrations")
+			exitProcess(1)
 			return
 		}
 		runDatabaseServer()
@@ -142,29 +152,48 @@ var migrateForceCmd = &cobra.Command{
 
 func initConfigAndMigrator() error {
 	bindenvs(cfg)
+	viper.SetDefault("dbdriver", "mysql")
 	if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
-	// Initialize migrator
-	connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
-		cfg.PassConfig.DbUser,
-		cfg.PassConfig.DbPass,
-		cfg.PassConfig.DbHost,
-		cfg.PassConfig.DbPort,
-		cfg.PassConfig.DbName,
-	)
-	db, err := sql.Open("mysql", connString)
+	driver := migrations.Dialect(cfg.PassConfig.DbDriver)
+	if driver == "" {
+		driver = migrations.DialectMySQL
+	}
+	db, err := openDatabase(driver, cfg.PassConfig)
 	if err != nil {
-		return fmt.Errorf("error opening database: %w", err)
+		return err
 	}
 
-	m, err := NewMigrator(db, "migrations")
+	m, err := NewMigrator(db, driver, migrationsDir)
 	if err != nil {
 		return fmt.Errorf("error initializing migrator: %w", err)
 	}
 	migrator = m
 	return nil
+}
+
+// openDatabase opens a connection for the given dialect using the configured credentials.
+func openDatabase(driver migrations.Dialect, c config.PassConfig) (*sql.DB, error) {
+	var (
+		db  *sql.DB
+		err error
+	)
+	switch driver {
+	case migrations.DialectMySQL:
+		connString := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",
+			c.DbUser, c.DbPass, c.DbHost, c.DbPort, c.DbName)
+		db, err = sql.Open("mysql", connString)
+	case migrations.DialectPostgres:
+		db, err = sql.Open("pgx", dsn.PostgresURL(c.DbHost, c.DbPort, c.DbUser, c.DbPass, c.DbName))
+	default:
+		return nil, fmt.Errorf("unsupported database driver %q", driver)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error opening database: %w", err)
+	}
+	return db, nil
 }
 
 // this is required due to viper not automatically mapping env to marshal https://github.com/spf13/viper/issues/584

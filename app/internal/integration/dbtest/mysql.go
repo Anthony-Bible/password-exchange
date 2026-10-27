@@ -106,7 +106,7 @@ func StartMySQL(t *testing.T) (*sql.DB, contracts.DatabaseConfig) {
 	migrationDB, err := sql.Open("mysql", dsn)
 	require.NoError(t, err)
 	waitForPing(t, migrationDB)
-	require.NoError(t, migrations.Up(migrationDB, migrationsDir(t)), "apply migrations")
+	require.NoError(t, migrations.Up(migrationDB, migrations.DialectMySQL, migrationsDir(t)), "apply migrations")
 	_ = migrationDB.Close()
 
 	// Fresh connection returned to the caller for the lifetime of the test.

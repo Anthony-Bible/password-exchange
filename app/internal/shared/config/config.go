@@ -101,6 +101,7 @@ type PassConfig struct {
 	RabUser                string `mapstructure:"rabuser"`
 	RabPass                string `mapstructure:"rabpass"`
 	RabQName               string `mapstructure:"rabqname"`
+	DbDriver               string `mapstructure:"dbdriver"`
 	DbHost                 string `mapstructure:"dbhost"`
 	DbUser                 string `mapstructure:"dbuser"`
 	DbPass                 string `mapstructure:"dbpass"`
