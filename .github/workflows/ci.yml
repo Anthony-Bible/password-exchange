@@ -86,12 +86,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  test_slackbot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r slackbot/requirements.txt -r slackbot/requirements-dev.txt
+      - name: Run slackbot tests
+        run: pytest slackbot/tests
+
   build_slackbot_image:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-    needs: [determine_version, test]
+    needs: [determine_version, test, test_slackbot]
     outputs:
       slackbot_image_digest: ${{ steps.build-and-push-slackbot.outputs.digest }}
     env:

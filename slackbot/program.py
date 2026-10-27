@@ -2,7 +2,7 @@
 import logging
 
 logging.basicConfig(level=logging.INFO)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
 import base64
 import os
@@ -19,7 +19,7 @@ from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
 
 import sqlalchemy
 from sqlalchemy.engine import Engine
-import MySQLdb
+import oauth_db
 # gazelle:ignore encryptionClient
 import encryptionClient
 
@@ -27,15 +27,9 @@ logger = logging.getLogger(__name__)
 
 # slackclient = WebClient(token=os.environ.get("SLACK_BOT_TOKEN"))
 
-oauthpassword = os.environ.get("OAUTHDB_PASSWORD")
-oauthUser = os.environ.get("OAUTHDB_USER")
-oauthdb = os.environ.get("OAUTHDB_NAME")
-dbhost = os.environ.get("PASSWORDEXCHANGE_DBHOST")
 client_id = os.environ.get("SLACK_CLIENT_ID")
 client_secret = os.environ.get("SLACK_CLIENT_SECRET")
-database_url = "mysql+mysqldb://" + oauthUser +":" + oauthpassword +"@" + dbhost +"/" + oauthdb
-
-engine: Engine = sqlalchemy.create_engine(database_url, pool_pre_ping=True)
+engine: Engine = oauth_db.make_engine(os.environ)
 
 #create oauth and installation store
 installation_store = SQLAlchemyInstallationStore(
@@ -53,7 +47,8 @@ try:
     installation_store.metadata.create_all(engine)
     oauth_state_store.metadata.create_all(engine)
 except Exception as e:
-    logger.error("Something went wrong creating intial dbs" + e)
+    logger.exception("Something went wrong creating initial dbs")
+    raise
 
 bolt_app = App(
     logger=logger,

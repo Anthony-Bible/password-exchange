@@ -9,7 +9,6 @@ gunicorn==23.0.0
 importlib-metadata==5.2.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
-mariadb>=1.0.11
 MarkupSafe==3.0.3
 mysqlclient==2.1.1
 protobuf==6.33.6
@@ -17,6 +16,7 @@ six==1.16.0
 slack-bolt==1.23.0
 slack-sdk==3.42.0
 soupsieve==2.7
-SQLAlchemy==1.4.54
+SQLAlchemy==2.0.*
+psycopg[binary]==3.2.*
 Werkzeug==3.1.6
 zipp==3.19.1
