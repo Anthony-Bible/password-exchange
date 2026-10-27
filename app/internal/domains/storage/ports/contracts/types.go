@@ -58,6 +58,8 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Name     string
+	// MaxOpenConns caps the Postgres connection pool. Zero means the adapter default.
+	MaxOpenConns int
 }
 
 // LogEvent is the shared structured-logging event contract. It is an alias to

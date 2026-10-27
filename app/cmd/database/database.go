@@ -153,6 +153,7 @@ var migrateForceCmd = &cobra.Command{
 func initConfigAndMigrator() error {
 	bindenvs(cfg)
 	viper.SetDefault("dbdriver", "mysql")
+	viper.SetDefault("dbmaxopenconns", 5)
 	if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
@@ -188,7 +189,7 @@ func openDatabase(driver migrations.Dialect, c config.PassConfig) (*sql.DB, erro
 	case migrations.DialectPostgres:
 		db, err = sql.Open("pgx", dsn.PostgresURL(c.DbHost, c.DbPort, c.DbUser, c.DbPass, c.DbName))
 	default:
-		return nil, fmt.Errorf("unsupported database driver %q", driver)
+		return nil, fmt.Errorf("unsupported PASSWORDEXCHANGE_DBDRIVER %q (expected \"mysql\" or \"postgres\")", driver)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)

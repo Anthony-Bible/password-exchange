@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
@@ -71,6 +72,15 @@ func (h *FileAPIHandler) InitiateUpload(c *gin.Context) {
 		return
 	}
 
+	for field, v := range map[string]string{"filename": req.Filename, "contentType": req.ContentType, "messageID": req.MessageID} {
+		if !middleware.IsStorageSafe(v) || utf8.RuneCountInString(v) > 255 {
+			writeValidationError(c, "Request validation failed", map[string]interface{}{
+				field: "Must be valid UTF-8 without NUL characters and at most 255 characters",
+			})
+			return
+		}
+	}
+
 	response, err := h.fileService.InitiateUpload(c.Request.Context(), domain.InitiateUploadRequest{
 		Filename:    req.Filename,
 		ContentType: req.ContentType,
@@ -106,6 +116,10 @@ func (h *FileAPIHandler) InitiateUpload(c *gin.Context) {
 // @Router /files/{fileID}/chunks [post]
 func (h *FileAPIHandler) UploadChunk(c *gin.Context) {
 	sessionID := c.PostForm("sessionID")
+	if !middleware.IsStorageSafe(sessionID) || !middleware.IsStorageSafe(c.Param("fileID")) {
+		writeValidationError(c, "Invalid ID", nil)
+		return
+	}
 	chunkIndex, ciErr := strconv.Atoi(c.PostForm("chunkIndex"))
 	totalChunks, tcErr := strconv.Atoi(c.PostForm("totalChunks"))
 	fileHeader, dataErr := c.FormFile("data")
@@ -185,6 +199,10 @@ func (h *FileAPIHandler) DownloadFile(c *gin.Context) {
 		return
 	}
 
+	if !middleware.IsStorageSafe(c.Param("fileID")) {
+		writeValidationError(c, "Invalid file ID", nil)
+		return
+	}
 	response, err := h.fileService.DownloadFile(c.Request.Context(), domain.DownloadFileRequest{FileID: c.Param("fileID"), Key: key})
 	if err != nil {
 		writeFileServiceError(c, err, "Failed to download file")

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/models"
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,11 @@ var validate *validator.Validate
 const (
 	maxPlaintextContentLength        = 10000
 	maxClientCiphertextContentLength = 20000
+	maxStoredEmailLength             = 255
 )
+
+// IsStorageSafe reports whether s can be stored by Postgres: valid UTF-8 and no NUL.
+func IsStorageSafe(s string) bool { return utf8.ValidString(s) && !strings.ContainsRune(s, 0) }
 
 func init() {
 	validate = validator.New()
@@ -89,6 +94,13 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 		errors["content"] = fmt.Sprintf("Must be no more than %d characters", maxPlaintextContentLength)
 	}
 
+	if !IsStorageSafe(req.Content) {
+		errors["content"] = "Must be valid UTF-8 without NUL characters"
+	}
+	if !IsStorageSafe(req.Passphrase) {
+		errors["passphrase"] = "Must be valid UTF-8 without NUL characters"
+	}
+
 	// Conditional validation for notifications
 	if req.SendNotification {
 		if req.Sender == nil {
@@ -119,6 +131,8 @@ func ValidateMessageSubmission(req *models.MessageSubmissionRequest) map[string]
 				for k, v := range recipientErrors {
 					errors["recipient."+k] = v
 				}
+			} else if utf8.RuneCountInString(req.Recipient.Email) > maxStoredEmailLength {
+				errors["recipient.email"] = fmt.Sprintf("Must be no more than %d characters", maxStoredEmailLength)
 			}
 		}
 

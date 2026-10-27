@@ -124,6 +124,7 @@ type PassConfig struct {
 	ObjectStorageUseSSL    bool   `mapstructure:"objectstorageusessl"`
 	AutoMigrate            bool   `mapstructure:"automigrate"`
 	DbPort                 int    `mapstructure:"dbport"`
+	DbMaxOpenConns         int    `mapstructure:"dbmaxopenconns"`
 	EmailPort              int    `mapstructure:"emailport"`
 	RabPort                int    `mapstructure:"rabport"`
 }

@@ -2,9 +2,8 @@ package database
 
 import (
 	storageGRPC "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/primary/grpc"
-	storageMySQL "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
+	storageFactory "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/factory"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
-	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
@@ -23,20 +22,18 @@ func (conf Config) startHexagonalServer() {
 	address := "0.0.0.0:50051"
 
 	// Create database configuration from PassConfig
-	dbConfig := storageContracts.DatabaseConfig{
-		Host:     conf.PassConfig.DbHost,
-		User:     conf.PassConfig.DbUser,
-		Password: conf.PassConfig.DbPass,
-		Name:     conf.PassConfig.DbName,
-	}
+	dbConfig := storageFactory.DatabaseConfigFromPass(conf.PassConfig)
 
 	// Wire up the secondary port adapters first so they can be passed into
 	// every adapter that depends on them (mysql, grpc).
 	storageLogger := logging.NewLogger()
 	storageValidator := validation.NewAdapter()
 
-	// Create MySQL adapter (secondary adapter)
-	mysqlAdapter := storageMySQL.NewMySQLAdapter(dbConfig, storageLogger, storageValidator)
+	// Create the storage adapter selected by PASSWORDEXCHANGE_DBDRIVER (secondary adapter)
+	mysqlAdapter, err := storageFactory.NewMessageRepository(conf.PassConfig.DbDriver, dbConfig, storageLogger, storageValidator)
+	if err != nil {
+		logging.Fatal().Err(err).Msg("Failed to create storage adapter")
+	}
 	defer func() {
 		if err := mysqlAdapter.Close(); err != nil {
 			logging.Error().Err(err).Msg("Failed to close storage adapter")

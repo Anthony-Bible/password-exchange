@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/adapters/primary/api/middleware"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/message/domain"
@@ -125,6 +126,17 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 		ExpirationHours: expirationHours,
 	}
 
+	for field, v := range map[string]string{
+		"firstname": req.SenderName, "email": req.SenderEmail,
+		"other_firstname": req.RecipientName, "other_email": req.RecipientEmail,
+		"other_lastname": req.Passphrase, "other_information": req.AdditionalInfo,
+	} {
+		if !middleware.IsStorageSafe(v) || (field == "other_email" && utf8.RuneCountInString(v) > 255) {
+			h.renderErrorWithField(c, "Invalid input for "+field, field)
+			return
+		}
+	}
+
 	// Submit the message
 	response, err := h.messageService.SubmitMessage(ctx, req)
 	if err != nil {
@@ -143,6 +155,10 @@ func (h *MessageHandler) SubmitMessage(c *gin.Context) {
 func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("uuid")
+	if !middleware.IsStorageSafe(messageID) {
+		h.render404(c)
+		return
+	}
 
 	logging.Debug().Str("messageId", messageID).Msg("Checking message access")
 
@@ -173,6 +189,10 @@ func (h *MessageHandler) DisplayDecrypted(c *gin.Context) {
 func (h *MessageHandler) DecryptMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("uuid")
+	if !middleware.IsStorageSafe(messageID) {
+		h.render404(c)
+		return
+	}
 	keyParam := c.Param("key")
 	passphrase := c.PostForm("passphrase")
 

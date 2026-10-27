@@ -17,9 +17,8 @@ import (
 	sharedConfig "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/shared"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/adapters/secondary/storage"
 	notificationDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/notification/domain"
-	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/mysql"
+	storageFactory "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/adapters/secondary/factory"
 	storageDomain "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
-	storageContracts "github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/config"
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/logging"
 	"github.com/Anthony-Bible/password-exchange/app/pkg/validation"
@@ -111,12 +110,7 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 
 		// Initialize storage adapter with database connection
 		// Uses MySQL adapter as the concrete implementation of the storage port
-		dbConfig := storageContracts.DatabaseConfig{
-			Host:     cfg.DbHost,
-			User:     cfg.DbUser,
-			Password: cfg.DbPass,
-			Name:     cfg.DbName,
-		}
+		dbConfig := storageFactory.DatabaseConfigFromPass(cfg.PassConfig)
 
 		// Wire the storage domain's port adapters so the MySQL adapter can
 		// receive them and we never reach for the shared logging/validation
@@ -124,7 +118,10 @@ PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)
 		storageLogger := logging.NewLogger()
 		storageValidator := validation.NewAdapter()
 
-		storageAdapter := mysql.NewMySQLAdapter(dbConfig, storageLogger, storageValidator)
+		storageAdapter, err := storageFactory.NewMessageRepository(cfg.DbDriver, dbConfig, storageLogger, storageValidator)
+		if err != nil {
+			logging.Fatal().Err(err).Msg("Failed to create storage adapter")
+		}
 
 		// Fail fast on misconfigured/unreachable databases so the cronjob exits
 		// with a clear diagnostic instead of silently proceeding and erroring
@@ -249,6 +246,7 @@ func init() {
 	cmd.RootCmd.AddCommand(reminderCmd)
 
 	// Set defaults for reminder configuration
+	viper.SetDefault("dbmaxopenconns", 5)
 	viper.SetDefault("reminder.enabled", true)
 	viper.SetDefault("reminder.checkafterhours", 24)
 	viper.SetDefault("reminder.maxreminders", 3)
