@@ -45,3 +45,22 @@ func TestStartPostgres_AppliesMigrationsAndReturnsUsableConfig(t *testing.T) {
 	require.NoError(t, db.QueryRow("SELECT count(*) FROM fixture").Scan(&count))
 	assert.Equal(t, 1, count)
 }
+
+func TestStartPostgresBaseline_AppliesEmbeddedBaseline(t *testing.T) {
+	db, cfg := StartPostgresBaseline(t)
+
+	for _, table := range []string{"messages", "email_reminders", "file_upload_sessions"} {
+		var exists bool
+		require.NoError(t, db.QueryRow("SELECT to_regclass('public.' || $1) IS NOT NULL", table).Scan(&exists))
+		assert.True(t, exists, "baseline should create %s", table)
+	}
+
+	var version int64
+	var dirty bool
+	require.NoError(t, db.QueryRow("SELECT version, dirty FROM schema_migrations").Scan(&version, &dirty))
+	assert.EqualValues(t, 20260311000007, version)
+	assert.False(t, dirty)
+
+	assert.NotEmpty(t, cfg.Host)
+	assert.NotZero(t, cfg.Port)
+}

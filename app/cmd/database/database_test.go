@@ -230,6 +230,11 @@ func TestDatabaseCmdRun_NoServerOnMigrationFailure(t *testing.T) {
 	cfg.PassConfig.AutoMigrate = true
 	defer func() { cfg = oldCfg }()
 
+	oldExit := exitProcess
+	exitCode := -1
+	exitProcess = func(code int) { exitCode = code }
+	defer func() { exitProcess = oldExit }()
+
 	// Mock server start
 	serverStarted := false
 	oldRunDatabaseServer := runDatabaseServer
@@ -243,4 +248,5 @@ func TestDatabaseCmdRun_NoServerOnMigrationFailure(t *testing.T) {
 
 	// Verify server NOT started on failure
 	assert.False(t, serverStarted, "Server should NOT have been started if migration failed")
+	assert.Equal(t, 1, exitCode, "process must exit non-zero on migration failure")
 }

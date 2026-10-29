@@ -9,6 +9,7 @@ import (
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/shared/database/migrations"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Migrator defines the interface for database migrations.
@@ -23,31 +24,33 @@ type Migrator interface {
 // defaultMigrator implements the Migrator interface.
 type defaultMigrator struct {
 	db            *sql.DB
+	dialect       migrations.Dialect
 	migrationsDir string
 }
 
 // NewMigrator creates a new instance of the default Migrator implementation.
-func NewMigrator(db *sql.DB, migrationsDir string) (Migrator, error) {
+func NewMigrator(db *sql.DB, dialect migrations.Dialect, migrationsDir string) (Migrator, error) {
 	return &defaultMigrator{
 		db:            db,
+		dialect:       dialect,
 		migrationsDir: migrationsDir,
 	}, nil
 }
 
 func (m *defaultMigrator) Up() error {
-	return migrations.Up(m.db, m.migrationsDir)
+	return migrations.Up(m.db, m.dialect, m.migrationsDir)
 }
 
 func (m *defaultMigrator) Down() error {
-	return migrations.Down(m.db, m.migrationsDir)
+	return migrations.Down(m.db, m.dialect, m.migrationsDir)
 }
 
 func (m *defaultMigrator) Version() (uint, bool, error) {
-	return migrations.Version(m.db, m.migrationsDir)
+	return migrations.Version(m.db, m.dialect, m.migrationsDir)
 }
 
 func (m *defaultMigrator) Force(version int) error {
-	return migrations.Force(m.db, m.migrationsDir, version)
+	return migrations.Force(m.db, m.dialect, m.migrationsDir, version)
 }
 
 func (m *defaultMigrator) Create(name string) error {
@@ -55,17 +58,22 @@ func (m *defaultMigrator) Create(name string) error {
 	upFileName := fmt.Sprintf("%s_%s.up.sql", timestamp, name)
 	downFileName := fmt.Sprintf("%s_%s.down.sql", timestamp, name)
 
-	if err := os.MkdirAll(m.migrationsDir, 0o755); err != nil {
+	dir := m.migrationsDir
+	if m.dialect == migrations.DialectPostgres {
+		dir = filepath.Join(dir, "postgres")
+	}
+
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("could not create migrations directory: %w", err)
 	}
 
-	upFile, err := os.Create(filepath.Join(m.migrationsDir, upFileName))
+	upFile, err := os.Create(filepath.Join(dir, upFileName))
 	if err != nil {
 		return fmt.Errorf("could not create up migration file: %w", err)
 	}
 	defer upFile.Close()
 
-	downFile, err := os.Create(filepath.Join(m.migrationsDir, downFileName))
+	downFile, err := os.Create(filepath.Join(dir, downFileName))
 	if err != nil {
 		return fmt.Errorf("could not create down migration file: %w", err)
 	}

@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
+	pgmigrations "github.com/Anthony-Bible/password-exchange/app/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	pgxmigrate "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -142,4 +143,12 @@ func applyPostgresMigrations(t *testing.T, db *sql.DB, fsys fs.FS) {
 	}
 	require.NoError(t, upErr, "apply migrations")
 	require.NoError(t, errors.Join(srcErr, dbErr), "close migrator")
+}
+
+// StartPostgresBaseline starts Postgres with the embedded baseline migration applied.
+func StartPostgresBaseline(t *testing.T) (*sql.DB, contracts.DatabaseConfig) {
+	t.Helper()
+	sub, err := fs.Sub(pgmigrations.PostgresFS, "postgres")
+	require.NoError(t, err)
+	return StartPostgres(t, sub)
 }
