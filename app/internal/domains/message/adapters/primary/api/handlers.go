@@ -169,6 +169,10 @@ func (h *MessageAPIHandler) SubmitMessage(c *gin.Context) {
 func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
+	if !middleware.IsStorageSafe(messageID) {
+		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid message ID", nil)
+		return
+	}
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
 	logging.Debug().
@@ -236,6 +240,10 @@ func (h *MessageAPIHandler) GetMessageInfo(c *gin.Context) {
 func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
+	if !middleware.IsStorageSafe(messageID) {
+		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid message ID", nil)
+		return
+	}
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
 	logging.Debug().
@@ -346,6 +354,10 @@ func (h *MessageAPIHandler) DecryptMessage(c *gin.Context) {
 func (h *MessageAPIHandler) NotifyMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	messageID := c.Param("id")
+	if !middleware.IsStorageSafe(messageID) {
+		middleware.JSONErrorResponse(c, http.StatusBadRequest, models.ErrorCodeValidationFailed, "Invalid message ID", nil)
+		return
+	}
 	correlationID, _ := c.Get(middleware.CorrelationIDKey)
 
 	logging.Info().
