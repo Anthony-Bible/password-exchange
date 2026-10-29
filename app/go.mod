@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/Anthony-Bible/Logging v0.0.0-20260525150021-f765f71559a8
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.1
+	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.2
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-kit/kit v0.13.0
 	github.com/go-playground/validator/v10 v10.26.0
@@ -41,7 +41,7 @@ require (
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c // indirect
-	github.com/JohannesKaufmann/dom v0.2.0 // indirect
+	github.com/JohannesKaufmann/dom v0.3.1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
