@@ -111,6 +111,18 @@ def test_unknown_driver_fails_naming_the_variable(fn):
         getattr(oauth_db, fn)({**BASE, "PASSWORDEXCHANGE_DBDRIVER": "bogus"})
 
 
+@pytest.mark.parametrize(
+    "driver, overrides, variable",
+    [
+        ("postgres", {"PASSWORDEXCHANGE_DBPORT": "not-a-port"}, "PASSWORDEXCHANGE_DBPORT"),
+        ("mysql", {"PASSWORDEXCHANGE_DBHOST": "db.internal:not-a-port"}, "PASSWORDEXCHANGE_DBHOST"),
+    ],
+)
+def test_non_numeric_port_fails_naming_the_variable(driver, overrides, variable):
+    with pytest.raises(ValueError, match=variable):
+        oauth_db.build_url({**BASE, "PASSWORDEXCHANGE_DBDRIVER": driver, **overrides})
+
+
 def test_make_engine_bounds_the_pool_and_pings():
     engine = oauth_db.make_engine({**BASE, "PASSWORDEXCHANGE_DBDRIVER": "postgres"})
     try:

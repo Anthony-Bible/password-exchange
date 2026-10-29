@@ -17,7 +17,6 @@ from slack_bolt.oauth.oauth_settings import OAuthSettings
 from slack_sdk.oauth.installation_store.sqlalchemy import SQLAlchemyInstallationStore
 from slack_sdk.oauth.state_store.sqlalchemy import SQLAlchemyOAuthStateStore
 
-import sqlalchemy
 from sqlalchemy.engine import Engine
 import oauth_db
 # gazelle:ignore encryptionClient
@@ -46,7 +45,7 @@ oauth_state_store = SQLAlchemyOAuthStateStore(
 try:
     installation_store.metadata.create_all(engine)
     oauth_state_store.metadata.create_all(engine)
-except Exception as e:
+except Exception:
     logger.exception("Something went wrong creating initial dbs")
     raise
 

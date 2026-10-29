@@ -10,11 +10,18 @@ DEFAULT_DRIVER = "mysql"
 DEFAULT_POSTGRES_PORT = 5432
 
 
+def _port(raw, variable) -> int:
+    try:
+        return int(raw)
+    except ValueError:
+        raise ValueError("invalid port %r in %s (expected an integer)" % (raw, variable)) from None
+
+
 def _postgres_url(env, **credentials) -> URL:
     return URL.create(
         "postgresql+psycopg",
         host=env.get("PASSWORDEXCHANGE_DBHOST"),
-        port=int(env.get("PASSWORDEXCHANGE_DBPORT") or DEFAULT_POSTGRES_PORT),
+        port=_port(env.get("PASSWORDEXCHANGE_DBPORT") or DEFAULT_POSTGRES_PORT, "PASSWORDEXCHANGE_DBPORT"),
         **credentials,
     )
 
@@ -24,7 +31,7 @@ def _mysql_url(env, **credentials) -> URL:
     host, port = env.get("PASSWORDEXCHANGE_DBHOST"), None
     if host and ":" in host:
         host, raw_port = host.rsplit(":", 1)
-        port = int(raw_port)
+        port = _port(raw_port, "PASSWORDEXCHANGE_DBHOST")
     return URL.create("mysql+mysqldb", host=host, port=port, **credentials)
 
 
