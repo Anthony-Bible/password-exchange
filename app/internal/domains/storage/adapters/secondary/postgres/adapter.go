@@ -21,6 +21,9 @@ const (
 	// defaultMaxOpenConns is the pool size used when DatabaseConfig.MaxOpenConns is unset.
 	defaultMaxOpenConns = 5
 
+	// connectPingTimeout bounds the initial connectivity check in Connect.
+	connectPingTimeout = 5 * time.Second
+
 	// defaultMessageTTL is the default time-to-live for messages stored in Postgres.
 	// Must match the message domain's DefaultMessageTTL.
 	defaultMessageTTL = 7 * 24 * time.Hour
@@ -134,8 +137,10 @@ func (m *PostgresAdapter) Connect() error {
 	db.SetMaxIdleConns(maxOpen)
 	db.SetConnMaxLifetime(30 * time.Minute)
 
-	// Test the connection
-	if err := db.Ping(); err != nil {
+	// Test the connection; bounded so a hung database cannot hold connMu indefinitely
+	ctx, cancel := context.WithTimeout(context.Background(), connectPingTimeout)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
 		db.Close() // Close connection if ping fails to prevent leak
 		m.logger.Error().Err(err).Msg("Failed to ping Postgres database")
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
@@ -307,7 +312,11 @@ func (m *PostgresAdapter) DeleteExpiredMessages() error {
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseOperation, err)
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		m.logger.Warn().Err(err).Msg("Expired messages cleaned up; rows affected unavailable")
+		return nil
+	}
 	m.logger.Info().Int64("rowsDeleted", rowsAffected).Msg("Expired messages cleaned up")
 	return nil
 }
@@ -467,9 +476,16 @@ func (m *PostgresAdapter) Close() error {
 	return nil
 }
 
-// isInvalidInputError reports whether err is a Postgres string-too-long (22001)
-// or invalid-byte-sequence (22021, including NUL) error.
+// isInvalidInputError reports whether err is a Postgres string-too-long (22001),
+// invalid-byte-sequence (22021, including NUL) or untranslatable-character (22P05) error.
 func isInvalidInputError(err error) bool {
 	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && (pgErr.Code == "22001" || pgErr.Code == "22021")
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	switch pgErr.Code {
+	case "22001", "22021", "22P05":
+		return true
+	}
+	return false
 }

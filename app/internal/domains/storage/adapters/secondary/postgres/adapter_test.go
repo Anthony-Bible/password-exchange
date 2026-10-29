@@ -95,7 +95,7 @@ func TestPostgresAdapter_RejectsOperationsAfterClose(t *testing.T) {
 // --- error mapping ---
 
 func TestInsertMessage_StringTooLongAndInvalidByteSequenceMapToValidationError(t *testing.T) {
-	for _, code := range []string{"22001", "22021"} {
+	for _, code := range []string{"22001", "22021", "22P05"} {
 		t.Run(code, func(t *testing.T) {
 			a, mock := newAdapterForTest(t)
 			mock.ExpectExec(`INSERT INTO messages`).WillReturnError(&pgconn.PgError{Code: code})
@@ -109,7 +109,7 @@ func TestInsertMessage_StringTooLongAndInvalidByteSequenceMapToValidationError(t
 }
 
 func TestCreateUploadSession_StringTooLongAndInvalidByteSequenceMapToValidationError(t *testing.T) {
-	for _, code := range []string{"22001", "22021"} {
+	for _, code := range []string{"22001", "22021", "22P05"} {
 		t.Run(code, func(t *testing.T) {
 			a, mock := newAdapterForTest(t)
 			mock.ExpectExec(`INSERT INTO file_upload_sessions`).WillReturnError(&pgconn.PgError{Code: code})

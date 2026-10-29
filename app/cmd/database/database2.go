@@ -30,18 +30,18 @@ func (conf Config) startHexagonalServer() {
 	storageValidator := validation.NewAdapter()
 
 	// Create the storage adapter selected by PASSWORDEXCHANGE_DBDRIVER (secondary adapter)
-	mysqlAdapter, err := storageFactory.NewMessageRepository(conf.PassConfig.DbDriver, dbConfig, storageLogger, storageValidator)
+	storageAdapter, err := storageFactory.NewMessageRepository(conf.PassConfig.DbDriver, dbConfig, storageLogger, storageValidator)
 	if err != nil {
 		logging.Fatal().Err(err).Msg("Failed to create storage adapter")
 	}
 	defer func() {
-		if err := mysqlAdapter.Close(); err != nil {
+		if err := storageAdapter.Close(); err != nil {
 			logging.Error().Err(err).Msg("Failed to close storage adapter")
 		}
 	}()
 
 	// Create storage service (domain)
-	storageService := storageDomain.NewStorageService(mysqlAdapter, storageLogger, storageValidator)
+	storageService := storageDomain.NewStorageService(storageAdapter, storageLogger, storageValidator)
 
 	// Create gRPC server (primary adapter) — inject logger and validator so
 	// the adapter does not reach out to the shared logging/validation packages.
