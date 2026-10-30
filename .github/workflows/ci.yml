@@ -8,6 +8,12 @@ on:
     tags:
       - 'v*'
 
+# A newer push to master supersedes an in-flight master run, so its deploy can't land last.
+# Tags and PRs get their own groups and are never cancelled.
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/master' }}
+
 jobs:
   determine_version:
     runs-on: ubuntu-24.04
@@ -277,6 +283,14 @@ jobs:
         working-directory: ./build
         run: |
           # Clone stays anonymous HTTPS (public repo); push over SSH with the write-enabled deploy key
+          # Cancellation is best-effort; never let a superseded master commit overwrite dev
+          if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
+            HEAD_SHA=$(git -C "${GITHUB_WORKSPACE}" ls-remote origin refs/heads/master | cut -f1)
+            if [[ "${HEAD_SHA}" != "${GITHUB_SHA}" ]]; then
+              echo "::warning::${GITHUB_SHA} is no longer master HEAD (${HEAD_SHA}); skipping stale deploy"
+              exit 0
+            fi
+          fi
           git remote set-url origin git@github.com:Anthony-Bible/password-exchange-deploy.git
           git push origin HEAD:main
 
