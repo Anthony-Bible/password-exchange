@@ -38,7 +38,7 @@ const (
 	// defaultPGImage uses the Google-hosted Docker Hub mirror for the same
 	// rate-limit reason as defaultDBImage. Override with
 	// PASSWORDEXCHANGE_TEST_PG_IMAGE.
-	defaultPGImage = "mirror.gcr.io/library/postgres:17-alpine"
+	defaultPGImage = "mirror.gcr.io/library/postgres:18-alpine"
 	pgImageEnvVar  = "PASSWORDEXCHANGE_TEST_PG_IMAGE"
 )
 
@@ -50,7 +50,7 @@ func testPGImage() string {
 	return defaultPGImage
 }
 
-// StartPostgres launches a throwaway Postgres 17 container, applies the
+// StartPostgres launches a throwaway Postgres 18 container, applies the
 // migrations found at the root of migrationsFS, and returns both an open
 // *sql.DB (for seeding and assertions) and the DatabaseConfig a Postgres
 // adapter needs to connect, with Host and Port kept separate. All resources are

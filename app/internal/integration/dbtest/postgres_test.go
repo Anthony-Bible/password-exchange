@@ -23,7 +23,7 @@ func TestStartPostgres_AppliesMigrationsAndReturnsUsableConfig(t *testing.T) {
 
 	var version string
 	require.NoError(t, db.QueryRow("SELECT version()").Scan(&version))
-	assert.Contains(t, version, "PostgreSQL 17")
+	assert.Contains(t, version, "PostgreSQL 18")
 
 	var exists bool
 	require.NoError(t, db.QueryRow("SELECT to_regclass('public.fixture') IS NOT NULL").Scan(&exists))

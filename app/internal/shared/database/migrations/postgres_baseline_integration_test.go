@@ -1,6 +1,6 @@
 //go:build integration
 
-// Postgres 17 integration tests for the embedded baseline migration.
+// Postgres 18 integration tests for the embedded baseline migration.
 // See app/internal/integration/dbtest/postgres.go for the podman setup.
 
 package migrations_test
@@ -22,7 +22,7 @@ import (
 
 const baselineVersion = 20260311000007
 
-// freshDatabase starts (or reuses) a PG17 container and returns an opener that
+// freshDatabase starts (or reuses) a PG18 container and returns an opener that
 // yields a NEW *sql.DB on a brand-new empty database each time it is called
 // for the same database. golang-migrate closes the *sql.DB it is given, so
 // every Up/Down/Version needs its own handle.
