@@ -7,6 +7,9 @@ metadata:
   namespace: default
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+# There is ONE Slack app and one slackbot. It is rendered by the dev pipeline
+# only (CI drops it from the prod render) because the dev ArgoCD app owns it,
+# but it serves the real Slack app, so its DB target is the PROD Secret.
 spec:
   replicas: 2
   selector:
@@ -15,15 +18,48 @@ spec:
   template:
     metadata:
       annotations:
-        iam.amazonaws.com/role: arn:aws:iam::842805395457:role/Test_ec2ForSDK
         linkerd.io/inject: enabled
-        config.linkerd.io/skip-outbound-ports: "3306"
+        # 3306: MySQL via the in-cluster cloudsql-proxy (until #570).
+        # 3307: cloud-sql-proxy's TLS connection to Cloud SQL. 127.0.0.1:5432 is loopback.
+        config.linkerd.io/skip-outbound-ports: "3306,3307"
+        # Start linkerd-proxy before cloud-sql-proxy so the proxy's Admin API and
+        # metadata-server calls aren't caught by iptables with no proxy listening.
+        config.alpha.linkerd.io/proxy-enable-native-sidecar: "true"
       labels:
         app: slackbot
         name: slackbot
         phase: "%{PHASE}"
         version: "%{VERSION}" 
     spec:
+      serviceAccountName: password-exchange
+      initContainers:
+      # Cloud SQL Auth Proxy as a native sidecar; identity via Workload Identity.
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.22.0
+        restartPolicy: Always
+        args:
+        - --structured-logs
+        - --port=5432
+        - --health-check
+        - --http-address=0.0.0.0
+        - --http-port=9801
+        - gen-lang-client-0479899208:us-central1:sre-bible
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 9801
+          periodSeconds: 1
+          failureThreshold: 60
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
       containers:
       - image: ghcr.io/anthony-bible/passwordexchange-slackbot-%{PHASE}@%{SLACKBOT_IMAGE_SHA}
         ports:
@@ -62,41 +98,62 @@ spec:
               secretKeyRef:
                 key: PASSWORDEXCHANGE_PRODHOST
                 name: test-secret
+          # OAuth DB target: always the prod Secret (see the note at the top).
+          - name: PASSWORDEXCHANGE_DBDRIVER
+            valueFrom:
+              secretKeyRef:
+                key: PASSWORDEXCHANGE_DBDRIVER
+                name: password-exchange-db-prod
           - name: PASSWORDEXCHANGE_DBHOST
             valueFrom:
               secretKeyRef:
                 key: PASSWORDEXCHANGE_DBHOST
-                name: test-secret
-          - name: OAUTHDB_PASSWORD
+                name: password-exchange-db-prod
+          - name: PASSWORDEXCHANGE_DBPORT
             valueFrom:
               secretKeyRef:
-                key: OAUTHDB_PASSWORD
-                name: test-secret
+                key: PASSWORDEXCHANGE_DBPORT
+                name: password-exchange-db-prod
           - name: OAUTHDB_USER
             valueFrom:
               secretKeyRef:
                 key: OAUTHDB_USER
-                name: test-secret
+                name: password-exchange-db-prod
+          - name: OAUTHDB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: OAUTHDB_PASSWORD
+                name: password-exchange-db-prod
           - name: OAUTHDB_NAME
             valueFrom:
               secretKeyRef:
                 key: OAUTHDB_NAME
-                name: test-secret
+                name: password-exchange-db-prod
+          - name: OAUTHDB_POOL_SIZE
+            valueFrom:
+              secretKeyRef:
+                key: OAUTHDB_POOL_SIZE
+                name: password-exchange-db-prod
+          - name: OAUTHDB_MAX_OVERFLOW
+            valueFrom:
+              secretKeyRef:
+                key: OAUTHDB_MAX_OVERFLOW
+                name: password-exchange-db-prod
           - name: SLACK_SIGNING_SECRET
             valueFrom:
               secretKeyRef:
                 key: SLACK_SIGNING_SECRET
-                name: test-secret    
+                name: test-secret
           - name: SLACK_CLIENT_ID
             valueFrom:
               secretKeyRef:
                 key: SLACK_CLIENT_ID
-                name: test-secret  
+                name: test-secret
           - name: SLACK_CLIENT_SECRET
             valueFrom:
               secretKeyRef:
                 key: SLACK_CLIENT_SECRET
-                name: test-secret        
+                name: test-secret
         name: slackbot
 
 

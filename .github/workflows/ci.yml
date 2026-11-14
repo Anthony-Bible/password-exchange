@@ -231,6 +231,17 @@ jobs:
           # Check if any yaml files exist in k8s/
           if ls k8s/*.yaml 1> /dev/null 2>&1; then
             for f in k8s/*.yaml; do
+              # Phase-shared objects (the one slackbot, the Cloud SQL KSA) are owned
+              # by the dev ArgoCD app, so only the dev render emits them; two apps
+              # rendering the same name fight over it.
+              case "$(basename "$f")" in
+                slackbot.*|password-exchange.serviceaccount.yaml)
+                  if [[ "${PHASE}" == "prod" ]]; then
+                    echo "skipping $f for prod (owned by the dev render)"
+                    continue
+                  fi
+                  ;;
+              esac
               if [ "$first_file" = true ]; then
                 first_file=false
               else
