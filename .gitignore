@@ -14,3 +14,9 @@ slackbot/.venv/*
 .idea/
 app/app
 combined.yaml
+
+# Terraform
+deploy/terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
