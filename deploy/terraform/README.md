@@ -51,7 +51,17 @@ The KSA `password-exchange` needs the annotation `iam.gke.io/gcp-service-account
 
 ## Shared instance: things to know
 
-- **Connections.** `db-f1-micro` has 25 `max_connections`, about 19 usable by apps. sre-bible takes 8 (2 × 4). password-exchange's pool caps are budgeted in #568. If `too many clients` shows up, raising the tier (in sre-bible's Terraform) is the escape hatch.
+- **Connections.** `db-f1-micro` has 25 `max_connections`. The last 3 are superuser-reserved and `cloudsqladmin` uses up to 3 ordinary slots, so about 19 are usable by apps (measured 2026-11-14). If `too many clients` shows up, raising the tier (in sre-bible's Terraform) is the escape hatch. The budget:
+
+  | Workload | Cap set by | prod | dev |
+  |---|---|---|---|
+  | sre-bible | `MaxConns = 4` in sre-bible, 2 pods | 8 | – |
+  | `database` | `PASSWORDEXCHANGE_DBMAXOPENCONNS` in the phase Secret, 2 pods | 2 × 2 = 4 | 2 × 1 = 2 |
+  | reminder CronJob | `PASSWORDEXCHANGE_DBMAXOPENCONNS=1` in `k8s/reminder-cronjob.yaml`, `concurrencyPolicy: Forbid` | 1 | 1 |
+  | slackbot (one, serves prod) | `OAUTHDB_POOL_SIZE=1`, `OAUTHDB_MAX_OVERFLOW=0` in the prod Secret, 2 pods | 2 | – |
+  | **Worst case** | | **15** | **3** → **18 of ≈19** |
+
+  A rolling-update surge pod can briefly add its pool on top; real usage is far below the caps, so that is accepted (no per-role connection limits). Idle connections are released after 2 minutes.
 - **No HA.** The instance is ZONAL. A zone outage or restart takes both apps down.
 - **Restarts.** Instance-level changes in sre-bible's Terraform can restart the instance and affect password-exchange too.
 - **Restore is per instance.** To recover password-exchange alone: PITR-clone `sre-bible` to a new instance at the target time, `pg_dump` the password-exchange databases from the clone, restore them into `sre-bible`, then delete the clone. Never restore over the shared instance.

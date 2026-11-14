@@ -3,7 +3,7 @@ FROM ubuntu:24.04 AS builder
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y golang-go git gcc musl-dev libmariadb-dev && \
+    apt-get install -y golang-go git gcc musl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -28,7 +28,7 @@ FROM ubuntu:24.04
 
 # Install runtime dependencies
 RUN apt-get update && \
-    apt-get install -y libmariadb3 ca-certificates curl && \
+    apt-get install -y ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the binary from the builder stage
