@@ -1,13 +1,18 @@
 """Engine construction for the Slack OAuth installation/state stores.
 
 The backing database is selected by PASSWORDEXCHANGE_DBDRIVER ("mysql", the
-default, or "postgres"); credentials come from the OAUTHDB_* variables.
+default, or "postgres"); credentials come from the OAUTHDB_* variables. Pool size is capped by
+OAUTHDB_POOL_SIZE (default 1) and OAUTHDB_MAX_OVERFLOW (default 0).
 """
 from sqlalchemy import create_engine
 from sqlalchemy.engine import URL, Engine
 
 DEFAULT_DRIVER = "mysql"
 DEFAULT_POSTGRES_PORT = 5432
+# The Postgres instance is shared with sre-bible and has ~19 usable
+# connections in total (#568), so each pod holds one unless overridden.
+DEFAULT_POOL_SIZE = 1
+DEFAULT_MAX_OVERFLOW = 0
 
 
 def _port(raw, variable) -> int:
@@ -35,6 +40,19 @@ def _mysql_url(env, **credentials) -> URL:
     return URL.create("mysql+mysqldb", host=host, port=port, **credentials)
 
 
+def _int_env(env, variable, default, minimum) -> int:
+    raw = env.get(variable)
+    if raw is None or raw == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        value = None
+    if value is None or value < minimum:
+        raise ValueError("invalid %s %r (expected an integer >= %d)" % (variable, raw, minimum))
+    return value
+
+
 _URL_BUILDERS = {"postgres": _postgres_url, "mysql": _mysql_url}
 
 
@@ -58,7 +76,7 @@ def make_engine(env) -> Engine:
     return create_engine(
         build_url(env),
         pool_pre_ping=True,
-        pool_size=2,
-        max_overflow=2,
+        pool_size=_int_env(env, "OAUTHDB_POOL_SIZE", DEFAULT_POOL_SIZE, 1),
+        max_overflow=_int_env(env, "OAUTHDB_MAX_OVERFLOW", DEFAULT_MAX_OVERFLOW, 0),
         pool_recycle=1800,
     )

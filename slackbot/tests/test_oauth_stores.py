@@ -1,4 +1,4 @@
-"""slack-sdk SQLAlchemy stores behave identically on Postgres 17 and MySQL 8.0
+"""slack-sdk SQLAlchemy stores behave identically on Postgres 18 and MySQL 8.0
 when the engine comes from oauth_db.make_engine."""
 import logging
 import time
