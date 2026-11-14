@@ -200,14 +200,14 @@ func TestIntegration_Property_MessageTextFieldsRoundTripOrAreRejected(t *testing
 }
 
 // Pool: the adapter must never hold more server connections than its limit.
-// Default (zero) is 5; an explicit MaxOpenConns is honoured. Connections are
+// Default (zero) is 2; an explicit MaxOpenConns is honoured. Connections are
 // pinned deterministically by blocking readers behind an ACCESS EXCLUSIVE lock.
 func TestIntegration_ConnectionPool_RespectsDefaultAndConfiguredLimit(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		maxOpen  int
 		wantPeak int
-	}{{"default is 5", 0, 5}, {"explicit 2", 2, 2}} {
+	}{{"default is 2", 0, 2}, {"explicit 3", 3, 3}} {
 		t.Run(tc.name, func(t *testing.T) {
 			db, cfg := dbtest.StartPostgresBaseline(t)
 			cfg.MaxOpenConns = tc.maxOpen

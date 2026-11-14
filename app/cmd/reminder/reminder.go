@@ -86,9 +86,7 @@ PASSWORDEXCHANGE_REMINDER_CHECKAFTERHOURS: Hours to wait before first reminder (
 PASSWORDEXCHANGE_REMINDER_MAXREMINDERS: Maximum reminders per message (1-10, default: 3)
 PASSWORDEXCHANGE_REMINDER_INTERVAL: Hours between reminders (1-720, default: 24)`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var cfg Config
-		bindenvs(&cfg)
-		viper.Unmarshal(&cfg)
+		cfg := loadConfig()
 
 		// Apply default values for any unset reminder configuration
 		cfg.Reminder.WithDefaults()
@@ -242,11 +240,20 @@ func applyFlagOverrides(cfg *Config) error {
 	return nil
 }
 
+// loadConfig binds the environment and unmarshals the reminder configuration,
+// applying the shared database pool default.
+func loadConfig() Config {
+	var cfg Config
+	bindenvs(&cfg)
+	viper.SetDefault("dbmaxopenconns", config.DefaultDBMaxOpenConns)
+	viper.Unmarshal(&cfg)
+	return cfg
+}
+
 func init() {
 	cmd.RootCmd.AddCommand(reminderCmd)
 
 	// Set defaults for reminder configuration
-	viper.SetDefault("dbmaxopenconns", 5)
 	viper.SetDefault("reminder.enabled", true)
 	viper.SetDefault("reminder.checkafterhours", 24)
 	viper.SetDefault("reminder.maxreminders", 3)

@@ -3,6 +3,11 @@ package config
 var AppConfig PassConfig
 
 // EmailConfig holds all email-related settings.
+// DefaultDBMaxOpenConns is the database pool size used when
+// PASSWORDEXCHANGE_DBMAXOPENCONNS is unset. The Postgres instance is shared
+// with sre-bible (~19 usable connections), so it stays small (#568).
+const DefaultDBMaxOpenConns = 2
+
 type EmailConfig struct {
 	Templates EmailTemplates `mapstructure:"templates"`
 	Subjects  EmailSubjects  `mapstructure:"subjects"`

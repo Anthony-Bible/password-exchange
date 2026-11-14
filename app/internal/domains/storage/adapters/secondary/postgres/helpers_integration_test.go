@@ -15,15 +15,20 @@ import (
 	"pgregory.net/rapid"
 )
 
-// These tests need a Postgres 17 container. Under podman, see the header of
+// These tests need a Postgres 18 container. Under podman, see the header of
 // internal/integration/dbtest/postgres.go (DOCKER_HOST + TESTCONTAINERS_RYUK_DISABLED).
 
 // startAdapter boots Postgres with the embedded baseline migration and
 // returns a raw *sql.DB (for seeding and assertions) plus the adapter under
 // test, built only through its public constructor.
+//
+// The adapter gets a pool of ONE connection, the tightest cap a phase runs
+// with on the shared instance (#568). A path that uses the pool while holding
+// a transaction deadlocks here instead of in production.
 func startAdapter(t *testing.T) (*sql.DB, secondary.MessageRepository) {
 	t.Helper()
 	db, cfg := dbtest.StartPostgresBaseline(t)
+	cfg.MaxOpenConns = 1
 	return db, newAdapterFor(t, cfg)
 }
 
