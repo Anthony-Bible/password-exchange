@@ -75,7 +75,7 @@ func TestIntegration_IncrementViewCountAndGet_ConcurrentViewers(t *testing.T) {
 	cases := []struct{ n, max int }{{3, 5}, {5, 5}, {12, 5}, {20, 1}}
 	for _, tc := range cases {
 		t.Run("", func(t *testing.T) {
-			db, repo := startAdapter(t)
+			db, repo := startContendedAdapter(t)
 			m := validMessage("contended")
 			m.MaxViewCount = tc.max
 			require.NoError(t, repo.InsertMessage(m))

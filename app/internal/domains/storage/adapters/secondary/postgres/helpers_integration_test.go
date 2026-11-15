@@ -32,6 +32,21 @@ func startAdapter(t *testing.T) (*sql.DB, secondary.MessageRepository) {
 	return db, newAdapterFor(t, cfg)
 }
 
+// contendedPoolSize is large enough that every goroutine in the contention
+// tests can hold its own connection, so their transactions really overlap.
+const contendedPoolSize = 8
+
+// startContendedAdapter is startAdapter for the concurrency tests. A pool of
+// one serializes every transaction in database/sql, so lost-update,
+// double-count and double-sweep bugs would pass unseen; these tests need
+// competing transactions on separate connections.
+func startContendedAdapter(t *testing.T) (*sql.DB, secondary.MessageRepository) {
+	t.Helper()
+	db, cfg := dbtest.StartPostgresBaseline(t)
+	cfg.MaxOpenConns = contendedPoolSize
+	return db, newAdapterFor(t, cfg)
+}
+
 func newAdapterFor(t *testing.T, cfg contracts.DatabaseConfig) secondary.MessageRepository {
 	t.Helper()
 	repo := NewPostgresAdapter(cfg, logtest.NewNoop(), noopValidator{})

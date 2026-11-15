@@ -104,7 +104,7 @@ func TestIntegration_DeleteExpiredUploadSessions_ReturnsExactlyTheDeletedRows(t 
 }
 
 func TestIntegration_DeleteExpiredUploadSessions_ConcurrentSweepsNeverReturnTheSameRowTwice(t *testing.T) {
-	_, repo := startAdapter(t)
+	_, repo := startContendedAdapter(t)
 	now := time.Now()
 	const n = 30
 	for i := 0; i < n; i++ {
@@ -138,7 +138,7 @@ func TestIntegration_DeleteExpiredUploadSessions_ConcurrentSweepsNeverReturnTheS
 }
 
 func TestIntegration_AddCompletedPart_Concurrent(t *testing.T) {
-	_, repo := startAdapter(t)
+	_, repo := startContendedAdapter(t)
 	require.NoError(t, repo.CreateUploadSession(ctx, validSession("concurrent", "concurrent-f")))
 
 	const N = 10
