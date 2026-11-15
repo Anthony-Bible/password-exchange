@@ -153,7 +153,7 @@ var migrateForceCmd = &cobra.Command{
 func initConfigAndMigrator() error {
 	bindenvs(cfg)
 	viper.SetDefault("dbdriver", "mysql")
-	viper.SetDefault("dbmaxopenconns", 5)
+	viper.SetDefault("dbmaxopenconns", config.DefaultDBMaxOpenConns)
 	if err := viper.Unmarshal(&cfg.PassConfig); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}

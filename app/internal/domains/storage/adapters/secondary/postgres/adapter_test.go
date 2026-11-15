@@ -20,7 +20,7 @@ import (
 // dialect translation choices the issue calls out ($n placeholders, a single
 // argument for the OR lookup, the status guard, DELETE ... RETURNING) and the
 // mapping of Postgres error codes to domain errors. Behaviour against a real
-// Postgres 17 is pinned by the *_integration_test.go files.
+// Postgres 18 is pinned by the *_integration_test.go files.
 
 type noopValidator struct{}
 

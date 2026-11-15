@@ -18,8 +18,17 @@ import (
 )
 
 const (
-	// defaultMaxOpenConns is the pool size used when DatabaseConfig.MaxOpenConns is unset.
-	defaultMaxOpenConns = 5
+	// defaultMaxOpenConns is the pool size used when DatabaseConfig.MaxOpenConns
+	// is unset. The instance is shared with sre-bible (~19 usable connections),
+	// so the default stays small (#568).
+	defaultMaxOpenConns = 2
+
+	// connMaxIdleTime returns idle connections to the shared instance quickly
+	// instead of holding them for the full lifetime.
+	connMaxIdleTime = 2 * time.Minute
+
+	// connMaxLifetime recycles every connection periodically.
+	connMaxLifetime = 30 * time.Minute
 
 	// connectPingTimeout bounds the initial connectivity check in Connect.
 	connectPingTimeout = 5 * time.Second
@@ -53,6 +62,29 @@ func scanMessageRow(row *sql.Row) (*contracts.Message, error) {
 		message.ExpiresAt = &expiresAt.Time
 	}
 	return &message, nil
+}
+
+// poolSettings is the database/sql pool configuration the adapter applies.
+type poolSettings struct {
+	MaxOpen     int
+	MaxIdle     int
+	MaxIdleTime time.Duration
+	MaxLifetime time.Duration
+}
+
+// poolSettingsFor returns the pool configuration for a configured
+// MaxOpenConns; a non-positive value selects defaultMaxOpenConns.
+func poolSettingsFor(configuredMaxOpen int) poolSettings {
+	maxOpen := configuredMaxOpen
+	if maxOpen <= 0 {
+		maxOpen = defaultMaxOpenConns
+	}
+	return poolSettings{
+		MaxOpen:     maxOpen,
+		MaxIdle:     maxOpen,
+		MaxIdleTime: connMaxIdleTime,
+		MaxLifetime: connMaxLifetime,
+	}
 }
 
 // PostgresAdapter implements the MessageRepository interface for Postgres.
@@ -129,13 +161,11 @@ func (m *PostgresAdapter) Connect() error {
 		return fmt.Errorf("%w: %v", domain.ErrDatabaseConnection, err)
 	}
 
-	maxOpen := m.config.MaxOpenConns
-	if maxOpen <= 0 {
-		maxOpen = defaultMaxOpenConns
-	}
-	db.SetMaxOpenConns(maxOpen)
-	db.SetMaxIdleConns(maxOpen)
-	db.SetConnMaxLifetime(30 * time.Minute)
+	pool := poolSettingsFor(m.config.MaxOpenConns)
+	db.SetMaxOpenConns(pool.MaxOpen)
+	db.SetMaxIdleConns(pool.MaxIdle)
+	db.SetConnMaxIdleTime(pool.MaxIdleTime)
+	db.SetConnMaxLifetime(pool.MaxLifetime)
 
 	// Test the connection; bounded so a hung database cannot hold connMu indefinitely
 	ctx, cancel := context.WithTimeout(context.Background(), connectPingTimeout)

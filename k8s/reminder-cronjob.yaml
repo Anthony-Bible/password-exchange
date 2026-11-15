@@ -1,15 +1,15 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: password-exchange-reminder
+  name: password-exchange-reminder-%{PHASE}
   namespace: default
   labels:
     app: password-exchange
     component: reminder
+    phase: "%{PHASE}"
 spec:
-  # Run daily at 9:00 AM UTC
+  # Every 10 minutes. Each run starts a fresh cloud-sql-proxy (~1-2 s).
   schedule: "*/10 * * * *"
-  # Alternatively, run every 24 hours from first execution: "@every 24h"
   concurrencyPolicy: Forbid  # Don't allow overlapping jobs
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 1
@@ -22,12 +22,48 @@ spec:
         metadata:
           annotations:
             linkerd.io/inject: enabled
-            proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
+            # 3306: prod still on MySQL via the in-cluster cloudsql-proxy (until #570).
+            # 3307: cloud-sql-proxy's TLS connection to Cloud SQL. 127.0.0.1:5432 is loopback.
+            config.linkerd.io/skip-outbound-ports: "3306,3307"
+            # Start linkerd-proxy before cloud-sql-proxy so the proxy's Admin API and
+            # metadata-server calls aren't caught by iptables with no proxy listening.
+            config.alpha.linkerd.io/proxy-enable-native-sidecar: "true"
           labels:
             app: password-exchange
             component: reminder
+            phase: "%{PHASE}"
         spec:
           restartPolicy: OnFailure
+          serviceAccountName: password-exchange
+          initContainers:
+          # Cloud SQL Auth Proxy as a native sidecar: starts before the app, and does
+          # not keep a Job from completing. Identity comes from Workload Identity.
+          - name: cloud-sql-proxy
+            image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.22.0
+            restartPolicy: Always
+            args:
+            - --structured-logs
+            - --port=5432
+            - --health-check
+            - --http-address=0.0.0.0
+            - --http-port=9801
+            - gen-lang-client-0479899208:us-central1:sre-bible
+            startupProbe:
+              httpGet:
+                path: /startup
+                port: 9801
+              periodSeconds: 1
+              failureThreshold: 60
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 128Mi
+            securityContext:
+              runAsNonRoot: true
+              allowPrivilegeEscalation: false
           containers:
           - name: reminder
             image: ghcr.io/anthony-bible/passwordexchange-container-%{PHASE}@%{MAIN_IMAGE_SHA}
@@ -37,8 +73,13 @@ spec:
             envFrom:
               - secretRef:
                   name: test-secret
+              # DB target for this phase; listed last so its keys win over test-secret.
+              - secretRef:
+                  name: password-exchange-db-%{PHASE}
             env:
-            # Database configuration
+            # Reminder holds one slot of the shared sre-bible connection budget.
+            - name: PASSWORDEXCHANGE_DBMAXOPENCONNS
+              value: "1"
             # Reminder configuration
             - name: PASSWORDEXCHANGE_REMINDER_ENABLED
               value: "true"
@@ -65,12 +106,12 @@ spec:
           volumes:
           - name: config
             configMap:
-              name: password-exchange-config
+              name: password-exchange-config-%{PHASE}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: password-exchange-config
+  name: password-exchange-config-%{PHASE}
   namespace: default
   labels:
     app: password-exchange

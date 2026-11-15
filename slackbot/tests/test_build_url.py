@@ -123,15 +123,47 @@ def test_non_numeric_port_fails_naming_the_variable(driver, overrides, variable)
         oauth_db.build_url({**BASE, "PASSWORDEXCHANGE_DBDRIVER": driver, **overrides})
 
 
-def test_make_engine_bounds_the_pool_and_pings():
+def test_make_engine_defaults_to_one_connection_and_pings():
+    # Shared sre-bible budget (#568): 1 connection per pod unless overridden.
     engine = oauth_db.make_engine({**BASE, "PASSWORDEXCHANGE_DBDRIVER": "postgres"})
     try:
-        assert engine.pool.size() == 2
-        assert engine.pool._max_overflow == 2
+        assert engine.pool.size() == 1
+        assert engine.pool._max_overflow == 0
         assert engine.pool._recycle == 1800
         assert engine.pool._pre_ping is True
     finally:
         engine.dispose()
+
+
+@settings(max_examples=25)
+@given(size=st.integers(min_value=1, max_value=20), overflow=st.integers(min_value=0, max_value=20))
+def test_make_engine_honours_pool_env(size, overflow):
+    env = {
+        **BASE,
+        "PASSWORDEXCHANGE_DBDRIVER": "postgres",
+        "OAUTHDB_POOL_SIZE": str(size),
+        "OAUTHDB_MAX_OVERFLOW": str(overflow),
+    }
+    engine = oauth_db.make_engine(env)
+    try:
+        assert engine.pool.size() == size
+        assert engine.pool._max_overflow == overflow
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    "variable, raw",
+    [
+        ("OAUTHDB_POOL_SIZE", "lots"),
+        ("OAUTHDB_POOL_SIZE", "0"),
+        ("OAUTHDB_MAX_OVERFLOW", "-1"),
+        ("OAUTHDB_MAX_OVERFLOW", "1.5"),
+    ],
+)
+def test_invalid_pool_env_fails_naming_the_variable(variable, raw):
+    with pytest.raises(ValueError, match=variable):
+        oauth_db.make_engine({**BASE, "PASSWORDEXCHANGE_DBDRIVER": "postgres", variable: raw})
 
 
 def test_make_engine_uses_the_url_from_build_url():

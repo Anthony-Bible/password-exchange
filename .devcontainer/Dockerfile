@@ -10,7 +10,7 @@ RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/
 
 # [Optional] Uncomment this section to install additional OS packages.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-     && apt-get -y install --no-install-recommends zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev clang -y 
+     && apt-get -y install --no-install-recommends zstd libssl-dev build-essential curl wget gcc mariadb-client libmariadb-dev postgresql-client clang -y 
 RUN wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64 && chmod +x /usr/local/bin/bazel 
 
 # [Optional] Uncomment the next lines to use go get to install anything else you need

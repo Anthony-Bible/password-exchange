@@ -28,16 +28,16 @@ func TestBinary_UnknownDBDriverExitsNonZeroNamingTheVariable(t *testing.T) {
 	assert.Contains(t, res.output, "bogus-db")
 }
 
-// The pool budget (#568: 50 connections shared by dev and prod) requires a
-// conservative default of 5 open connections, overridable per environment.
-func TestDBMaxOpenConns_DefaultsToFive(t *testing.T) {
+// The shared sre-bible instance has ~19 usable connections for two apps
+// (#568), so the default pool is 2, overridable per environment.
+func TestDBMaxOpenConns_DefaultsToTwo(t *testing.T) {
 	resetConfig(t)
 	viper.Set("dbhost", "127.0.0.1")
 	viper.Set("dbport", 3306)
 
 	require.NoError(t, initConfigAndMigrator())
 
-	assert.Equal(t, 5, cfg.PassConfig.DbMaxOpenConns)
+	assert.Equal(t, 2, cfg.PassConfig.DbMaxOpenConns)
 }
 
 func TestDBMaxOpenConns_ReadFromEnvironment(t *testing.T) {

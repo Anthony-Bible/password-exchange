@@ -537,3 +537,24 @@ func TestCompleteConfigurationFlow(t *testing.T) {
 		assert.Equal(t, "testhost", cfg.DbHost)
 	})
 }
+
+// The reminder holds one slot of the shared sre-bible connection budget per
+// phase (#568); unset, it must not default to a larger pool.
+func TestLoadConfig_DBMaxOpenConnsDefaultsToTwo(t *testing.T) {
+	setupTestViper()
+	t.Cleanup(viper.Reset)
+
+	cfg := loadConfig()
+
+	assert.Equal(t, 2, cfg.PassConfig.DbMaxOpenConns)
+}
+
+func TestLoadConfig_DBMaxOpenConnsReadFromEnvironment(t *testing.T) {
+	t.Setenv("PASSWORDEXCHANGE_DBMAXOPENCONNS", "1")
+	setupTestViper()
+	t.Cleanup(viper.Reset)
+
+	cfg := loadConfig()
+
+	assert.Equal(t, 1, cfg.PassConfig.DbMaxOpenConns)
+}

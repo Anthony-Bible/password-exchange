@@ -16,9 +16,12 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
-        # Have to disable outbound ports since it's outside of cluster: https://linkerd.io/2.11/reference/proxy-configuration/
-        config.linkerd.io/skip-outbound-ports: "3306"
-        proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
+        # 3306: prod still on MySQL via the in-cluster cloudsql-proxy (until #570).
+        # 3307: cloud-sql-proxy's TLS connection to Cloud SQL. 127.0.0.1:5432 is loopback.
+        config.linkerd.io/skip-outbound-ports: "3306,3307"
+        # Start linkerd-proxy before cloud-sql-proxy so the proxy's Admin API and
+        # metadata-server calls aren't caught by iptables with no proxy listening.
+        config.alpha.linkerd.io/proxy-enable-native-sidecar: "true"
       labels:
         app: database
         name: database
@@ -37,10 +40,43 @@ spec:
                   values:
                   - database
               topologyKey: kubernetes.io/hostname
+      serviceAccountName: password-exchange
+      initContainers:
+      # Cloud SQL Auth Proxy as a native sidecar: starts before the app, and does
+      # not keep a Job from completing. Identity comes from Workload Identity.
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.22.0
+        restartPolicy: Always
+        args:
+        - --structured-logs
+        - --port=5432
+        - --health-check
+        - --http-address=0.0.0.0
+        - --http-port=9801
+        - gen-lang-client-0479899208:us-central1:sre-bible
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 9801
+          periodSeconds: 1
+          failureThreshold: 60
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
       containers:
       - envFrom:
         - secretRef:
             name: test-secret
+        # DB target for this phase; listed last so its keys win over test-secret.
+        - secretRef:
+            name: password-exchange-db-%{PHASE}
         image: ghcr.io/anthony-bible/passwordexchange-container-%{PHASE}@%{MAIN_IMAGE_SHA}
         args: ["database"]
         env:

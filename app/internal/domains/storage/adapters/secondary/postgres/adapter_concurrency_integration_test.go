@@ -14,8 +14,8 @@ import (
 
 // The adapter connects lazily on first use, and `app database` never connects
 // eagerly, so the first concurrent requests race. This must neither be a data
-// race (run with -race) nor open more than one pool: the db-g1-small budget
-// (shared by dev and prod) assumes at most MaxOpenConns connections per pod.
+// race (run with -race) nor open more than one pool: the shared sre-bible budget
+// (#568) assumes at most MaxOpenConns connections per pod.
 func TestIntegration_ConcurrentFirstUse_OpensSingleBoundedPool(t *testing.T) {
 	const maxOpen = 2
 	const goroutines = 24

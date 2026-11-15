@@ -34,7 +34,7 @@ if str(SLACKBOT_DIR) not in sys.path:
     sys.path.insert(0, str(SLACKBOT_DIR))
 
 PG_IMAGE = os.environ.get(
-    "PASSWORDEXCHANGE_TEST_PG_IMAGE", "mirror.gcr.io/library/postgres:17-alpine"
+    "PASSWORDEXCHANGE_TEST_PG_IMAGE", "mirror.gcr.io/library/postgres:18-alpine"
 )
 MYSQL_IMAGE = os.environ.get(
     "PASSWORDEXCHANGE_TEST_MYSQL_IMAGE", "mirror.gcr.io/library/mysql:8.0"
@@ -52,7 +52,7 @@ def _ip(host: str) -> str:
 
 @pytest.fixture(scope="session")
 def postgres_env():
-    """Env mapping (as the bot would see it) for a throwaway Postgres 17."""
+    """Env mapping (as the bot would see it) for a throwaway Postgres 18."""
     from testcontainers.postgres import PostgresContainer
 
     with PostgresContainer(

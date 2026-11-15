@@ -2,7 +2,7 @@
 
 // Postgres twin of reminder_flow_integration_test.go: the complete reminder
 // pipeline (ReminderService -> notification storage adapter -> StorageService
-// -> PostgresAdapter -> Postgres 17). Full duplication of the MySQL file is
+// -> PostgresAdapter -> Postgres 18). Full duplication of the MySQL file is
 // intentional; #570 deletes the MySQL side.
 package reminder_test
 
