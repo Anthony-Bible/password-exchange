@@ -393,3 +393,35 @@ func TestIntegration_Property_ExpiresAtIsPreservedAtMicrosecondPrecision(t *test
 			"stored %v, want %v (offset %ds)", got.ExpiresAt, want.Truncate(time.Microsecond), offset)
 	})
 }
+
+// Postgres silently truncates a varchar value whose excess characters are all
+// spaces instead of raising 22001. The adapter must still reject it: a value
+// one trailing space over the column limit is never stored truncated.
+func TestIntegration_UploadSessionRejectsValueOverLimitByTrailingSpaces(t *testing.T) {
+	db, repo := startAdapter(t)
+	cases := []struct {
+		name  string
+		limit int
+		set   func(s *contracts.UploadSession, v string)
+	}{
+		{"session_id", 255, func(s *contracts.UploadSession, v string) { s.SessionID = v }},
+		{"file_id", 255, func(s *contracts.UploadSession, v string) { s.FileID = v }},
+		{"message_id", 255, func(s *contracts.UploadSession, v string) { s.MessageID = v }},
+		{"upload_id", 255, func(s *contracts.UploadSession, v string) { s.UploadID = v }},
+		{"filename", 255, func(s *contracts.UploadSession, v string) { s.Filename = v }},
+		{"content_type", 255, func(s *contracts.UploadSession, v string) { s.ContentType = v }},
+		{"status", 50, func(s *contracts.UploadSession, v string) { s.Status = v }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetTables(t, db)
+			s := validSession("trail-sid", "trail-fid")
+			tc.set(&s, strings.Repeat("é", tc.limit)+" ")
+
+			err := repo.CreateUploadSession(ctx, s)
+
+			assert.ErrorIs(t, err, domain.ErrInvalidParameter)
+			assert.Equal(t, 0, rowCount(t, db, "file_upload_sessions"), "must not be stored truncated")
+		})
+	}
+}

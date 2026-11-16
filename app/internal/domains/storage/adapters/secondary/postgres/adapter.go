@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/ports/contracts"
@@ -189,6 +190,14 @@ func (m *PostgresAdapter) InsertMessage(message *contracts.Message) error {
 	defer release()
 
 	// Column mapping: recipient email -> other_email, passphrase -> other_lastname.
+	if err := checkVarcharLimits(
+		varcharValue{"uniqueid", message.UniqueID, 255},
+		varcharValue{"other_lastname", message.Passphrase, 100},
+		varcharValue{"other_email", message.RecipientEmail, 255},
+	); err != nil {
+		m.logger.Warn().Err(err).Msg("Rejected message with invalid input")
+		return err
+	}
 	var expiresAt time.Time
 	if message.ExpiresAt != nil {
 		expiresAt = *message.ExpiresAt
@@ -408,6 +417,10 @@ func (m *PostgresAdapter) LogReminderSent(messageID int, emailAddress string) er
 	}
 	defer release()
 
+	if err := checkVarcharLimits(varcharValue{"email_address", emailAddress, 255}); err != nil {
+		return err
+	}
+
 	query := `INSERT INTO email_reminders (message_id, email_address, reminder_count, last_reminder_sent)
 		VALUES ($1, $2, 1, now())
 		ON CONFLICT (message_id, email_address) DO UPDATE
@@ -503,6 +516,26 @@ func (m *PostgresAdapter) Close() error {
 		return err
 	}
 	m.db = nil
+	return nil
+}
+
+// varcharValue is a string bound for a varchar(max) column.
+type varcharValue struct {
+	column string
+	value  string
+	max    int
+}
+
+// checkVarcharLimits returns domain.ErrInvalidParameter when a value has more
+// characters than its column allows. Postgres raises 22001 for most over-long
+// values, but silently truncates when every excess character is a space, so
+// the limit is enforced here before the INSERT.
+func checkVarcharLimits(values ...varcharValue) error {
+	for _, v := range values {
+		if n := utf8.RuneCountInString(v.value); n > v.max {
+			return fmt.Errorf("%w: %s is %d characters, the column allows %d", domain.ErrInvalidParameter, v.column, n, v.max)
+		}
+	}
 	return nil
 }
 

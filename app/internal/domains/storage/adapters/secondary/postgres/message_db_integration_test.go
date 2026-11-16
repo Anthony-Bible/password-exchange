@@ -262,3 +262,31 @@ func openTagged(t *testing.T, cfg contracts.DatabaseConfig, app string) *sql.DB 
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
+
+// Postgres silently truncates a varchar value whose excess characters are all
+// spaces instead of raising 22001. The adapter must still reject it: a value
+// one trailing space over the column limit is never stored truncated.
+func TestIntegration_MessageRejectsValueOverLimitByTrailingSpaces(t *testing.T) {
+	db, repo := startAdapter(t)
+	cases := []struct {
+		name  string
+		limit int
+		set   func(m *contracts.Message, v string)
+	}{
+		{"uniqueid", 255, func(m *contracts.Message, v string) { m.UniqueID = v }},
+		{"other_lastname (passphrase)", 100, func(m *contracts.Message, v string) { m.Passphrase = v }},
+		{"other_email (recipient)", 255, func(m *contracts.Message, v string) { m.RecipientEmail = v }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resetTables(t, db)
+			m := validMessage("trail-msg")
+			tc.set(m, strings.Repeat("é", tc.limit)+" ")
+
+			err := repo.InsertMessage(m)
+
+			assert.ErrorIs(t, err, domain.ErrInvalidParameter)
+			assert.Equal(t, 0, rowCount(t, db, "messages"), "must not be stored truncated")
+		})
+	}
+}
