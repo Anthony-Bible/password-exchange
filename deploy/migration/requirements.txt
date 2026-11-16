@@ -1,0 +1,5 @@
+# Operator tooling for the MySQL -> Postgres copy (docs/runbooks/mysql-to-postgres.md).
+# The slackbot requirements bring mysqlclient, psycopg, SQLAlchemy and slack-sdk.
+-r ../../slackbot/requirements.txt
+pytest==9.1.1
+hypothesis==6.170.12
