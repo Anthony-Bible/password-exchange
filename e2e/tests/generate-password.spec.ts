@@ -17,10 +17,22 @@ async function waitForBootstrap(page: any): Promise<void> {
   });
 }
 
-async function openModalAndGenerate(page: any): Promise<void> {
+// Under parallel load a click on the trigger is occasionally lost and the modal
+// never opens. Retry the click, but only while the modal is hidden, so a retry
+// can't toggle an already-opening modal closed.
+async function openGeneratorModal(page: any): Promise<void> {
   await waitForBootstrap(page);
-  await page.locator('button[data-bs-target="#passwordGeneratorModal"]').click();
-  await expect(page.locator('#passwordGeneratorModal')).toBeVisible();
+  const modal = page.locator('#passwordGeneratorModal');
+  await expect(async () => {
+    if (!(await modal.isVisible())) {
+      await page.locator('button[data-bs-target="#passwordGeneratorModal"]').click();
+    }
+    await expect(modal).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
+}
+
+async function openModalAndGenerate(page: any): Promise<void> {
+  await openGeneratorModal(page);
   // The generated-password section is hidden until the user clicks "Generate Password"
   await page.locator('#modal-generate-password').click();
   await expect(page.locator('#generated-password-section')).toBeVisible();
@@ -46,9 +58,7 @@ test.describe('Generate password modal', () => {
 
   test('generated password length matches slider value', async ({ page }) => {
     await page.goto('/');
-    await waitForBootstrap(page);
-    await page.locator('button[data-bs-target="#passwordGeneratorModal"]').click();
-    await expect(page.locator('#passwordGeneratorModal')).toBeVisible();
+    await openGeneratorModal(page);
     // Set slider to 20 before generating
     await page.locator('#modal-password-length').evaluate((el: HTMLInputElement) => {
       el.value = '20';
@@ -57,8 +67,8 @@ test.describe('Generate password modal', () => {
     });
     await expect(page.locator('#modalLengthValue')).toHaveText('20');
     await page.locator('#modal-generate-password').click();
-    await expect(page.locator('#generated-password-section')).toBeVisible();
-    const generated = await page.locator('#generated-password').inputValue();
-    expect(generated.length).toBe(20);
+    // Generation is debounced (200ms), and opening the modal already generated a
+    // default-length password, so the section can be visible before the 20-char one lands.
+    await expect(page.locator('#generated-password')).toHaveValue(/^[\s\S]{20}$/);
   });
 });
