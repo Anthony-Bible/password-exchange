@@ -35,6 +35,18 @@ func (m *PostgresAdapter) CreateUploadSession(ctx context.Context, session contr
 	}
 	defer release()
 
+	if err := checkVarcharLimits(
+		varcharValue{"session_id", session.SessionID, 255},
+		varcharValue{"file_id", session.FileID, 255},
+		varcharValue{"message_id", session.MessageID, 255},
+		varcharValue{"upload_id", session.UploadID, 255},
+		varcharValue{"filename", session.Filename, 255},
+		varcharValue{"content_type", session.ContentType, 255},
+		varcharValue{"status", session.Status, 50},
+	); err != nil {
+		return err
+	}
+
 	partsJSON, err := marshalUploadSessionParts(session.CompletedParts)
 	if err != nil {
 		return fmt.Errorf("postgres: marshalling completed_parts: %w", err)

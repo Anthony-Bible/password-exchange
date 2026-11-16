@@ -5,9 +5,11 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Anthony-Bible/password-exchange/app/internal/domains/storage/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"pgregory.net/rapid"
@@ -200,4 +202,18 @@ func TestIntegration_Property_ReminderWindowSelection(t *testing.T) {
 			}
 		}
 	})
+}
+
+// Postgres silently truncates a varchar value whose excess characters are all
+// spaces. An email one trailing space over the column limit must be rejected,
+// not stored truncated under a different upsert key.
+func TestIntegration_LogReminderSentRejectsEmailOverLimitByTrailingSpaces(t *testing.T) {
+	db, repo := startAdapter(t)
+	resetTables(t, db)
+	id := seedMessage(t, db, "trail", "x@example.com", 0, 48*hour)
+
+	err := repo.LogReminderSent(id, strings.Repeat("é", 255)+" ")
+
+	assert.ErrorIs(t, err, domain.ErrInvalidParameter)
+	assert.Equal(t, 0, rowCount(t, db, "email_reminders"), "must not be stored truncated")
 }
