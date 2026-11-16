@@ -168,8 +168,11 @@ pgloader image: `ghcr.io/dimitri/pgloader@sha256:bd81512667c987c516c87c397d1039c
    ```bash
    kubectl --context $CTX -n default patch cronjob password-exchange-reminder-prod -p '{"spec":{"suspend":true}}'
    kubectl --context $CTX -n default scale deploy/database-prod-deployment deploy/slackbot-deployment --replicas=0
-   kubectl --context $CTX -n default wait --for=delete pod -l name=database,phase=prod --timeout=120s
+   kubectl --context $CTX -n default wait --for=delete pod -l app=database,phase=prod --timeout=120s
+   kubectl --context $CTX -n default wait --for=delete pod -l app=slackbot --timeout=120s
    ```
+   `phase=prod` matters: the dev database pods also carry `app=database`. "no matching resources"
+   means the pods are already gone. Step 4's session gate is the real proof that no writer is left.
    The web front end stays up and returns errors on submit/view until step 7. Any
    reminder Job already running must finish first: wait until
    `kubectl --context $CTX -n default get pods -l component=reminder,phase=prod` shows none running.
