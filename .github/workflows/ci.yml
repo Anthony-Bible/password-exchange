@@ -105,6 +105,9 @@ jobs:
         run: pip install -r slackbot/requirements.txt -r slackbot/requirements-dev.txt
       - name: Run slackbot tests
         run: pytest slackbot/tests
+      - name: Run migration tooling tests
+        # deploy/migration (#569) runs on the slackbot requirements; its DB drivers are imported lazily.
+        run: pytest deploy/migration/tests
 
   build_slackbot_image:
     runs-on: ubuntu-24.04
