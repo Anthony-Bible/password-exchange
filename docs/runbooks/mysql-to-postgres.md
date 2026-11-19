@@ -148,7 +148,7 @@ pgloader image: `ghcr.io/dimitri/pgloader@sha256:bd81512667c987c516c87c397d1039c
        OAUTHDB_USER:"slackbot", OAUTHDB_NAME:"slack_oauth", OAUTHDB_PASSWORD:$pw.slackbot
      } | map_values(@base64))' "$W/secret-mysql.json" > "$W/secret-postgres.json"
    # review the non-secret keys only
-   jq -r '.data|to_entries[]|select(.key|test("PASS")|not)|"\(.key)=\(.value|@base64d)"' "$W/secret-postgres.json"
+   jq -r '.data|to_entries[]|select(.key|test("(_DBPASS|_PASSWORD)$")|not)|"\(.key)=\(.value|@base64d)"' "$W/secret-postgres.json"
    ```
    `PASSWORDEXCHANGE_AUTOMIGRATE` stays `false`, `DBMAXOPENCONNS` stays 2 and the
    OAuth pool stays 1/0. Every pod already has the `cloud-sql-proxy` sidecar on
@@ -209,8 +209,22 @@ pgloader image: `ghcr.io/dimitri/pgloader@sha256:bd81512667c987c516c87c397d1039c
    `kubectl --context $CTX -n argocd patch application passwordexchange-devv --type merge -p '{"spec":{"syncPolicy":{"automated":{"prune":true}}}}'`.
    Merges may resume.
 10. **Commit the Secret.** Re-encrypt `kubernetes/password-exchange-db-prod.encrypted.yaml`
-    from `secret-postgres.json` (SOPS, profile `sopsuser`) and open a PR. Keep
-    `secret-mysql.json` for the rollback window.
+    from `secret-postgres.json` and open a PR. Until it merges, the committed copy still
+    decrypts to MySQL, and applying it would roll prod back. There is no `.sops.yaml`, so
+    reuse the KMS key from the existing file. The plaintext stays in `$W`:
+    ```bash
+    umask 077; F=kubernetes/password-exchange-db-prod.encrypted.yaml
+    jq '{apiVersion,kind,metadata:{name:.metadata.name,namespace:.metadata.namespace},type,data}' \
+      "$W/secret-postgres.json" | yq -P . > "$W/plain.yaml"
+    AWS_PROFILE=sopsuser sops --encrypt --kms "$(yq '.sops.kms[0].arn' $F)" \
+      --input-type yaml --output-type yaml "$W/plain.yaml" > "$W/enc.yaml"
+    cp "$W/enc.yaml" $F && rm "$W/plain.yaml" "$W/enc.yaml"
+    # gate: 0 plaintext values, and the file decrypts to exactly the live Secret
+    yq 'del(.sops) | [.. | select(tag == "!!str" and (test("^ENC\\[")|not))] | length' $F
+    diff <(AWS_PROFILE=sopsuser sops -d $F | yq -o=json .data | jq -S .) \
+         <(kubectl --context $CTX -n default get secret password-exchange-db-prod -o json | jq -S .data)
+    ```
+    Keep `secret-mysql.json` for the rollback window.
 
 **Spot preemption.** The node pool is all Spot. A preemption can take out kube-dns, the
 service mesh or the ArgoCD repo-server for a few minutes. If a `kubectl` or `argocd` step
